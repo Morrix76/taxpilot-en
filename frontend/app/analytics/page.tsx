@@ -16,7 +16,7 @@ export default function AnalyticsPage() {
   });
   const [topClienti, setTopClienti] = useState([]);
   const [attivita, setAttivita] = useState([]);
-  const [trend, setTrend] = useState([]);
+  const [trend, setTrend] = useState<Array<{ data: string; valore: number }>>([]);
   const [report, setReport] = useState(null);
   const router = useRouter();
 
@@ -63,7 +63,7 @@ export default function AnalyticsPage() {
       // Fetch trend data
       const trendRes = await fetch(`${API_BASE_URL}/api/analytics/trend?periodo=${period}&tipo=documenti`, { headers });
       if (trendRes.ok) {
-        const trendData = await trendRes.json();
+        const trendData: Array<{ data: string; valore: number }> = await trendRes.json();
         if (trendData.success) {
           setTrend(trendData.trend);
         }
