@@ -236,7 +236,7 @@ export default function AnalyticsPage() {
                   <div key={index} className="flex flex-col items-center">
                     <div 
                       className="bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg w-8 transition-all duration-300 hover:from-blue-600 hover:to-blue-500"
-                      style={{ height: `${Math.max(10, (item.valore / Math.max(...trend.map(t => t.valore))) * 80)}%` }}
+                      style={{ height: `${Math.max(10, (item.valore / Math.max(...trend.map((t: any) => t.valore))) * 80)}%` }}
                     ></div>
                     <span className="text-xs text-slate-500 mt-2">
                       {new Date(item.data).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit' })}
