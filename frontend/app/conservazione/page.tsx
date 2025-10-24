@@ -590,7 +590,7 @@ export default function ConservazioneSostitutiva() {
       </div>
     </div>
   )
-}Tab === 'documenti'
+${activeTab === 'documenti'
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
                 }`}
