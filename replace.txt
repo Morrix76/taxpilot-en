@@ -1,0 +1,2 @@
+﻿regex:gsk_[A-Za-z0-9_-]+==>GROQ_KEY_REMOVED
+regex:hf_[A-Za-z0-9_-]+==>HF_TOKEN_REMOVED

@@ -1,0 +1,275 @@
+# 🧠 AI PROMPT TEMPLATES - FISCALI ITALIANI 2025
+
+## 📋 TEMPLATE FATTURA ELETTRONICA
+
+```
+ANALISI FATTURA ELETTRONICA ITALIANA 2025
+
+DATI FATTURA:
+{json_fattura_data}
+
+NORMATIVE FISCALI 2025:
+IVA 2025:
+- Aliquota ordinaria: 22%
+- Aliquota ridotta: 10% (alimenti, farmaci, libri)
+- Aliquota minima: 4% (beni prima necessità)
+- Split payment: PA, enti pubblici, società partecipate
+- Regime forfettario: no IVA se fatturato <65.000€
+
+REGIME FORFETTARIO 2025:
+- Limite fatturato: 65.000€
+- No IVA in fattura
+- Imposta sostitutiva: 15% (5% primi 5 anni)
+- No detraibilità IVA acquisti
+
+SPLIT PAYMENT 2025:
+- Obbligatorio per PA e enti pubblici
+- Cliente paga imponibile al fornitore
+- Cliente versa IVA direttamente all'Erario
+- Da indicare in fattura: "Scissione pagamenti"
+
+COMPITO:
+Analizza la fattura per identificare:
+1. Incongruenze logiche nell'applicazione IVA
+2. Possibili errori nel regime fiscale dichiarato
+3. Anomalie nei totali o nelle aliquote
+4. Rischi di compliance fiscale
+5. Pattern di rischio per controlli fiscali
+
+NON DEVI:
+- Fare calcoli matematici
+- Validare i totali numericamente
+- Correggere gli importi
+
+DEVI SOLO:
+- Identificare possibili incongruenze logiche
+- Suggerire verifiche da fare
+- Segnalare pattern di rischio
+
+FORMATO OUTPUT (JSON):
+{
+  "summary": "Descrizione breve analisi",
+  "confidence": 0.95,
+  "riskLevel": "low|medium|high",
+  "anomalies": [
+    {
+      "type": "iva_incongruence",
+      "description": "Descrizione anomalia",
+      "severity": "warning|error|critical"
+    }
+  ],
+  "recommendations": [
+    "Raccomandazione specifica 1",
+    "Raccomandazione specifica 2"
+  ],
+  "complianceIssues": [
+    {
+      "regulation": "Nome normativa",
+      "issue": "Descrizione problema",
+      "action": "Azione raccomandata"
+    }
+  ]
+}
+
+Rispondi SOLO con il JSON, senza testo aggiuntivo.
+```
+
+## 💼 TEMPLATE BUSTA PAGA
+
+```
+ANALISI BUSTA PAGA ITALIANA 2025
+
+DATI BUSTA PAGA:
+{json_busta_paga_data}
+
+NORMATIVE FISCALI 2025:
+IRPEF 2025:
+- Primo scaglione: 23% fino a 28.000€
+- Secondo scaglione: 35% da 28.001€ a 50.000€
+- Terzo scaglione: 43% oltre 50.000€
+- Detrazione lavoro dipendente: 1.880€ (decrescente)
+- No tax area: circa 8.500€ con detrazioni
+
+INPS 2025:
+- Contributi dipendenti: 9,19%
+- Contributi autonomi: 24,00%
+- Massimale contributivo: circa 109.000€
+- Minimale autonomi: circa 16.500€
+
+DETRAZIONI 2025:
+- Coniuge: 800€ (se reddito <2.840€)
+- Figli: 1.200€ primo figlio, 1.000€ altri
+- Maggiorazione disabili: +400€
+- Bonus figli: +50€ se figli >3
+
+FRINGE BENEFITS 2025:
+- Soglia esenzione: 600€/anno
+- Auto aziendale: 30% valore convenzionale
+- Buoni carburante: inclusi nel limite 600€
+- Welfare aziendale: escluso da fringe benefits
+
+COMPITO:
+Analizza la busta paga per identificare:
+1. Incongruenze logiche nell'applicazione IRPEF
+2. Possibili errori nei contributi INPS
+3. Anomalie nelle detrazioni applicate
+4. Problemi con fringe benefits oltre soglia
+5. Pattern di rischio per controlli INPS/AdE
+
+NON DEVI:
+- Ricalcolare i valori numerici
+- Fare verifiche matematiche
+- Correggere gli importi
+
+DEVI SOLO:
+- Identificare possibili incongruenze logiche
+- Suggerire verifiche da fare
+- Segnalare pattern di rischio
+
+FORMATO OUTPUT (JSON):
+{
+  "summary": "Descrizione breve analisi",
+  "confidence": 0.88,
+  "riskLevel": "low|medium|high",
+  "anomalies": [
+    {
+      "type": "irpef_incongruence",
+      "description": "Descrizione anomalia",
+      "severity": "warning|error|critical"
+    }
+  ],
+  "recommendations": [
+    "Raccomandazione specifica 1",
+    "Raccomandazione specifica 2"
+  ],
+  "complianceIssues": [
+    {
+      "regulation": "IRPEF 2025",
+      "issue": "Descrizione problema",
+      "action": "Azione raccomandata"
+    }
+  ]
+}
+
+Rispondi SOLO con il JSON, senza testo aggiuntivo.
+```
+
+## ⚙️ TEMPLATE SEMPLIFICATO (HUGGING FACE)
+
+```
+ANALISI FISCALE DOCUMENTO ITALIANO 2025
+
+DATI: {simplified_data}
+
+NORMATIVE: IVA 22%, IRPEF 23%-35%-43%, INPS 9.19%
+
+COMPITO: Trova anomalie fiscali e suggerisci verifiche.
+
+OUTPUT JSON:
+{
+  "summary": "...",
+  "confidence": 0.8,
+  "recommendations": ["..."]
+}
+```
+
+## 🔧 ESEMPI PRATICHE DI USO
+
+### Esempio 1: Fattura con IVA sospetta
+```json
+INPUT:
+{
+  "imponibile": 1000,
+  "aliquotaIva": 15,
+  "importoIva": 150,
+  "totale": 1150,
+  "cliente": "Studio Medico Rossi",
+  "dataEmissione": "2025-05-12",
+  "regimeFiscale": "ordinario"
+}
+
+EXPECTED OUTPUT:
+{
+  "summary": "Rilevata aliquota IVA non standard per prestazione sanitaria",
+  "confidence": 0.92,
+  "riskLevel": "medium",
+  "anomalies": [
+    {
+      "type": "iva_incongruence",
+      "description": "Aliquota IVA 15% non prevista dalle normative italiane",
+      "severity": "error"
+    }
+  ],
+  "recommendations": [
+    "Verificare se il servizio rientra in esenzioni IVA (art. 10 DPR 633/72)",
+    "Controllare se applicabile regime di esenzione sanitaria",
+    "Considerare correzione con nota di credito se errore"
+  ]
+}
+```
+
+### Esempio 2: Busta paga con contributi anomali
+```json
+INPUT:
+{
+  "stipendioLordo": 2500,
+  "irpef": 420,
+  "inps": 180,
+  "detrazioni": 150,
+  "nettoPercepito": 1750,
+  "meseRiferimento": "2025-05",
+  "tipoContratto": "tempo indeterminato"
+}
+
+EXPECTED OUTPUT:
+{
+  "summary": "Contributi INPS inferiori al previsto per la retribuzione",
+  "confidence": 0.89,
+  "riskLevel": "high",
+  "anomalies": [
+    {
+      "type": "inps_incongruence", 
+      "description": "Contributi INPS 7.2% invece del previsto 9.19%",
+      "severity": "critical"
+    }
+  ],
+  "recommendations": [
+    "Verificare applicazione aliquota INPS corretta 9.19%",
+    "Controllare massimali contributivi applicati",
+    "Considerare conguaglio contributi mancanti"
+  ]
+}
+```
+
+## 🎯 LINEE GUIDA PROMPT ENGINEERING
+
+### ✅ BEST PRACTICES
+1. **Specificità Italiana**: Sempre riferimenti normativi italiani 2025
+2. **JSON Rigoroso**: Formato output sempre identico
+3. **No Calcoli**: AI analizza logica, non fa matematica
+4. **Contestualizzazione**: Include tipo cliente/dipendente
+5. **Risk Assessment**: Sempre classificazione rischio
+
+### ❌ COSA EVITARE
+1. **Calcoli Matematici**: "Ricalcola l'IVA"
+2. **Correzioni Dirette**: "Il totale dovrebbe essere..."
+3. **Giudizi Assoluti**: "È sicuramente sbagliato"
+4. **Troppi Dettagli**: Prompt troppo lunghi per HF
+5. **Normative Generiche**: Usare sempre specifiche 2025
+
+### 🔄 VARIANTI PROMPT PER PROVIDER
+
+**GROQ (Completo):**
+- Prompt completo con tutte le normative
+- JSON strutturato dettagliato
+- Analisi multi-livello
+
+**HUGGING FACE (Semplificato):**
+- Prompt ridotto <200 caratteri
+- JSON essenziale
+- Focus su 1-2 anomalie principali
+
+**FALLBACK (Emergenza):**
+- Analisi basata su regole hardcoded
+- Template response pre-definiti
+- Sempre funzionante anche senza AI

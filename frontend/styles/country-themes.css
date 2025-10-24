@@ -1,0 +1,70 @@
+/* country-themes.css - Temi Multi-Paese */
+
+/* VARIABILI COLORI PER PAESE */
+:root[data-country="IT"], 
+:root:not([data-country]) {
+  --country-primary: #009246;    /* Verde Italia */
+  --country-secondary: #CE2B37;  /* Rosso Italia */
+  --country-flag: linear-gradient(90deg, #009246 33%, #FFFFFF 33% 66%, #CE2B37 66%);
+}
+
+:root[data-country="CH"] {
+  --country-primary: #FF0000;    /* Rosso Canton Ticino */
+  --country-secondary: #0000FF;  /* Blu Canton Ticino */
+  --country-flag: linear-gradient(90deg, #FF0000 50%, #0000FF 50%);
+}
+
+/* APPLICA COLORI PAESE AI COMPONENTI SPECIFICI */
+
+/* Link attivi sidebar */
+[data-country="IT"] .bg-indigo-100.dark\:bg-indigo-900\/40 {
+  background-color: rgba(0, 146, 70, 0.15) !important;
+}
+
+[data-country="IT"] .text-indigo-700.dark\:text-indigo-300 {
+  color: #009246 !important;
+}
+
+[data-country="CH"] .bg-indigo-100.dark\:bg-indigo-900\/40 {
+  background-color: rgba(255, 0, 0, 0.15) !important;
+}
+
+[data-country="CH"] .text-indigo-700.dark\:text-indigo-300 {
+  color: #FF0000 !important;
+}
+
+/* Gradiente logo TaxPilot */
+[data-country="IT"] .bg-gradient-to-r.from-indigo-500.via-purple-500.to-pink-500 {
+  background: linear-gradient(45deg, #009246, #CE2B37) !important;
+}
+
+[data-country="CH"] .bg-gradient-to-r.from-indigo-500.via-purple-500.to-pink-500 {
+  background: linear-gradient(45deg, #FF0000, #0000FF) !important;
+}
+
+/* Testo gradiente logo */
+[data-country="IT"] .bg-gradient-to-r.from-indigo-500.via-purple-500.to-pink-500.bg-clip-text {
+  background: linear-gradient(45deg, #009246, #CE2B37) !important;
+  -webkit-background-clip: text !important;
+}
+
+[data-country="CH"] .bg-gradient-to-r.from-indigo-500.via-purple-500.to-pink-500.bg-clip-text {
+  background: linear-gradient(45deg, #FF0000, #0000FF) !important;
+  -webkit-background-clip: text !important;
+}
+
+/* Banner trial */
+[data-country="IT"] .bg-gradient-to-r.from-purple-500.to-pink-500 {
+  background: linear-gradient(45deg, #009246, #CE2B37) !important;
+}
+
+[data-country="CH"] .bg-gradient-to-r.from-purple-500.to-pink-500 {
+  background: linear-gradient(45deg, #FF0000, #0000FF) !important;
+}
+
+/* Transizioni smooth */
+.bg-gradient-to-r,
+.text-indigo-700,
+.bg-indigo-100 {
+  transition: all 300ms ease-in-out;
+}

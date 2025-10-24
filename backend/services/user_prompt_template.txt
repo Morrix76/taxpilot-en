@@ -1,0 +1,7 @@
+Analizza il seguente documento fiscale basandoti sul contesto normativo fornito. Identifica qualsiasi anomalia e rispondi esclusivamente con l'oggetto JSON come da istruzioni di sistema.
+
+### DATI DEL DOCUMENTO ###
+{jsonData}
+
+### CONTESTO NORMATIVO PERTINENTE (ANNO 2025) ###
+{contestoNormativo}

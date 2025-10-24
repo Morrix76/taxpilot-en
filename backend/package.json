@@ -1,0 +1,99 @@
+{
+  "name": "taxPilot-assistant-backend",
+  "version": "2.0.0",
+  "description": "TaxPilot Assistant PRO Backend V2 - Sistema fiscale professionale con normative italiane 2025",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node --import=dotenv/config server.js",
+    "dev": "nodemon --import=dotenv/config server.js",
+    "test": "node services/fiscalValidator.js && echo 'All tests completed'",
+    "test:fiscal": "node services/fiscalValidator.js",
+    "test:xml": "node services/xml-parser.js",
+    "test:ocr": "node services/pdf-ocr.js",
+    "lint": "echo 'Linting skipped - add ESLint if needed'",
+    "clean": "rm -rf temp/* && echo 'Temp files cleaned'",
+    "health": "curl http://localhost:3001/health || echo 'Server not running'"
+  },
+  "dependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "axios": "^1.9.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.10.0",
+    "chardet": "^2.1.0",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.5.0",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "groq-sdk": "^0.23.0",
+    "helmet": "^7.1.0",
+    "iconv-lite": "^0.6.3",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.513.0",
+    "multer": "^1.4.5-lts.1",
+    "papaparse": "^5.5.3",
+    "pdf-parse": "^1.1.1",
+    "pdf2pic": "^3.2.0",
+    "pdfjs-dist": "^5.3.31",
+    "sqlite3": "^5.1.7",
+    "tesseract.js": "^5.0.4",
+    "uuid": "^11.1.0",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "express-list-endpoints": "^7.1.1",
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "ai",
+    "tax",
+    "fiscal",
+    "saas",
+    "italian-tax-law",
+    "fiscal-validation",
+    "normative-2025",
+    "irpef",
+    "iva",
+    "inps",
+    "commercialisti",
+    "fatture-elettroniche",
+    "buste-paga"
+  ],
+  "author": "TaxPilot Assistant PRO Team",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-repo/ai-tax-assistant-backend"
+  },
+  "bugs": {
+    "url": "https://github.com/your-repo/ai-tax-assistant-backend/issues"
+  },
+  "homepage": "https://ai-tax-assistant-pro.com",
+  "config": {
+    "fiscal_validator_version": "v2.0.0",
+    "normative_year": "2025",
+    "supported_regions": [
+      "IT"
+    ],
+    "compliance_standards": [
+      "GDPR",
+      "Italian-Tax-Law-2025"
+    ]
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "temp/*",
+      "*.log"
+    ],
+    "ext": "js,json",
+    "env": {
+      "NODE_ENV": "development"
+    }
+  }
+}

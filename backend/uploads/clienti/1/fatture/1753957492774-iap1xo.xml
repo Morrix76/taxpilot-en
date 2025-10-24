@@ -1,0 +1,87 @@
+<p:FatturaElettronica xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+    xmlns:p="http://ivaservizi.agenziaentrate.gov.it/doc/xsd/fatture/v1.2"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    versione="FPA12"
+    xsi:schemaLocation="http://ivaservizi.agenziaentrate.gov.it/doc/xsd/fatture/v1.2 Schema_del_file_xml_FatturaPA_versione_1.2.xsd">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente>
+        <IdPaese>IT</IdPaese>
+        <IdCodice>12345678901</IdCodice> <!-- Errore 1: Partita IVA cedente non valida -->
+      </IdTrasmittente>
+      <ProgressivoInvio>00005</ProgressivoInvio>
+      <FormatoTrasmissione>FPA12</FormatoTrasmissione>
+      <CodiceDestinatario>0000000</CodiceDestinatario> <!-- Errore 2: Codice destinatario non valido (troppo corto) -->
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>12345678901</IdCodice>
+        </IdFiscaleIVA>
+        <Anagrafica>
+          <Denominazione>ARUBA SPA</Denominazione>
+        </Anagrafica>
+        <RegimeFiscale>RF01</RegimeFiscale>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>VIA SAN CLEMENTE 53</Indirizzo>
+        <CAP>24036</CAP>
+        <Comune>PONTE SAN PIETRO</Comune>
+        <Provincia>BG</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <CodiceFiscale>CRDFRN85M01F205Z</CodiceFiscale> <!-- Errore 3: Codice fiscale non valido -->
+        <Anagrafica>
+          <Nome>Francesco</Nome>
+          <Cognome>Ciardo</Cognome>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Via G. Tenete Adami 13</Indirizzo>
+        <CAP>24040</CAP>
+        <Comune>Arzago d'Adda</Comune>
+        <Provincia>BG</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2025-06-30</Data> <!-- Errore 4: Data futura non ammessa -->
+        <Numero>1000253004347571</Numero>
+        <ImportoTotaleDocumento>6.10</ImportoTotaleDocumento>
+      </DatiGeneraliDocumento>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Casella Standard morrix@pec.it da 29/05/2025 a 29/05/2026</Descrizione>
+        <Quantita>1.00</Quantita>
+        <PrezzoUnitario>5.00</PrezzoUnitario>
+        <PrezzoTotale>5.00</PrezzoTotale>
+        <AliquotaIVA>22.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>22.00</AliquotaIVA>
+        <ImponibileImporto>5.00</ImponibileImporto>
+        <Imposta>1.10</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP02</CondizioniPagamento>
+      <DettaglioPagamento>
+        <ModalitaPagamento>MP08</ModalitaPagamento>
+        <DataScadenzaPagamento>2025-05-30</DataScadenzaPagamento>
+        <ImportoPagamento>6.10</ImportoPagamento>
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

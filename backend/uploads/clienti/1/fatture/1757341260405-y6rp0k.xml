@@ -1,0 +1,55 @@
+<p:FatturaElettronica xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+    xmlns:p="http://ivaservizi.agenziaentrate.gov.it/doc/xsd/fatture/v1.2"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    versione="FPA12">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente><IdPaese>IT</IdPaese><IdCodice>01234567890</IdCodice></IdTrasmittente>
+      <ProgressivoInvio>00002</ProgressivoInvio>
+      <!-- Errore 1: manca <FormatoTrasmissione> -->
+      <CodiceDestinatario>0000000</CodiceDestinatario>
+    </DatiTrasmissione>
+    <!-- Errore 2: mancano tag CedentePrestatore -->
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <CodiceFiscale>09876543210</CodiceFiscale>
+        <Anagrafica><Denominazione>ENTE ZETA</Denominazione></Anagrafica>
+      </DatiAnagrafici>
+      <Sede><Indirizzo>VIA MILANO 1</Indirizzo><CAP>20100</CAP><Comune>MILANO</Comune><Provincia>MI</Provincia><Nazione>IT</Nazione></Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2025-06-23</Data>
+        <Numero>124</Numero>
+      </DatiGeneraliDocumento>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Servizio</Descrizione>
+        <Quantita>1.00</Quantita>
+        <PrezzoUnitario>50.00</PrezzoUnitario>
+        <PrezzoTotale>50.00</PrezzoTotale>
+        <AliquotaIVA>22.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>22.00</AliquotaIVA>
+        <ImponibileImporto>50.00</ImponibileImporto>
+        <Imposta>11.00</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP01</CondizioniPagamento>
+      <DettaglioPagamento>
+        <ModalitaPagamento>MP01</ModalitaPagamento>
+        <DataScadenzaPagamento>2025-07-23</DataScadenzaPagamento>
+        <ImportoPagamento>61.00</ImportoPagamento>
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

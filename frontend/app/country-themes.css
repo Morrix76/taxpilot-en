@@ -1,0 +1,33 @@
+:root {
+  --primary-color: #009246;
+  --secondary-color: #CE2B37;
+  --background-color: #FAFAFA;
+  --surface-color: #FFFFFF;
+  --text-color: #212529;
+  --text-secondary: #6C757D;
+  --gray-50: #FAFAFA;
+  --gray-100: #F5F5F5;
+  --gray-900: #212529;
+  --primary-50: #E8F5E8;
+  --primary-100: #C3E6C3;
+  --primary-600: #007A37;
+  --primary-700: #005D29;
+}
+
+:root[data-country="IT"] {
+  --primary-color: #009246;
+  --secondary-color: #CE2B37;
+  --background-color: #FAFAFA;
+  --surface-color: #FFFFFF;
+  --text-color: #212529;
+  --text-secondary: #6C757D;
+}
+
+:root[data-country="CH"] {
+  --primary-color: #DA291C;
+  --secondary-color: #FFFFFF;
+  --background-color: #FFFFFF;
+  --surface-color: #FEFEFE;
+  --text-color: #2C2C2C;
+  --text-secondary: #666666;
+}

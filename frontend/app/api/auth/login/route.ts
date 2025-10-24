@@ -1,0 +1,32 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+const BACKEND_URL = 'http://localhost:3003/api/auth/login';
+
+/**
+ * Gestisce POST /api/auth/login
+ * Inoltra la richiesta di login al backend Express.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    const backendResponse = await fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await backendResponse.json();
+
+    return NextResponse.json(data, { status: backendResponse.status });
+
+  } catch (error) {
+    console.error(`❌ Errore di connessione al backend per /login:`, error);
+    return NextResponse.json(
+      { error: 'Impossibile connettersi al servizio di autenticazione.' },
+      { status: 503 }
+    );
+  }
+}

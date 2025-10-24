@@ -1,0 +1,254 @@
+/* frontend/app/country-themes.css */
+
+/* ===== BASE THEME VARIABLES ===== */
+:root {
+  /* Colors dinamicamente impostati da CountryContext */
+  --primary-color: #009246;
+  --secondary-color: #CE2B37;
+  --accent-color: #FFFFFF;
+  --background-color: #FAFAFA;
+  --surface-color: #FFFFFF;
+  --text-color: #212529;
+  --text-secondary-color: #6C757D;
+  --success-color: #28A745;
+  --warning-color: #FFC107;
+  --error-color: #DC3545;
+  --flag-gradient: linear-gradient(90deg, #009246 0% 33%, #FFFFFF 33% 66%, #CE2B37 66% 100%);
+  --country-shadow: 0 2px 8px rgba(0, 146, 70, 0.15);
+  
+  /* Spacing e dimensioni */
+  --border-radius: 8px;
+  --border-radius-lg: 12px;
+  --transition-speed: 0.3s;
+  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== TEMA ITALIA ===== */
+:root[data-country="IT"] {
+  --primary-color: #009246;
+  --secondary-color: #CE2B37;
+  --accent-color: #FFFFFF;
+  --flag-gradient: linear-gradient(90deg, #009246 0% 33%, #FFFFFF 33% 66%, #CE2B37 66% 100%);
+  --country-shadow: 0 2px 8px rgba(0, 146, 70, 0.15);
+}
+
+/* ===== TEMA SVIZZERA ===== */
+:root[data-country="CH"] {
+  --primary-color: #DA291C;
+  --secondary-color: #FFFFFF;
+  --accent-color: #E85A52;
+  --flag-gradient: #DA291C;
+  --country-shadow: 0 2px 8px rgba(218, 41, 28, 0.15);
+}
+
+/* ===== COMPONENTI BASE ===== */
+
+/* Pulsanti primari */
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--accent-color);
+  transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.btn-primary:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 85%, black);
+  border-color: color-mix(in srgb, var(--primary-color) 85%, black);
+  box-shadow: var(--country-shadow);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* Pulsanti secondari */
+.btn-secondary {
+  background-color: transparent;
+  border: 2px solid var(--primary-color);
+  color: var(--primary-color);
+  transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.btn-secondary:hover {
+  background-color: var(--primary-color);
+  color: var(--accent-color);
+  box-shadow: var(--country-shadow);
+}
+
+/* Links */
+.link-primary {
+  color: var(--primary-color);
+  transition: color var(--transition-speed) var(--transition-easing);
+}
+
+.link-primary:hover {
+  color: color-mix(in srgb, var(--primary-color) 85%, black);
+  text-decoration: underline;
+}
+
+/* Cards con tema */
+.card-themed {
+  background-color: var(--surface-color);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 20%, transparent);
+  border-radius: var(--border-radius-lg);
+  transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.card-themed:hover {
+  box-shadow: var(--country-shadow);
+  border-color: color-mix(in srgb, var(--primary-color) 30%, transparent);
+}
+
+/* Badge con colori paese */
+.badge-primary {
+  background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
+  color: var(--primary-color);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 30%, transparent);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Header con gradiente bandiera */
+.header-flag-gradient {
+  background: var(--flag-gradient);
+  height: 4px;
+  width: 100%;
+}
+
+/* Specifici per Country Selector */
+.country-selector {
+  position: relative;
+}
+
+.country-selector-trigger {
+  cursor: pointer;
+  user-select: none;
+}
+
+.country-selector-trigger:focus {
+  --ring-color: color-mix(in srgb, var(--primary-color) 50%, transparent);
+  box-shadow: 0 0 0 3px var(--ring-color);
+}
+
+.country-option {
+  cursor: pointer;
+  user-select: none;
+}
+
+.country-option:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 8%, transparent);
+}
+
+/* Flag emoji animations */
+.flag-emoji {
+  display: inline-block;
+  transition: transform var(--transition-speed) var(--transition-easing);
+}
+
+.country-selector-trigger:hover .flag-emoji {
+  transform: scale(1.1);
+}
+
+/* Dropdown animations */
+.country-dropdown {
+  animation: slideDown 0.2s var(--transition-easing);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .country-selector {
+    position: static;
+  }
+  
+  .country-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+  
+  .country-option {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f1f1;
+  }
+}
+
+/* ===== DARK MODE SUPPORT ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-color: #1a1a1a;
+    --surface-color: #2d2d2d;
+    --text-color: #ffffff;
+    --text-secondary-color: #a0a0a0;
+  }
+  
+  .card-themed {
+    background-color: var(--surface-color);
+    border-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
+  }
+  
+  .country-dropdown {
+    background-color: var(--surface-color);
+    border-color: color-mix(in srgb, var(--primary-color) 30%, transparent);
+  }
+  
+  .country-option:hover {
+    background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
+  }
+}
+
+/* ===== ACCESSIBILITY ===== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Focus indicators più evidenti per keyboard navigation */
+.country-selector-trigger:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.country-option:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+/* ===== UTILITY CLASSES ===== */
+.text-primary { color: var(--primary-color); }
+.text-secondary { color: var(--secondary-color); }
+.bg-primary { background-color: var(--primary-color); }
+.bg-secondary { background-color: var(--secondary-color); }
+.border-primary { border-color: var(--primary-color); }
+.shadow-country { box-shadow: var(--country-shadow); }
+
+/* Gradiente per elementi decorativi */
+.flag-gradient {
+  background: var(--flag-gradient);
+}
+
+/* Status indicators con colori paese */
+.status-success { color: var(--success-color); }
+.status-warning { color: var(--warning-color); }  
+.status-error { color: var(--error-color); }
