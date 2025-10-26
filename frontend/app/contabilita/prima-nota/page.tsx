@@ -91,7 +91,7 @@ export default function PrimaNotaPage() {
         setClienti(data.clients || data)
       }
     } catch (error) {
-      console.error('Error loading clients:', error)
+      console.error('Error loading customers:', error)
     }
   }
 
@@ -100,7 +100,7 @@ export default function PrimaNotaPage() {
       setLoading(true)
       
       // TODO: Implementare questi endpoint nel backend
-      console.log('Loading data for client:', clienteId)
+      console.log('Loading data for customer:', clienteId)
       
       // Dati mock per ora
       setMovimenti([])
@@ -109,7 +109,7 @@ export default function PrimaNotaPage() {
         { codice: '1200', descrizione: 'Bank' },
         { codice: '2100', descrizione: 'Suppliers' },
         { codice: '3100', descrizione: 'Customers' },
-        { codice: '5100', descrizione: 'Revenue' },
+        { codice: '5100', descrizione: 'Revenues' },
         { codice: '6100', descrizione: 'Costs' }
       ])
       
@@ -139,15 +139,15 @@ export default function PrimaNotaPage() {
       const totaleAvere = formData.righe.reduce((sum, riga) => sum + (riga.avere || 0), 0)
 
       if (Math.abs(totaleDare - totaleAvere) > 0.01) {
-        alert('The total Debit must be equal to the total Credit')
+        alert('The Debit total must equal the Credit total')
         return
       }
 
       // TODO: Implementare endpoint nel backend
-      console.log('Entry data to save:', formData)
+      console.log('Movement data to save:', formData)
       
       // Mock salvataggio per ora
-      alert('Entry saved successfully (mock)')
+      alert('Movement saved successfully (mock)')
       setShowForm(false)
       resetForm()
       
@@ -162,9 +162,9 @@ export default function PrimaNotaPage() {
       //   setShowForm(false)
       //   caricaDati(clienteSelezionato)
       //   resetForm()
-      //   alert('Entry saved successfully')
+      //   alert('Movimento salvato con successo')
       // } else {
-      //   alert('Error saving')
+      //   alert('Errore nel salvataggio')
       // }
     } catch (error) {
       console.error('Error saving:', error)
@@ -237,7 +237,7 @@ export default function PrimaNotaPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">General Ledger</h1>
-            <p className="text-gray-600">Accounting entry management</p>
+            <p className="text-gray-600">Accounting entries management</p>
           </div>
         </div>
         {clienteSelezionato && (
@@ -250,13 +250,13 @@ export default function PrimaNotaPage() {
 
       {/* Selezione Cliente con select HTML nativo */}
       <div className="mb-6 max-w-md">
-        <Label>Client / Company</Label>
+        <Label>Customer / Company</Label>
         <select 
           value={clienteSelezionato} 
           onChange={(e) => setClienteSelezionato(e.target.value)}
           className="w-full px-4 py-3 border border-gray-300 rounded-md bg-white text-black focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
-          <option value="">Select a client to start</option>
+          <option value="">Select a customer to start</option>
           {clienti.map(c => (
             <option key={c.id} value={c.id.toString()}>
               {c.partitaIva ? (c.company || c.name) : c.name}
@@ -268,7 +268,7 @@ export default function PrimaNotaPage() {
       {!clienteSelezionato && (
         <div className="text-center py-12 text-gray-500">
           <FileText className="mx-auto h-16 w-16 mb-4" />
-          <p>Select a client to manage accounting entries</p>
+          <p>Select a customer to manage accounting entries</p>
         </div>
       )}
 
@@ -368,7 +368,7 @@ export default function PrimaNotaPage() {
               
               <div className="flex justify-between">
                 <Button type="button" variant="outline" onClick={aggiungiRiga}>
-                  Add Line
+                  Add Row
                 </Button>
                 <div className="text-sm">
                   Total Debit: {calcolaTotali().totaleDare.toFixed(2)} | 
