@@ -15,7 +15,12 @@ import authRoutes from './routes/auth.js';
 import documentsRoutes from './routes/documents.js';
 import clientsRouter from './routes/clients.js';
 
-// Configura dotenv
+// --- NUOVA IMPORTAZIONE DB ---
+// Importa la funzione di inizializzazione dal nuovo file db.js
+import { initializeDatabase } from './db.js';
+// -----------------------------
+
+// Configura dotenv (già gestito da --import=dotenv/config nello script npm)
 
 
 // DEBUG: Verifica variabili d'ambiente
@@ -23,6 +28,9 @@ console.log('🔧 DEBUG Environment Variables:');
 console.log('GROQ_API_KEY:', process.env.GROQ_API_KEY ? '✅ PRESENTE' : '❌ MANCANTE');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT);
+console.log('TURSO_DATABASE_URL:', process.env.TURSO_DATABASE_URL ? '✅ PRESENTE' : '❌ MANCANTE');
+console.log('TURSO_AUTH_TOKEN:', process.env.TURSO_AUTH_TOKEN ? '✅ PRESENTE' : '❌ MANCANTE');
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,10 +70,10 @@ app.use('/api/clients', clientsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
-    version: '3.6.0-billing',
+    version: '3.7.0-turso', // Versione aggiornata
     features: ['contabilita', 'analytics', 'piano-conti', 'billing']
   });
 });
@@ -113,9 +121,18 @@ app.use('*', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`
-🚀 Server Tax Assistant v3.7.0-gdpr
+// --- NUOVO AVVIO ASINCRONO ---
+// Dobbiamo usare una funzione asincrona per poter attendere
+// l'inizializzazione del database prima di avviare il server.
+async function startServer() {
+  try {
+    // Inizializza il database (crea tabelle se non esistono)
+    await initializeDatabase();
+    
+    // Avvia il server Express
+    app.listen(PORT, () => {
+      console.log(`
+🚀 Server Tax Assistant v3.7.0-gdpr (TURSO ENABLED)
 📂 Server: http://localhost:${PORT}
 📊 Health: http://localhost:${PORT}/api/health
 💰 Billing: http://localhost:${PORT}/api/billing/status
@@ -123,5 +140,14 @@ app.listen(PORT, () => {
 🧮 Piano Conti: http://localhost:${PORT}/api/piano-conti/1
 📚 Contabilità: http://localhost:${PORT}/api/contabilita/test
 🔒 GDPR Privacy: http://localhost:${PORT}/api/gdpr/privacy-policy
-  `);
-});
+      `);
+    });
+  } catch (err) {
+    console.error("❌ Errore fatale durante l'avvio del server:", err);
+    process.exit(1);
+  }
+}
+
+// Avvia il server
+startServer();
+// -----------------------------
