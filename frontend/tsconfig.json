@@ -9,6 +9,8 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -28,8 +30,7 @@
       {
         "name": "next"
       }
-    ],
-    "strictNullChecks": false
+    ]
   },
   "include": [
     "**/*.ts",
