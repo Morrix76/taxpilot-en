@@ -1,41 +1,31 @@
 import { createClient } from '@libsql/client';
 import dotenv from 'dotenv';
 
-// Assicura che le variabili d'ambiente siano caricate
 dotenv.config();
 
 const url = process.env.TURSO_DATABASE_URL;
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
-// Validazione delle variabili d'ambiente
 if (!url) {
-  console.error("❌ Errore Critico: TURSO_DATABASE_URL non è impostato nelle variabili d'ambiente.");
-  console.log("ℹ️ Aggiungilo al tuo file .env o nelle 'Environment Variables' di Vercel.");
-  process.exit(1); // Esce dall'applicazione se la configurazione DB non è presente
+  console.error("❌ Errore: TURSO_DATABASE_URL non impostato");
+  process.exit(1);
 }
 
 if (!authToken) {
-  console.warn("⚠️ Attenzione: TURSO_AUTH_TOKEN non è impostato.");
-  console.log("ℹ️ Questo è necessario per connettersi a un database Turso remoto (incluso Vercel).");
+  console.warn("⚠️ TURSO_AUTH_TOKEN non impostato");
 }
 
-// Creazione del client Turso
 export const db = createClient({
   url: url,
   authToken: authToken
 });
 
-console.log('✅ Client Turso (libSQL) configurato e pronto.');
+console.log('✅ Client Turso configurato');
 
-/**
- * Inizializza il database creando le tabelle se non esistono.
- * Questo è un buon posto per definire lo schema.
- */
 export async function initializeDatabase() {
   try {
-    console.log('Inizializzazione database (creazione tabelle se non esistono)...');
+    console.log('Inizializzazione database...');
     
-    // Esegui tutte le query di creazione in un batch
     await db.batch([
       `CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,7 +34,7 @@ export async function initializeDatabase() {
         nome TEXT,
         cognome TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );`,
+      )`,
       `CREATE TABLE IF NOT EXISTS clients (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -53,7 +43,7 @@ export async function initializeDatabase() {
         codice_fiscale TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-      );`,
+      )`,
       `CREATE TABLE IF NOT EXISTS documents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         client_id INTEGER NOT NULL,
@@ -68,13 +58,11 @@ export async function initializeDatabase() {
         status TEXT DEFAULT 'pending',
         FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-      );`,
-      // ...Aggiungi qui le altre CREATE TABLE per (piano-conti, settings, billing, ecc.)...
-    ], 'write'); // Esegui in modalità scrittura
+      )`
+    ], 'write');
     
-    console.log('✅ Database inizializzato con successo.');
+    console.log('✅ Database inizializzato');
   } catch (e) {
-    console.error('❌ Errore durante l'inizializzazione del database:', e);
-    // In un ambiente di produzione, potresti voler gestire questo errore in modo più robusto
+    console.error('❌ Errore database:', e);
   }
 }
