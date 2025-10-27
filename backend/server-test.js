@@ -1,5 +1,5 @@
 import express from 'express';
-import { initializeDatabase } from './database/db.js';
+import { initializeDatabase } from './database/db-new.js';
 
 const app = express();
 const PORT = process.env.PORT || 3003;
