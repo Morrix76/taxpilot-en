@@ -2,7 +2,7 @@
   "name": "taxPilot-assistant-backend",
   "version": "2.0.0",
   "description": "TaxPilot Assistant PRO Backend V2 - Sistema fiscale professionale con normative italiane 2025",
-  "main": "server.js",
+  "main": "server-test.js",
   "type": "module",
   "scripts": {
     "start": "node --import=dotenv/config server.js",
