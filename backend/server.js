@@ -16,7 +16,7 @@ import documentsRoutes from './routes/documents.js';
 import clientsRouter from './routes/clients.js';
 
 // Import database
-import { initializeDatabase } from './db.js';
+import { initializeDatabase } from './database/db.js';
 
 dotenv.config();
 
