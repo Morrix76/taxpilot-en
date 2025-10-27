@@ -5,16 +5,6 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-// Import routes
-import contabilitaRoutes from './routes/contabilita.js';
-import analyticsRoutes from './routes/analytics.js';
-import pianoContiRoutes from './routes/piano-conti.js';
-import billingRoutes from './routes/billing.js';
-import settingsRoutes from './routes/settings.js';
-//import authRoutes from './routes/auth.js';
-import documentsRoutes from './routes/documents.js';
-import clientsRouter from './routes/clients.js';
-
 // Import database
 import { initializeDatabase } from './database/db.js';
 
@@ -36,16 +26,6 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Routes
-//app.use('/api/contabilita', contabilitaRoutes);
-//app.use('/api/analytics', analyticsRoutes);
-//app.use('/api/piano-conti', pianoContiRoutes);
-//app.use('/api/billing', billingRoutes);
-//app.use('/api/settings', settingsRoutes);
-//app.use('/api/auth', authRoutes);
-//app.use('/api/documents', documentsRoutes);
-//app.use('/api/clients', clientsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
