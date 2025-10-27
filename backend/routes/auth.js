@@ -7,7 +7,7 @@ import { db } from '../db.js'; // Assicurati che il percorso sia corretto
 
 const router = express.Router();
 
-/**
+/** 
  * =================================================================
  * ESEMPIO DI REFACTORING OBBLIGATORIO per le tue rotte
  * =================================================================
