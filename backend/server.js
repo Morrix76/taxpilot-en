@@ -11,7 +11,7 @@ import analyticsRoutes from './routes/analytics.js';
 import pianoContiRoutes from './routes/piano-conti.js';
 import billingRoutes from './routes/billing.js';
 import settingsRoutes from './routes/settings.js';
-import authRoutes from './routes/auth.js';
+//import authRoutes from './routes/auth.js';
 import documentsRoutes from './routes/documents.js';
 import clientsRouter from './routes/clients.js';
 
@@ -43,7 +43,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 //app.use('/api/piano-conti', pianoContiRoutes);
 //app.use('/api/billing', billingRoutes);
 //app.use('/api/settings', settingsRoutes);
-app.use('/api/auth', authRoutes);
+//app.use('/api/auth', authRoutes);
 //app.use('/api/documents', documentsRoutes);
 //app.use('/api/clients', clientsRouter);
 
