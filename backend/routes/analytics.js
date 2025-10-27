@@ -1,19 +1,16 @@
-// backend/routes/analytics.js
 import express from 'express';
-import { db } from '../database/db.js';
+import { db } from '../db.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Middleware autenticazione
 router.use(authMiddleware);
 
-// GET /api/analytics/overview - Statistiche generali
-router.get('/overview', (req, res) => {
+// GET /api/analytics/overview
+router.get('/overview', async (req, res) => {
   try {
     const { periodo = 'mese' } = req.query;
     
-    // Calcola date in base al periodo
     let dateFilter = '';
     const now = new Date();
     
@@ -36,26 +33,19 @@ router.get('/overview', (req, res) => {
         break;
     }
 
-    // Conta documenti processati
-    const docsStmt = db.prepare(`
-      SELECT COUNT(*) as count 
-      FROM documents 
-      WHERE 1=1 ${dateFilter}
-    `);
-    const documentsProcessed = docsStmt.get()?.count || 0;
+    const docsResult = await db.execute({
+      sql: `SELECT COUNT(*) as count FROM documents WHERE 1=1 ${dateFilter}`,
+      args: []
+    });
+    const documentsProcessed = docsResult.rows[0]?.count || 0;
 
-    // Calcola accuracy media
-    const accuracyStmt = db.prepare(`
-      SELECT AVG(confidence) as avg_accuracy 
-      FROM documents 
-      WHERE confidence IS NOT NULL ${dateFilter}
-    `);
-    const accuracy = accuracyStmt.get()?.avg_accuracy || 95.0;
+    const accuracyResult = await db.execute({
+      sql: `SELECT AVG(confidence) as avg_accuracy FROM documents WHERE confidence IS NOT NULL ${dateFilter}`,
+      args: []
+    });
+    const accuracy = accuracyResult.rows[0]?.avg_accuracy || 95.0;
 
-    // Calcola ricavi (esempio basato su numero documenti)
-    const monthlyRevenue = documentsProcessed * 0.5; // €0.50 per documento
-
-    // Calcola tempo risparmiato (esempio: 5 min per documento)
+    const monthlyRevenue = documentsProcessed * 0.5;
     const timeSaved = documentsProcessed * 5;
 
     res.json({
@@ -70,38 +60,37 @@ router.get('/overview', (req, res) => {
     });
 
   } catch (error) {
-    console.error('Errore analytics overview:', error);
+    console.error('Error analytics overview:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore recupero statistiche',
+      error: 'Error retrieving stats',
       details: error.message
     });
   }
 });
 
-// GET /api/analytics/clienti-top - Top clienti per volume
-router.get('/clienti-top', (req, res) => {
+// GET /api/analytics/clienti-top
+router.get('/clienti-top', async (req, res) => {
   try {
     const { limite = 10 } = req.query;
 
-    const stmt = db.prepare(`
-      SELECT 
-        u.id,
-        u.name as cliente,
-        COUNT(d.id) as documenti,
-        AVG(d.confidence) as accuracy_media,
-        MAX(d.created_at) as ultimo_documento
-      FROM users u
-      LEFT JOIN documents d ON u.id = d.user_id
-      GROUP BY u.id, u.name
-      HAVING documenti > 0
-      ORDER BY documenti DESC
-      LIMIT ?
-    `);
+    const result = await db.execute({
+      sql: `SELECT 
+              u.id,
+              u.name as cliente,
+              COUNT(d.id) as documenti,
+              AVG(d.confidence) as accuracy_media,
+              MAX(d.created_at) as ultimo_documento
+            FROM users u
+            LEFT JOIN documents d ON u.id = d.user_id
+            GROUP BY u.id, u.name
+            HAVING documenti > 0
+            ORDER BY documenti DESC
+            LIMIT ?`,
+      args: [parseInt(limite)]
+    });
 
-    const topClienti = stmt.all(limite);
-
-    const clientiFormatted = topClienti.map(cliente => ({
+    const topClienti = result.rows.map(cliente => ({
       id: cliente.id,
       cliente: cliente.cliente,
       documenti: cliente.documenti,
@@ -111,42 +100,41 @@ router.get('/clienti-top', (req, res) => {
 
     res.json({
       success: true,
-      clienti: clientiFormatted,
-      count: clientiFormatted.length
+      clienti: topClienti,
+      count: topClienti.length
     });
 
   } catch (error) {
-    console.error('Errore top clienti:', error);
+    console.error('Error top clients:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore recupero top clienti',
+      error: 'Error retrieving top clients',
       details: error.message
     });
   }
 });
 
-// GET /api/analytics/attivita - Timeline attività recenti
-router.get('/attivita', (req, res) => {
+// GET /api/analytics/attivita
+router.get('/attivita', async (req, res) => {
   try {
     const { limite = 20 } = req.query;
 
-    const stmt = db.prepare(`
-      SELECT 
-        d.id,
-        d.filename,
-        d.status,
-        d.confidence,
-        d.created_at,
-        u.name as cliente
-      FROM documents d
-      LEFT JOIN users u ON d.user_id = u.id
-      ORDER BY d.created_at DESC
-      LIMIT ?
-    `);
+    const result = await db.execute({
+      sql: `SELECT 
+              d.id,
+              d.filename,
+              d.status,
+              d.confidence,
+              d.created_at,
+              u.name as cliente
+            FROM documents d
+            LEFT JOIN users u ON d.user_id = u.id
+            ORDER BY d.created_at DESC
+            LIMIT ?`,
+      args: [parseInt(limite)]
+    });
 
-    const attivita = stmt.all(limite);
-
-    const attivitaFormatted = attivita.map(item => ({
+    const attivita = result.rows.map(item => ({
       id: item.id,
       documento: item.filename,
       cliente: item.cliente || 'N/A',
@@ -158,46 +146,39 @@ router.get('/attivita', (req, res) => {
 
     res.json({
       success: true,
-      attivita: attivitaFormatted,
-      count: attivitaFormatted.length
+      attivita,
+      count: attivita.length
     });
 
   } catch (error) {
-    console.error('Errore timeline attività:', error);
+    console.error('Error activity timeline:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore recupero attività',
+      error: 'Error retrieving activity',
       details: error.message
     });
   }
 });
 
-// GET /api/analytics/trend - Dati per grafici trend
-router.get('/trend', (req, res) => {
+// GET /api/analytics/trend
+router.get('/trend', async (req, res) => {
   try {
     const { periodo = 'mese', tipo = 'documenti' } = req.query;
     
-    let groupBy, dateFormat;
+    let groupBy;
     switch(periodo) {
       case 'settimana':
-        groupBy = `strftime('%Y-%m-%d', created_at)`;
-        dateFormat = '%Y-%m-%d';
-        break;
       case 'mese':
         groupBy = `strftime('%Y-%m-%d', created_at)`;
-        dateFormat = '%Y-%m-%d';
         break;
       case 'trimestre':
         groupBy = `strftime('%Y-%W', created_at)`;
-        dateFormat = '%Y-W%W';
         break;
       case 'anno':
         groupBy = `strftime('%Y-%m', created_at)`;
-        dateFormat = '%Y-%m';
         break;
       default:
         groupBy = `strftime('%Y-%m-%d', created_at)`;
-        dateFormat = '%Y-%m-%d';
     }
 
     let query;
@@ -225,10 +206,9 @@ router.get('/trend', (req, res) => {
       `;
     }
 
-    const stmt = db.prepare(query);
-    const dati = stmt.all();
+    const result = await db.execute({ sql: query, args: [] });
 
-    const trendFormatted = dati.map(item => ({
+    const trend = result.rows.map(item => ({
       data: item.periodo,
       valore: tipo === 'accuracy' ? parseFloat(item.valore.toFixed(1)) : item.valore,
       count: item.count || item.valore
@@ -236,65 +216,61 @@ router.get('/trend', (req, res) => {
 
     res.json({
       success: true,
-      trend: trendFormatted,
+      trend,
       periodo,
       tipo,
-      count: trendFormatted.length
+      count: trend.length
     });
 
   } catch (error) {
-    console.error('Errore trend analytics:', error);
+    console.error('Error trend:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore recupero trend',
+      error: 'Error retrieving trend',
       details: error.message
     });
   }
 });
 
-// GET /api/analytics/report - Report completo
-router.get('/report', (req, res) => {
+// GET /api/analytics/report
+router.get('/report', async (req, res) => {
   try {
     const { periodo = 'mese' } = req.query;
 
-    // Ottieni tutte le statistiche
-    const overviewStmt = db.prepare(`
-      SELECT 
-        COUNT(*) as totale_documenti,
-        AVG(confidence) as accuracy_media,
-        COUNT(DISTINCT user_id) as clienti_attivi
-      FROM documents 
-      WHERE created_at >= date('now', '-30 days')
-    `);
+    const overviewResult = await db.execute({
+      sql: `SELECT 
+              COUNT(*) as totale_documenti,
+              AVG(confidence) as accuracy_media,
+              COUNT(DISTINCT user_id) as clienti_attivi
+            FROM documents 
+            WHERE created_at >= date('now', '-30 days')`,
+      args: []
+    });
 
-    const overview = overviewStmt.get();
+    const overview = overviewResult.rows[0];
 
-    // Distribuzione per tipo documento
-    const tipiStmt = db.prepare(`
-      SELECT 
-        tipo_documento,
-        COUNT(*) as count
-      FROM documents 
-      WHERE created_at >= date('now', '-30 days')
-      GROUP BY tipo_documento
-      ORDER BY count DESC
-    `);
+    const tipiResult = await db.execute({
+      sql: `SELECT 
+              tipo_documento,
+              COUNT(*) as count
+            FROM documents 
+            WHERE created_at >= date('now', '-30 days')
+            GROUP BY tipo_documento
+            ORDER BY count DESC`,
+      args: []
+    });
 
-    const tipi = tipiStmt.all();
-
-    // Performance per ora del giorno
-    const oreStmt = db.prepare(`
-      SELECT 
-        strftime('%H', created_at) as ora,
-        COUNT(*) as documenti,
-        AVG(confidence) as accuracy
-      FROM documents 
-      WHERE created_at >= date('now', '-7 days')
-      GROUP BY strftime('%H', created_at)
-      ORDER BY ora
-    `);
-
-    const performanceOre = oreStmt.all();
+    const oreResult = await db.execute({
+      sql: `SELECT 
+              strftime('%H', created_at) as ora,
+              COUNT(*) as documenti,
+              AVG(confidence) as accuracy
+            FROM documents 
+            WHERE created_at >= date('now', '-7 days')
+            GROUP BY strftime('%H', created_at)
+            ORDER BY ora`,
+      args: []
+    });
 
     res.json({
       success: true,
@@ -304,8 +280,8 @@ router.get('/report', (req, res) => {
           accuracyMedia: overview.accuracy_media ? parseFloat(overview.accuracy_media.toFixed(1)) : 0,
           clientiAttivi: overview.clienti_attivi || 0
         },
-        distribuzionePerTipo: tipi,
-        performancePerOra: performanceOre.map(item => ({
+        distribuzionePerTipo: tipiResult.rows,
+        performancePerOra: oreResult.rows.map(item => ({
           ora: item.ora + ':00',
           documenti: item.documenti,
           accuracy: item.accuracy ? parseFloat(item.accuracy.toFixed(1)) : 0
@@ -316,10 +292,10 @@ router.get('/report', (req, res) => {
     });
 
   } catch (error) {
-    console.error('Errore report analytics:', error);
+    console.error('Error report:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore generazione report',
+      error: 'Error generating report',
       details: error.message
     });
   }
