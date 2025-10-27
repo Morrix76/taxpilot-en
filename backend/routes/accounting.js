@@ -1,6 +1,5 @@
 // backend/routes/accounting.js
 import express from 'express';
-import contabilityService from '../services/contabilityService.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
