@@ -3,10 +3,10 @@ import { db } from '../database/db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ 
         success: false,
@@ -14,22 +14,27 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-    const token = authHeader.substring(7); // Rimuove "Bearer "
+    const token = authHeader.substring(7);
     
     // Verifica token JWT
     const decoded = jwt.verify(token, JWT_SECRET);
     
     // Recupera utente dal database con info piano
-    const user = db.prepare(`
-      SELECT 
-        u.id, u.email, u.name, 
-        u.trial_end_date, u.documents_used, u.documents_limit,
-        u.piano_data_fine, u.documenti_utilizzati,
-        p.documenti_mensili
-      FROM users u
-      LEFT JOIN piani p ON u.piano_id = p.id
-      WHERE u.id = ?
-    `).get(decoded.id);
+    const result = await db.execute({
+      sql: `
+        SELECT 
+          u.id, u.email, u.name, 
+          u.trial_end_date, u.documents_used, u.documents_limit,
+          u.piano_data_fine, u.documenti_utilizzati,
+          p.documenti_mensili
+        FROM users u
+        LEFT JOIN piani p ON u.piano_id = p.id
+        WHERE u.id = ?
+      `,
+      args: [decoded.id]
+    });
+
+    const user = result.rows[0];
 
     if (!user) {
       return res.status(404).json({ 
@@ -48,7 +53,6 @@ const authMiddleware = (req, res, next) => {
       daysLeft = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
       trialActive = now < trialEnd;
     } else if (user.trial_end_date) {
-      // Fallback per vecchio schema
       const now = new Date();
       const trialEnd = new Date(user.trial_end_date);
       daysLeft = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
@@ -61,7 +65,8 @@ const authMiddleware = (req, res, next) => {
       email: user.email,
       name: user.name
     };
-    req.userId = user.id; // Per compatibilità 
+    
+    req.userId = user.id;
     req.userEmail = user.email;
     req.trialActive = trialActive;
     req.daysLeft = Math.max(0, daysLeft);
