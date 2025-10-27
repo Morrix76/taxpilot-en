@@ -1412,7 +1412,7 @@ router.get('/liquidazioni/dashboard', authMiddleware, async (req, res) => {
     const stats = { totale_iva_anno: liquidazioni.reduce((s, l) => s + l.iva_da_versare, 0), media_mensile: liquidazioni.reduce((s, l) => s + l.iva_da_versare, 0) / liquidazioni.length, totale_documenti: liquidazioni.reduce((s, l) => s + l.documenti, 0), mesi_con_credito: liquidazioni.filter(l => l.iva_da_versare < 0).length, mesi_con_debito: liquidazioni.filter(l => l.iva_da_versare > 0).length };
     res.json({ success: true, dashboard: { liquidazioni_recenti: liquidazioni.reverse(), statistiche: stats, anno_riferimento: annoCorrente, ultimo_aggiornamento: new Date().toISOString() }});
     console.log(`✅ Dashboard generata: €${stats.totale_iva_anno.toFixed(2)} IVA totale anno`);
-  } catch (error)
+  } catch (error) {
     console.error('💥 Errore dashboard liquidazioni:', error);
     res.status(500).json({ error: 'Errore durante generazione dashboard', details: error.message });
   }
