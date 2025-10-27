@@ -1,89 +1,34 @@
-// backend/routes/settings.js
 import express from 'express';
-import { db } from '../database/db.js';
+import { db } from '../db.js';
 import authMiddleware from '../middleware/authMiddleware.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
-// Middleware autenticazione
 router.use(authMiddleware);
 
-// Database setup per settings
-function initSettingsTables() {
-  // Aggiungi colonne settings alla tabella users se non esistono
-  const addSettingsColumns = `
-    ALTER TABLE users ADD COLUMN settings_preferences TEXT DEFAULT '{}';
-    ALTER TABLE users ADD COLUMN settings_ai TEXT DEFAULT '{}';
-    ALTER TABLE users ADD COLUMN settings_notifications TEXT DEFAULT '{}';
-    ALTER TABLE users ADD COLUMN settings_security TEXT DEFAULT '{}';
-    ALTER TABLE users ADD COLUMN nome_studio TEXT;
-    ALTER TABLE users ADD COLUMN telefono TEXT;
-    ALTER TABLE users ADD COLUMN partita_iva TEXT;
-    ALTER TABLE users ADD COLUMN codice_fiscale TEXT;
-    ALTER TABLE users ADD COLUMN indirizzo TEXT;
-    ALTER TABLE users ADD COLUMN sito_web TEXT;
-  `;
-
-  try {
-    // Controlla se le colonne esistono già
-    const tableInfo = db.prepare("PRAGMA table_info(users)").all();
-    const existingColumns = tableInfo.map(col => col.name);
-    
-    const newColumns = [
-      { name: 'settings_preferences', type: 'TEXT DEFAULT "{}"' },
-      { name: 'settings_ai', type: 'TEXT DEFAULT "{}"' },
-      { name: 'settings_notifications', type: 'TEXT DEFAULT "{}"' },
-      { name: 'settings_security', type: 'TEXT DEFAULT "{}"' },
-      { name: 'nome_studio', type: 'TEXT' },
-      { name: 'telefono', type: 'TEXT' },
-      { name: 'partita_iva', type: 'TEXT' },
-      { name: 'codice_fiscale', type: 'TEXT' },
-      { name: 'indirizzo', type: 'TEXT' },
-      { name: 'sito_web', type: 'TEXT' }
-    ];
-    
-    for (const column of newColumns) {
-      if (!existingColumns.includes(column.name)) {
-        try {
-          const alterSQL = `ALTER TABLE users ADD COLUMN ${column.name} ${column.type}`;
-          db.exec(alterSQL);
-          console.log(`✅ Colonna settings aggiunta: ${column.name}`);
-        } catch (error) {
-          // Ignora errori se colonna esiste già
-        }
-      }
-    }
-    
-  } catch (error) {
-    console.error('Errore setup settings:', error);
-  }
-}
-
-// Inizializza colonne
-initSettingsTables();
-
-// GET /api/settings/profile - Dati profilo utente
-router.get('/profile', (req, res) => {
+// GET /api/settings/profile
+router.get('/profile', async (req, res) => {
   try {
     const userId = req.user.id;
     
-    const stmt = db.prepare(`
-      SELECT 
-        id, email, name,
-        nome_studio, telefono, partita_iva, 
-        codice_fiscale, indirizzo, sito_web,
-        created_at
-      FROM users 
-      WHERE id = ?
-    `);
+    const result = await db.execute({
+      sql: `SELECT 
+              id, email, name,
+              nome_studio, telefono, partita_iva, 
+              codice_fiscale, indirizzo, sito_web,
+              created_at
+            FROM users 
+            WHERE id = ?`,
+      args: [userId]
+    });
     
-    const user = stmt.get(userId);
+    const user = result.rows[0];
     
     if (!user) {
       return res.status(404).json({
         success: false,
-        error: 'Utente non trovato'
+        error: 'User not found'
       });
     }
 
@@ -106,16 +51,16 @@ router.get('/profile', (req, res) => {
     });
 
   } catch (error) {
-    console.error('Errore recupero profilo:', error);
+    console.error('Error retrieving profile:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore recupero profilo'
+      error: 'Error retrieving profile'
     });
   }
 });
 
-// PUT /api/settings/profile - Aggiorna profilo
-router.put('/profile', (req, res) => {
+// PUT /api/settings/profile
+router.put('/profile', async (req, res) => {
   try {
     const userId = req.user.id;
     const {
@@ -128,54 +73,51 @@ router.put('/profile', (req, res) => {
       sitoWeb
     } = req.body;
 
-    const stmt = db.prepare(`
-      UPDATE users SET 
-        name = ?,
-        nome_studio = ?,
-        telefono = ?,
-        partita_iva = ?,
-        codice_fiscale = ?,
-        indirizzo = ?,
-        sito_web = ?,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    stmt.run(
-      name || null,
-      nomeStudio || null,
-      telefono || null,
-      partitaIva || null,
-      codiceFiscale || null,
-      indirizzo || null,
-      sitoWeb || null,
-      userId
-    );
+    await db.execute({
+      sql: `UPDATE users SET 
+              name = ?,
+              nome_studio = ?,
+              telefono = ?,
+              partita_iva = ?,
+              codice_fiscale = ?,
+              indirizzo = ?,
+              sito_web = ?
+            WHERE id = ?`,
+      args: [
+        name || null,
+        nomeStudio || null,
+        telefono || null,
+        partitaIva || null,
+        codiceFiscale || null,
+        indirizzo || null,
+        sitoWeb || null,
+        userId
+      ]
+    });
 
     res.json({
       success: true,
-      message: 'Profilo aggiornato con successo'
+      message: 'Profile updated successfully'
     });
 
   } catch (error) {
-    console.error('Errore aggiornamento profilo:', error);
+    console.error('Error updating profile:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore aggiornamento profilo'
+      error: 'Error updating profile'
     });
   }
 });
 
-// GET /api/settings/preferences - Preferenze utente
-router.get('/preferences', (req, res) => {
+// GET /api/settings/preferences
+router.get('/preferences', async (req, res) => {
   try {
     const userId = req.user.id;
     
-    const stmt = db.prepare(`
-      SELECT settings_preferences FROM users WHERE id = ?
-    `);
-    
-    const result = stmt.get(userId);
+    const result = await db.execute({
+      sql: `SELECT settings_preferences FROM users WHERE id = ?`,
+      args: [userId]
+    });
     
     let preferences = {
       lingua: 'IT Italiano',
@@ -185,12 +127,12 @@ router.get('/preferences', (req, res) => {
       tema: 'Chiaro'
     };
 
-    if (result?.settings_preferences) {
+    if (result.rows[0]?.settings_preferences) {
       try {
-        const saved = JSON.parse(result.settings_preferences);
+        const saved = JSON.parse(result.rows[0].settings_preferences);
         preferences = { ...preferences, ...saved };
       } catch (e) {
-        console.error('Errore parsing preferences:', e);
+        console.error('Error parsing preferences:', e);
       }
     }
 
@@ -200,53 +142,48 @@ router.get('/preferences', (req, res) => {
     });
 
   } catch (error) {
-    console.error('Errore recupero preferenze:', error);
+    console.error('Error retrieving preferences:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore recupero preferenze'
+      error: 'Error retrieving preferences'
     });
   }
 });
 
-// PUT /api/settings/preferences - Aggiorna preferenze
-router.put('/preferences', (req, res) => {
+// PUT /api/settings/preferences
+router.put('/preferences', async (req, res) => {
   try {
     const userId = req.user.id;
     const preferences = req.body;
 
-    const stmt = db.prepare(`
-      UPDATE users SET 
-        settings_preferences = ?,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    stmt.run(JSON.stringify(preferences), userId);
+    await db.execute({
+      sql: `UPDATE users SET settings_preferences = ? WHERE id = ?`,
+      args: [JSON.stringify(preferences), userId]
+    });
 
     res.json({
       success: true,
-      message: 'Preferenze aggiornate con successo'
+      message: 'Preferences updated successfully'
     });
 
   } catch (error) {
-    console.error('Errore aggiornamento preferenze:', error);
+    console.error('Error updating preferences:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore aggiornamento preferenze'
+      error: 'Error updating preferences'
     });
   }
 });
 
-// GET /api/settings/ai - Impostazioni AI
-router.get('/ai', (req, res) => {
+// GET /api/settings/ai
+router.get('/ai', async (req, res) => {
   try {
     const userId = req.user.id;
     
-    const stmt = db.prepare(`
-      SELECT settings_ai FROM users WHERE id = ?
-    `);
-    
-    const result = stmt.get(userId);
+    const result = await db.execute({
+      sql: `SELECT settings_ai FROM users WHERE id = ?`,
+      args: [userId]
+    });
     
     let aiSettings = {
       autoElaborazione: true,
@@ -255,12 +192,12 @@ router.get('/ai', (req, res) => {
       analisiAvanzata: false
     };
 
-    if (result?.settings_ai) {
+    if (result.rows[0]?.settings_ai) {
       try {
-        const saved = JSON.parse(result.settings_ai);
+        const saved = JSON.parse(result.rows[0].settings_ai);
         aiSettings = { ...aiSettings, ...saved };
       } catch (e) {
-        console.error('Errore parsing AI settings:', e);
+        console.error('Error parsing AI settings:', e);
       }
     }
 
@@ -270,53 +207,48 @@ router.get('/ai', (req, res) => {
     });
 
   } catch (error) {
-    console.error('Errore recupero impostazioni AI:', error);
+    console.error('Error retrieving AI settings:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore recupero impostazioni AI'
+      error: 'Error retrieving AI settings'
     });
   }
 });
 
-// PUT /api/settings/ai - Aggiorna impostazioni AI
-router.put('/ai', (req, res) => {
+// PUT /api/settings/ai
+router.put('/ai', async (req, res) => {
   try {
     const userId = req.user.id;
     const aiSettings = req.body;
 
-    const stmt = db.prepare(`
-      UPDATE users SET 
-        settings_ai = ?,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    stmt.run(JSON.stringify(aiSettings), userId);
+    await db.execute({
+      sql: `UPDATE users SET settings_ai = ? WHERE id = ?`,
+      args: [JSON.stringify(aiSettings), userId]
+    });
 
     res.json({
       success: true,
-      message: 'Impostazioni AI aggiornate con successo'
+      message: 'AI settings updated successfully'
     });
 
   } catch (error) {
-    console.error('Errore aggiornamento impostazioni AI:', error);
+    console.error('Error updating AI settings:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore aggiornamento impostazioni AI'
+      error: 'Error updating AI settings'
     });
   }
 });
 
-// GET /api/settings/notifications - Impostazioni notifiche
-router.get('/notifications', (req, res) => {
+// GET /api/settings/notifications
+router.get('/notifications', async (req, res) => {
   try {
     const userId = req.user.id;
     
-    const stmt = db.prepare(`
-      SELECT settings_notifications FROM users WHERE id = ?
-    `);
-    
-    const result = stmt.get(userId);
+    const result = await db.execute({
+      sql: `SELECT settings_notifications FROM users WHERE id = ?`,
+      args: [userId]
+    });
     
     let notifications = {
       documentiElaborati: true,
@@ -327,12 +259,12 @@ router.get('/notifications', (req, res) => {
       push: false
     };
 
-    if (result?.settings_notifications) {
+    if (result.rows[0]?.settings_notifications) {
       try {
-        const saved = JSON.parse(result.settings_notifications);
+        const saved = JSON.parse(result.rows[0].settings_notifications);
         notifications = { ...notifications, ...saved };
       } catch (e) {
-        console.error('Errore parsing notifications:', e);
+        console.error('Error parsing notifications:', e);
       }
     }
 
@@ -342,44 +274,40 @@ router.get('/notifications', (req, res) => {
     });
 
   } catch (error) {
-    console.error('Errore recupero notifiche:', error);
+    console.error('Error retrieving notifications:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore recupero notifiche'
+      error: 'Error retrieving notifications'
     });
   }
 });
 
-// PUT /api/settings/notifications - Aggiorna notifiche
-router.put('/notifications', (req, res) => {
+// PUT /api/settings/notifications
+router.put('/notifications', async (req, res) => {
   try {
     const userId = req.user.id;
     const notifications = req.body;
 
-    const stmt = db.prepare(`
-      UPDATE users SET 
-        settings_notifications = ?,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    stmt.run(JSON.stringify(notifications), userId);
+    await db.execute({
+      sql: `UPDATE users SET settings_notifications = ? WHERE id = ?`,
+      args: [JSON.stringify(notifications), userId]
+    });
 
     res.json({
       success: true,
-      message: 'Impostazioni notifiche aggiornate con successo'
+      message: 'Notifications updated successfully'
     });
 
   } catch (error) {
-    console.error('Errore aggiornamento notifiche:', error);
+    console.error('Error updating notifications:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore aggiornamento notifiche'
+      error: 'Error updating notifications'
     });
   }
 });
 
-// POST /api/settings/change-password - Cambia password
+// POST /api/settings/change-password
 router.post('/change-password', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -388,53 +316,49 @@ router.post('/change-password', async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({
         success: false,
-        error: 'Password attuale e nuova password richieste'
+        error: 'Current and new password required'
       });
     }
 
-    // Verifica password attuale
-    const userStmt = db.prepare('SELECT password_hash FROM users WHERE id = ?');
-    const user = userStmt.get(userId);
+    const result = await db.execute({
+      sql: 'SELECT password FROM users WHERE id = ?',
+      args: [userId]
+    });
+
+    const user = result.rows[0];
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        error: 'Utente non trovato'
+        error: 'User not found'
       });
     }
 
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
     if (!isValidPassword) {
       return res.status(400).json({
         success: false,
-        error: 'Password attuale non corretta'
+        error: 'Current password incorrect'
       });
     }
 
-    // Hash nuova password
-    const saltRounds = 10;
-    const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
 
-    // Aggiorna password
-    const updateStmt = db.prepare(`
-      UPDATE users SET 
-        password_hash = ?,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    updateStmt.run(newPasswordHash, userId);
+    await db.execute({
+      sql: `UPDATE users SET password = ? WHERE id = ?`,
+      args: [newPasswordHash, userId]
+    });
 
     res.json({
       success: true,
-      message: 'Password cambiata con successo'
+      message: 'Password changed successfully'
     });
 
   } catch (error) {
-    console.error('Errore cambio password:', error);
+    console.error('Error changing password:', error);
     res.status(500).json({
       success: false,
-      error: 'Errore cambio password'
+      error: 'Error changing password'
     });
   }
 });
