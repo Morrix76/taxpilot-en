@@ -1428,53 +1428,6 @@ router.stack.forEach(layer => {
     console.log(`  ${Object.keys(layer.route.methods).join(',').toUpperCase()} ${layer.route.path}`);
   }
 });
-// --- INIZIO CODICE DA AGGIUNGERE ---
-/**
- * GET /api/documents/:id/content
- * Restituisce il contenuto grezzo di un file XML associato al documento.
- * *** CONVERTED: This block was duplicated and buggy. It has been converted to async and fixed. ***
- */
-router.get('/:id/content', async (req, res) => { // *** CONVERTED: Added async ***
-  try {
-    const documentId = req.params.id;
-
-    // Cerca il documento nel database per ottenere il percorso file.
-    // *** CONVERTED: db.prepare().get() to await db.execute() ***
-    // *** FIXED: Changed 'filePath' to 'file_path' to match schema ***
-    const docResult = await db.execute({
-      sql: "SELECT file_path FROM documents WHERE id = ?",
-      args: [documentId]
-    });
-    const document = docResult.rows[0];
-
-    if (!document || !document.file_path) {
-      return res.status(404).json({ error: 'Documento non trovato nel database.' });
-    }
-
-    // *** FIXED: Construct full path, same as other routes ***
-    const filePath = path.join(__dirname, '../uploads', document.file_path);
-
-    // *** CONVERTED: fs.existsSync to async fs.access ***
-    // Verifica esistenza file fisico.
-    try {
-      await fs.access(filePath);
-    } catch (fsError) {
-      return res.status(404).json({ error: 'File fisico non trovato sul server.' });
-    }
-
-    // *** CONVERTED: fs.readFileSync to async fs.readFile ***
-    // Leggi contenuto XML.
-    const xmlContent = await fs.readFile(filePath, 'utf-8');
-
-    // Rispondi come XML.
-    res.header('Content-Type', 'application/xml');
-    res.send(xmlContent);
-
-  } catch (error) {
-    console.error(`Errore nel servire il contenuto del documento: ${error.message}`);
-    res.status(500).json({ error: 'Errore interno del server.' });
-  }
-});
-// --- FINE CODICE DA AGGIUNGERE ---
 
 export default router;
+
