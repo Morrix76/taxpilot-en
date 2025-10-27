@@ -38,14 +38,14 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
-app.use('/api/contabilita', contabilitaRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/piano-conti', pianoContiRoutes);
-app.use('/api/billing', billingRoutes);
-app.use('/api/settings', settingsRoutes);
+//app.use('/api/contabilita', contabilitaRoutes);
+//app.use('/api/analytics', analyticsRoutes);
+//app.use('/api/piano-conti', pianoContiRoutes);
+//app.use('/api/billing', billingRoutes);
+//app.use('/api/settings', settingsRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/documents', documentsRoutes);
-app.use('/api/clients', clientsRouter);
+//app.use('/api/documents', documentsRoutes);
+//app.use('/api/clients', clientsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
