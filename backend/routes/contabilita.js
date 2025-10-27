@@ -3,16 +3,16 @@ import { db } from '../db.js';
 
 const router = express.Router();
 
-// GET /api/contabilita/status - Verifica se la contabilità è inizializzata
-router.get('/status', (req, res) => {
+// GET /api/contabilita/status
+router.get('/status', async (req, res) => {
   try {
-    // Controlla se esistono le tabelle della contabilità
-    const checkTables = db.prepare(`
-      SELECT name FROM sqlite_master 
-      WHERE type='table' AND name IN ('movimenti', 'registri_iva', 'piano_conti')
-    `);
+    const result = await db.execute({
+      sql: `SELECT name FROM sqlite_master 
+            WHERE type='table' AND name IN ('movimenti', 'registri_iva', 'piano_conti')`,
+      args: []
+    });
     
-    const tables = checkTables.all();
+    const tables = result.rows;
     const initialized = tables.length >= 3;
     
     res.json({ 
@@ -21,20 +21,19 @@ router.get('/status', (req, res) => {
       tables: tables.map(t => t.name)
     });
   } catch (error) {
-    console.error('Errore verifica status contabilità:', error);
+    console.error('Error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Errore verifica status contabilità' 
+      error: 'Status check failed' 
     });
   }
 });
 
-// POST /api/contabilita/initialize - Inizializza le tabelle della contabilità
-router.post('/initialize', (req, res) => {
+// POST /api/contabilita/initialize
+router.post('/initialize', async (req, res) => {
   try {
-    // Tabella movimenti prima nota
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS movimenti (
+    await db.batch([
+      `CREATE TABLE IF NOT EXISTS movimenti (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         data DATE NOT NULL,
         numero VARCHAR(50) NOT NULL,
@@ -42,12 +41,8 @@ router.post('/initialize', (req, res) => {
         totale DECIMAL(10,2) NOT NULL DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Tabella righe movimenti (partita doppia)
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS righe_movimenti (
+      )`,
+      `CREATE TABLE IF NOT EXISTS righe_movimenti (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         movimento_id INTEGER NOT NULL,
         conto_codice VARCHAR(10) NOT NULL,
@@ -55,12 +50,8 @@ router.post('/initialize', (req, res) => {
         dare DECIMAL(10,2) DEFAULT 0,
         avere DECIMAL(10,2) DEFAULT 0,
         FOREIGN KEY (movimento_id) REFERENCES movimenti(id) ON DELETE CASCADE
-      )
-    `);
-
-    // Tabella registri IVA
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS registri_iva (
+      )`,
+      `CREATE TABLE IF NOT EXISTS registri_iva (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         data DATE NOT NULL,
         numero VARCHAR(50) NOT NULL,
@@ -77,12 +68,8 @@ router.post('/initialize', (req, res) => {
         documento_path TEXT,
         note TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Tabella piano dei conti
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS piano_conti (
+      )`,
+      `CREATE TABLE IF NOT EXISTS piano_conti (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         codice VARCHAR(10) UNIQUE NOT NULL,
         descrizione VARCHAR(255) NOT NULL,
@@ -95,20 +82,15 @@ router.post('/initialize', (req, res) => {
         movimento BOOLEAN DEFAULT 1,
         note TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+      )`
+    ], 'write');
 
-    // Inserisce piano conti base se non esiste
-    const checkConti = db.prepare('SELECT COUNT(*) as count FROM piano_conti');
-    const contiCount = checkConti.get();
+    const checkConti = await db.execute({
+      sql: 'SELECT COUNT(*) as count FROM piano_conti',
+      args: []
+    });
     
-    if (contiCount.count === 0) {
-      const insertConto = db.prepare(`
-        INSERT INTO piano_conti (codice, descrizione, tipo, categoria, mastro, saldo)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-
-      // Piano conti base
+    if (checkConti.rows[0].count === 0) {
       const contiBase = [
         ['110001', 'Cassa', 'attivo', 'Liquidità', '11 - Disponibilità liquide', 0],
         ['120001', 'Banca c/c', 'attivo', 'Liquidità', '12 - Depositi bancari', 0],
@@ -121,82 +103,79 @@ router.post('/initialize', (req, res) => {
         ['520001', 'Costi servizi', 'costo', 'Costi', '52 - Costi per servizi', 0]
       ];
 
-      contiBase.forEach(conto => {
-        insertConto.run(...conto);
-      });
+      for (const conto of contiBase) {
+        await db.execute({
+          sql: `INSERT INTO piano_conti (codice, descrizione, tipo, categoria, mastro, saldo)
+                VALUES (?, ?, ?, ?, ?, ?)`,
+          args: conto
+        });
+      }
     }
 
     res.json({ 
       success: true, 
-      message: 'Contabilità inizializzata con successo',
+      message: 'Accounting initialized successfully',
       tables_created: ['movimenti', 'righe_movimenti', 'registri_iva', 'piano_conti']
     });
 
   } catch (error) {
-    console.error('Errore inizializzazione contabilità:', error);
+    console.error('Init error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Errore durante l\'inizializzazione della contabilità',
+      error: 'Initialization failed',
       details: error.message
     });
   }
 });
 
-// GET /api/contabilita/stats/:clienteId - Statistiche contabilità per cliente
-router.get('/stats/:clienteId', (req, res) => {
+// GET /api/contabilita/stats/:clienteId
+router.get('/stats/:clienteId', async (req, res) => {
   try {
     const { clienteId } = req.params;
     
-    // Conta movimenti del mese corrente
-    const movimentiMese = db.prepare(`
-      SELECT COUNT(*) as count 
-      FROM movimenti 
-      WHERE strftime('%Y-%m', data) = strftime('%Y-%m', 'now')
-    `).get();
+    const movimentiMese = await db.execute({
+      sql: `SELECT COUNT(*) as count FROM movimenti 
+            WHERE strftime('%Y-%m', data) = strftime('%Y-%m', 'now')`,
+      args: []
+    });
 
-    // Statistiche IVA acquisti
-    const ivaAcquisti = db.prepare(`
-      SELECT 
-        COUNT(*) as count,
-        COALESCE(SUM(iva), 0) as totale_iva
-      FROM registri_iva 
-      WHERE tipo = 'acquisti' AND cliente_id = ?
-        AND strftime('%Y-%m', data) = strftime('%Y-%m', 'now')
-    `).get(clienteId);
+    const ivaAcquisti = await db.execute({
+      sql: `SELECT COUNT(*) as count, COALESCE(SUM(iva), 0) as totale_iva
+            FROM registri_iva 
+            WHERE tipo = 'acquisti' AND cliente_id = ?
+            AND strftime('%Y-%m', data) = strftime('%Y-%m', 'now')`,
+      args: [clienteId]
+    });
 
-    // Statistiche IVA vendite
-    const ivaVendite = db.prepare(`
-      SELECT 
-        COUNT(*) as count,
-        COALESCE(SUM(iva), 0) as totale_iva
-      FROM registri_iva 
-      WHERE tipo = 'vendite' AND cliente_id = ?
-        AND strftime('%Y-%m', data) = strftime('%Y-%m', 'now')
-    `).get(clienteId);
+    const ivaVendite = await db.execute({
+      sql: `SELECT COUNT(*) as count, COALESCE(SUM(iva), 0) as totale_iva
+            FROM registri_iva 
+            WHERE tipo = 'vendite' AND cliente_id = ?
+            AND strftime('%Y-%m', data) = strftime('%Y-%m', 'now')`,
+      args: [clienteId]
+    });
 
-    // Saldo cassa
-    const saldoCassa = db.prepare(`
-      SELECT COALESCE(saldo, 0) as saldo 
-      FROM piano_conti 
-      WHERE codice = '110001'
-    `).get();
+    const saldoCassa = await db.execute({
+      sql: `SELECT COALESCE(saldo, 0) as saldo FROM piano_conti WHERE codice = '110001'`,
+      args: []
+    });
 
     const stats = {
-      movimentiMese: movimentiMese.count,
-      fattureAcquisti: ivaAcquisti.count,
-      fattureVendite: ivaVendite.count,
-      ivaCredito: ivaAcquisti.totale_iva,
-      ivaDebito: ivaVendite.totale_iva,
-      saldoCassa: saldoCassa ? saldoCassa.saldo : 0
+      movimentiMese: movimentiMese.rows[0].count,
+      fattureAcquisti: ivaAcquisti.rows[0].count,
+      fattureVendite: ivaVendite.rows[0].count,
+      ivaCredito: ivaAcquisti.rows[0].totale_iva,
+      ivaDebito: ivaVendite.rows[0].totale_iva,
+      saldoCassa: saldoCassa.rows[0] ? saldoCassa.rows[0].saldo : 0
     };
 
     res.json({ success: true, stats });
 
   } catch (error) {
-    console.error('Errore caricamento statistiche:', error);
+    console.error('Stats error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Errore caricamento statistiche' 
+      error: 'Stats loading failed' 
     });
   }
 });
