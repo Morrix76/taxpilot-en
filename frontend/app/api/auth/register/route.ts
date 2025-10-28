@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = 'http://localhost:3003/api/auth/register';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL + '/api/auth/register' || 'https://taxpilot-en-backend-git-main-franks-projects-c85cd5ad.vercel.app/api/auth/register';
 
 /**
  * Gestisce POST /api/auth/register
