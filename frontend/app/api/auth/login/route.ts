@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://taxpilot-en-backend-git-main-franks-projects-c85cd5ad.vercel.app/api/auth/login';
+const BACKEND_URL = 'https://taxpilot-en-backend-git-main-franks-projects-c85cd5ad.vercel.app/api/auth/login';
 
 /**
  * Gestisce POST /api/auth/login
