@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-
 // Import database
 import { initializeDatabase } from './database/db.js';
 import authRoutes from './routes/auth.js'; 
@@ -27,6 +26,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 app.use('/api/auth', authRoutes);
 
 // Health check
