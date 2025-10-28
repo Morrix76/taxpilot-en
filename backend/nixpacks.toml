@@ -1,0 +1,5 @@
+[phases.install]
+cmds = ["npm install --force"]
+
+[start]
+cmd = "node server.js"
