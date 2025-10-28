@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data, { status: backendResponse.status });
 
   } catch (error) {
-    console.error(`❌ Errore di connessione al backend per /login:`, error);
+    console.error('❌ Errore di connessione al backend per /login:', error);
     return NextResponse.json(
       { error: 'Impossibile connettersi al servizio di autenticazione.' },
       { status: 503 }
