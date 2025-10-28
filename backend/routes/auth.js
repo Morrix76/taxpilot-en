@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 // 1. IMPORTA il client Turso dal NUOVO file db.js
-import { db } from '../db.js'; // Assicurati che il percorso sia corretto
+import { db } from '../database/db.js';
 
 const router = express.Router();
 
