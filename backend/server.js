@@ -21,7 +21,9 @@ app.use(cors({
   origin: [
     'http://localhost:3001', 
     'http://localhost:3000',
-    'https://taxpilot-en-git-main-franks-projects-c85cd5ad.vercel.app'
+    'https://taxpilot-en-git-main-franks-projects-c85cd5ad.vercel.app',
+    'https://taxpilot-en.vercel.app',
+    'https://taxpilot-en-franks-projects-c85cd5ad.vercel.app'
   ],
   credentials: true
 }));
