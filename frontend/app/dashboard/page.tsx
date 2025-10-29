@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = 'http://localhost:3003/api'
+const API_BASE_URL = ' + process.env.NEXT_PUBLIC_API_URL + '/api'
 
 // Interfaccia per il tipo Cliente, per la tipizzazione
 interface Client {
@@ -38,16 +38,16 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
   // CORREZIONE: Legge i dati reali dal backend
   const analysisResult = doc.analysis_result || {};
   
-  // ✅ CORREZIONE: Usa i campi reali del backend
+  // âœ… CORREZIONE: Usa i campi reali del backend
   const aiStatus = doc.ai_status || analysisResult.status || 'ok';
-  const confidence = doc.ai_confidence || analysisResult.confidence || 0.8; // Fallback più realistico
+  const confidence = doc.ai_confidence || analysisResult.confidence || 0.8; // Fallback piÃ¹ realistico
   const aiAnalysis = doc.ai_analysis || "Analysis completed";
   
-  // ✅ CORREZIONE: Determina se ci sono errori basandosi sui dati reali
+  // âœ… CORREZIONE: Determina se ci sono errori basandosi sui dati reali
   const hasIssues = aiStatus === 'error' || doc.flag_manual_review || confidence < 0.7;
   
-  // ✅ DEBUG: Log per vedere i dati reali
-  console.log('🔍 REPORT MODAL DEBUG:', {
+  // âœ… DEBUG: Log per vedere i dati reali
+  console.log('ðŸ” REPORT MODAL DEBUG:', {
     aiStatus,
     confidence,
     aiAnalysis,
@@ -57,12 +57,12 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
     analysis_result: doc.analysis_result
   });
   
-  // ✅ DEBUG DETTAGLIATO ERRORI
-  console.log('🔍 DETAILED ERROR ANALYSIS:');
+  // âœ… DEBUG DETTAGLIATO ERRORI
+  console.log('ðŸ” DETAILED ERROR ANALYSIS:');
   console.log('ai_issues (raw):', doc.ai_issues);
   console.log('analysis_result (raw):', doc.analysis_result);
   
-  // Prova a parsare ai_issues se è stringa
+  // Prova a parsare ai_issues se Ã¨ stringa
   let parsedAiIssues = [];
   try {
     if (typeof doc.ai_issues === 'string') {
@@ -75,7 +75,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
     console.log('ai_issues parse error:', e.message);
   }
   
-  // Prova a parsare analysis_result se è stringa
+  // Prova a parsare analysis_result se Ã¨ stringa
   let parsedAnalysisResult: any = {}; // CORREZIONE: Aggiunto tipo 'any'
   try {
     if (typeof doc.analysis_result === 'string') {
@@ -91,7 +91,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
   
   const issues = [];
   if (aiStatus === 'error') {
-    // ✅ Prova a estrarre errori reali dal backend
+    // âœ… Prova a estrarre errori reali dal backend
     try {
       let realIssues = [];
       
@@ -113,7 +113,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
         realIssues = analysisData?.technical?.errors || [];
       }
       
-      console.log('🔍 EXTRACTED ERRORS:', realIssues);
+      console.log('ðŸ” EXTRACTED ERRORS:', realIssues);
       
       // Aggiungi errori reali se trovati
       if (realIssues && realIssues.length > 0) {
@@ -133,7 +133,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
     issues.push("Low confidence in analysis");
   }
 
-  // ✅ CONTROLLI REALI DAL BACKEND - Non più fittizi!
+  // âœ… CONTROLLI REALI DAL BACKEND - Non piÃ¹ fittizi!
   const realChecks = [];
   
   try {
@@ -146,19 +146,19 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
     const technicalData = analysisData?.technical || {};
     const allIssues = [...(technicalData.errors || []), ...(technicalData.warnings || [])];
     
-    console.log('🔍 REAL CHECKS FROM BACKEND:', {
+    console.log('ðŸ” REAL CHECKS FROM BACKEND:', {
       technical: technicalData,
       allIssues: allIssues
     });
     
-    // ✅ GENERA CONTROLLI BASATI SUI RISULTATI REALI
+    // âœ… GENERA CONTROLLI BASATI SUI RISULTATI REALI
     
     // 1. Struttura documento
     if (technicalData.details?.structure) {
       realChecks.push({
         category: "Document Structure",
         name: "XML and Schema Validity",
-        status: technicalData.details.structure === 'valid' ? "✅" : "❌",
+        status: technicalData.details.structure === 'valid' ? "âœ…" : "âŒ",
         details: technicalData.details.structure === 'valid' 
           ? "XML structure compliant with FatturaPA specifications"
           : "Issues in the document structure",
@@ -171,7 +171,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
       realChecks.push({
         category: "Mandatory Fields", 
         name: "Data Completeness",
-        status: technicalData.details.mandatoryFields === 'complete' ? "✅" : "❌",
+        status: technicalData.details.mandatoryFields === 'complete' ? "âœ…" : "âŒ",
         details: technicalData.details.mandatoryFields === 'complete'
           ? "All mandatory fields are present"
           : "Some mandatory fields are missing",
@@ -185,7 +185,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
       realChecks.push({
         category: "Tax Validation",
         name: "VAT Numbers", 
-        status: technicalData.details.vatValidation === 'valid' ? "✅" : "❌",
+        status: technicalData.details.vatValidation === 'valid' ? "âœ…" : "âŒ",
         details: vatErrors.length > 0 
           ? vatErrors.map(e => e.message).join('; ')
           : "VAT numbers formally correct",
@@ -199,7 +199,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
       realChecks.push({
         category: "Tax Validation",
         name: "Tax Codes",
-        status: technicalData.details.taxCodeValidation === 'valid' ? "✅" : "❌", 
+        status: technicalData.details.taxCodeValidation === 'valid' ? "âœ…" : "âŒ", 
         details: cfErrors.length > 0
           ? cfErrors.map(e => e.message).join('; ')
           : "Tax Codes formally correct",
@@ -213,7 +213,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
       realChecks.push({
         category: "Transmission",
         name: "Destination Code",
-        status: destErrors.length === 0 ? "✅" : "❌",
+        status: destErrors.length === 0 ? "âœ…" : "âŒ",
         details: destErrors.length > 0
           ? destErrors.map(e => e.message).join('; ')
           : `Valid destination code: ${technicalData.details.destinationCode}`,
@@ -227,7 +227,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
       realChecks.push({
         category: "Mathematical Checks",
         name: "Totals and VAT",
-        status: technicalData.details.calculations === 'correct' ? "✅" : "❌",
+        status: technicalData.details.calculations === 'correct' ? "âœ…" : "âŒ",
         details: calcErrors.length > 0
           ? calcErrors.map(e => e.message).join('; ')
           : "All calculations are mathematically correct",
@@ -241,7 +241,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
       realChecks.push({
         category: "Temporal Checks",
         name: "Document Dates", 
-        status: dateWarnings.length === 0 ? "✅" : "⚠️",
+        status: dateWarnings.length === 0 ? "âœ…" : "âš ï¸",
         details: dateWarnings.length > 0
           ? dateWarnings.map(e => e.message).join('; ')
           : "Dates formally correct",
@@ -255,7 +255,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
       realChecks.push({
         category: "Format Checks",
         name: "Formats and Encodings",
-        status: technicalData.details.formatValidation === 'valid' ? "✅" : "❌",
+        status: technicalData.details.formatValidation === 'valid' ? "âœ…" : "âŒ",
         details: formatErrors.length > 0
           ? formatErrors.map(e => e.message).join('; ')
           : "All formats comply with specifications",
@@ -269,13 +269,13 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
     realChecks.push({
       category: "AI Analysis",
       name: "General Check",
-      status: aiStatus === 'error' ? "❌" : "✅",
+      status: aiStatus === 'error' ? "âŒ" : "âœ…",
       details: aiAnalysis,
       reference: " Assistant"
     });
   }
   
-  console.log('🎯 FINAL CHECKS TO DISPLAY:', realChecks);
+  console.log('ðŸŽ¯ FINAL CHECKS TO DISPLAY:', realChecks);
   
   // Raggruppa per categoria
   const checksByCategory = realChecks.reduce((acc, check) => {
@@ -293,9 +293,9 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
 
   const getStatusColor = (status) => {
     switch(status) {
-      case "✅": return "text-green-600 dark:text-green-400";
-      case "⚠️": return "text-orange-600 dark:text-orange-400";
-      case "❌": return "text-red-600 dark:text-red-400";
+      case "âœ…": return "text-green-600 dark:text-green-400";
+      case "âš ï¸": return "text-orange-600 dark:text-orange-400";
+      case "âŒ": return "text-red-600 dark:text-red-400";
       default: return "text-gray-600 dark:text-gray-400";
     }
   };
@@ -324,7 +324,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
       <div id="report-modal" className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-5xl mx-auto max-h-[95vh] flex flex-col shadow-2xl">
         <div className="flex justify-between items-center mb-6 no-print">
           <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 dark:from-slate-200 dark:to-indigo-400 bg-clip-text text-transparent">
-            📄 AI Analysis Report - Tax Checks
+            ðŸ“„ AI Analysis Report - Tax Checks
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 p-2 rounded-xl transition-all duration-300">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -343,17 +343,17 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
           {/* CORREZIONE: Mostra errori reali se presenti */}
           {hasIssues && issues.length > 0 && (
             <div className="mb-8 p-6 bg-red-50 dark:bg-red-900/30 border-2 border-red-200 dark:border-red-700 rounded-xl">
-              <h4 className="text-lg font-bold text-red-700 dark:text-red-300 mb-4">❌ ERRORS DETECTED:</h4>
+              <h4 className="text-lg font-bold text-red-700 dark:text-red-300 mb-4">âŒ ERRORS DETECTED:</h4>
               <ul className="space-y-2">
                 {issues.map((issue, index) => (
                   <li key={index} className="text-red-700 dark:text-red-300 flex items-start space-x-2">
-                    <span className="text-red-500 mt-1">•</span>
+                    <span className="text-red-500 mt-1">â€¢</span>
                     <span>{issue}</span>
                   </li>
                 ))}
               </ul>
               <div className="mt-4 p-3 bg-red-100 dark:bg-red-800/30 rounded-lg">
-                <p className="text-sm text-red-800 dark:text-red-200 font-medium">📋 AI Analysis:</p>
+                <p className="text-sm text-red-800 dark:text-red-200 font-medium">ðŸ“‹ AI Analysis:</p>
                 <p className="text-sm text-red-700 dark:text-red-300">{aiAnalysis}</p>
               </div>
             </div>
@@ -362,7 +362,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
           {/* Riepilogo Generale */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-lg border border-slate-200 dark:border-slate-600">
-              <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-2">📊 AI Confidence Level</h4>
+              <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-2">ðŸ“Š AI Confidence Level</h4>
               <div className="flex items-center">
                 <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-3">
                   <div 
@@ -375,7 +375,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
             </div>
             
             <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-lg border border-slate-200 dark:border-slate-600">
-              <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-2">⚖️ Regulatory Compliance</h4>
+              <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-2">âš–ï¸ Regulatory Compliance</h4>
               <p className={`text-2xl font-bold ${hasIssues ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                 {hasIssues ? `${Math.max(0, 100 - issues.length * 10)}%` : '98.5%'}
               </p>
@@ -385,7 +385,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-lg border border-slate-200 dark:border-slate-600">
-              <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-2">🔍 Checks Performed</h4>
+              <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-2">ðŸ” Checks Performed</h4>
               <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">15</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Automatic verifications</p>
             </div>
@@ -396,7 +396,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
             {aiChecks.map((category, categoryIndex) => (
               <div key={categoryIndex} className="bg-slate-50 dark:bg-slate-700 rounded-xl p-6 border border-slate-200 dark:border-slate-600">
                 <h4 className="text-lg font-bold text-indigo-700 dark:text-indigo-400 mb-4 border-b pb-2">
-                  📋 {category.category}
+                  ðŸ“‹ {category.category}
                 </h4>
                 
                 <div className="space-y-4">
@@ -418,7 +418,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
                                 className="text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors cursor-pointer underline"
                                 title={`Read ${link.text}`}
                               >
-                                🔗 {link.text}
+                                ðŸ”— {link.text}
                               </a>
                             ))
                           ) : (
@@ -438,24 +438,24 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
 
           {/* Risultato Finale - CORRETTO */}
           <div className="mt-8 p-6 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600">
-            <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">📋 Overall Outcome</h4>
+            <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">ðŸ“‹ Overall Outcome</h4>
             {hasIssues ? (
               <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-400 p-4 rounded-r-lg">
-                <p className="text-red-800 dark:text-red-300 font-medium">❌ Document has errors to correct</p>
+                <p className="text-red-800 dark:text-red-300 font-medium">âŒ Document has errors to correct</p>
                 <p className="text-sm text-red-700 dark:text-red-300 mt-2">
                   The AI analysis detected issues in the document that require attention. 
                   Check the highlighted points and make the necessary changes.
                 </p>
                 <div className="mt-4 p-3 bg-red-100 dark:bg-red-800/30 rounded-lg">
-                  <p className="text-sm text-red-800 dark:text-red-200 font-medium">🔍 Requires Review: YES</p>
-                  <p className="text-sm text-red-700 dark:text-red-300">📈 Confidence: {(confidence * 100).toFixed(1)}%</p>
-                  <p className="text-sm text-red-700 dark:text-red-300">📊 AI Status: {aiStatus}</p>
-                  <p className="text-sm text-red-700 dark:text-red-300">🤖 Analysis: {aiAnalysis}</p>
+                  <p className="text-sm text-red-800 dark:text-red-200 font-medium">ðŸ” Requires Review: YES</p>
+                  <p className="text-sm text-red-700 dark:text-red-300">ðŸ“ˆ Confidence: {(confidence * 100).toFixed(1)}%</p>
+                  <p className="text-sm text-red-700 dark:text-red-300">ðŸ“Š AI Status: {aiStatus}</p>
+                  <p className="text-sm text-red-700 dark:text-red-300">ðŸ¤– Analysis: {aiAnalysis}</p>
                 </div>
               </div>
             ) : (
               <div className="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-400 p-4 rounded-r-lg">
-                <p className="text-green-800 dark:text-green-300 font-medium">✅ Document fully compliant with regulations</p>
+                <p className="text-green-800 dark:text-green-300 font-medium">âœ… Document fully compliant with regulations</p>
                 <p className="text-sm text-green-700 dark:text-green-300 mt-2">
                   {aiStatus === 'ok' 
                     ? "All automatic checks passed successfully. The document complies with DM 55/2013 and the Technical Specifications for Electronic Invoicing."
@@ -463,9 +463,9 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
                   }
                 </p>
                 <div className="mt-4 p-3 bg-green-100 dark:bg-green-800/30 rounded-lg">
-                  <p className="text-sm text-green-800 dark:text-green-200 font-medium">🔍 Requires Review: NO</p>
-                  <p className="text-sm text-green-700 dark:text-green-300">📈 Confidence: {(confidence * 100).toFixed(1)}%</p>
-                  <p className="text-sm text-green-700 dark:text-green-300">📊 Status: {aiStatus === 'ok' ? 'Perfect' : 'Good'}</p>
+                  <p className="text-sm text-green-800 dark:text-green-200 font-medium">ðŸ” Requires Review: NO</p>
+                  <p className="text-sm text-green-700 dark:text-green-300">ðŸ“ˆ Confidence: {(confidence * 100).toFixed(1)}%</p>
+                  <p className="text-sm text-green-700 dark:text-green-300">ðŸ“Š Status: {aiStatus === 'ok' ? 'Perfect' : 'Good'}</p>
                 </div>
               </div>
             )}
@@ -483,16 +483,16 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
 
         <div className="grid grid-cols-4 gap-3 mt-6 pt-4 border-t border-slate-200 dark:border-slate-600 no-print">
           <button onClick={handleGoBack} className="px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg">
-            ← Go Back
+            â† Go Back
           </button>
           <button onClick={onClose} className="px-4 py-3 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-500 font-bold transition-all duration-300">
             Close
           </button>
           <button onClick={handleSaveDocument} className="px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg">
-            ✅ Save
+            âœ… Save
           </button>
           <button onClick={handlePrint} className="px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg">
-            📄 Print Report
+            ðŸ“„ Print Report
           </button>
         </div>
       </div>
@@ -518,9 +518,9 @@ export default function Dashboard() {
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
 
 
-  // Helper per ottenere l'AI status da analysis_result se ai_status non c'è
+  // Helper per ottenere l'AI status da analysis_result se ai_status non c'Ã¨
   const getAiStatus = (doc) => {
-    // Se c'è ai_status, usalo
+    // Se c'Ã¨ ai_status, usalo
     if (doc.ai_status) return doc.ai_status;
     
     // WORKAROUND: Usa flag_manual_review
@@ -545,36 +545,36 @@ export default function Dashboard() {
   // Funzione per caricare documenti dal backend
   const fetchDocuments = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/documents', {
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/documents', {
   headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` }
 });
       if (response.ok) {
         const result = await response.json();
-        console.log('📋 Documents loaded:', result);
-        // ✅ CORREZIONE: Il backend restituisce direttamente l'array, non { data: [...] }
+        console.log('ðŸ“‹ Documents loaded:', result);
+        // âœ… CORREZIONE: Il backend restituisce direttamente l'array, non { data: [...] }
         const documents = Array.isArray(result) ? result : (result.data || []);
         
-        // 🔍 DEBUG: Mostra tutti i campi del primo documento
+        // ðŸ” DEBUG: Mostra tutti i campi del primo documento
         if (documents.length > 0) {
-          console.log('🔍 FIRST DOCUMENT COMPLETE:', documents[0]);
-          console.log('🔍 AI STATUS FIELD:', documents[0].ai_status);
-          console.log('🔍 STATUS FIELD:', documents[0].status);
-          console.log('🔍 ANALYSIS_RESULT:', documents[0].analysis_result);
-          console.log('🔍 FILE_PATH FIELD:', documents[0].file_path);
-          console.log('🔍 ALL FIELDS:', Object.keys(documents[0]));
-          console.log('🔍 ALL FIELD VALUES:');
+          console.log('ðŸ” FIRST DOCUMENT COMPLETE:', documents[0]);
+          console.log('ðŸ” AI STATUS FIELD:', documents[0].ai_status);
+          console.log('ðŸ” STATUS FIELD:', documents[0].status);
+          console.log('ðŸ” ANALYSIS_RESULT:', documents[0].analysis_result);
+          console.log('ðŸ” FILE_PATH FIELD:', documents[0].file_path);
+          console.log('ðŸ” ALL FIELDS:', Object.keys(documents[0]));
+          console.log('ðŸ” ALL FIELD VALUES:');
           Object.keys(documents[0]).forEach(key => {
             console.log(`  - ${key}:`, documents[0][key]);
           });
           
           // Test getAiStatus
-          console.log('🔍 GET AI STATUS RESULT:', getAiStatus(documents[0]));
+          console.log('ðŸ” GET AI STATUS RESULT:', getAiStatus(documents[0]));
         }
         
         setDocuments(documents);
       }
     } catch (error) {
-      console.error('❌ Error loading documents:', error);
+      console.error('âŒ Error loading documents:', error);
       setDocuments([]);
     }
   };
@@ -583,7 +583,7 @@ export default function Dashboard() {
   const loadClients = async () => {
     try {
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch('http://localhost:3003/api/clients', {
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/clients', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -652,7 +652,7 @@ export default function Dashboard() {
       formData.append('document', fileToUpload);
       formData.append('client_id', selectedClient.id.toString()); // Aggiunge l'ID del cliente
 
-      const uploadUrl = 'http://localhost:3003/api/documents';
+      const uploadUrl = ' + process.env.NEXT_PUBLIC_API_URL + '/api/documents';
       const uploadRes = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
@@ -695,27 +695,27 @@ export default function Dashboard() {
       setSelectedDoc(validationResult);
       setShowValidationModal(true);
     } catch (error) {
-      console.error('🔥 COMPLETE ERROR:', error);
+      console.error('ðŸ”¥ COMPLETE ERROR:', error);
       setLoading(false);
       alert('Error during upload: ' + (error as Error).message);
     }
   };
 
-  // ✅ CORREZIONE: Funzione di salvataggio corretta
+  // âœ… CORREZIONE: Funzione di salvataggio corretta
   const handleSaveDocument = async () => {
     try {
       // Cerca il documento da validationResult o da selectedDoc
       const docToSave = validationResult || selectedDoc;
       
       if (!docToSave || !docToSave.id) {
-        console.log('❌ No document to save')
+        console.log('âŒ No document to save')
         alert('Error: no valid document to save')
         return
       }
       
-      console.log('💾 Saving document:', docToSave.id)
+      console.log('ðŸ’¾ Saving document:', docToSave.id)
       
-      // Il documento è già salvato nel backend, aggiorna solo lo stato locale
+      // Il documento Ã¨ giÃ  salvato nel backend, aggiorna solo lo stato locale
       setShowValidationModal(false)
       setShowReportModal(false)
       setShowModal(false) // Chiude anche il modal normale
@@ -726,26 +726,26 @@ export default function Dashboard() {
       // Ricarica la lista documenti per assicurarsi che sia aggiornata
       await fetchDocuments()
       
-      alert('✅ Document saved successfully!')
+      alert('âœ… Document saved successfully!')
       
     } catch (error) {
-      console.error('❌ Error saving:', error)
+      console.error('âŒ Error saving:', error)
       alert('Error during save: ' + error.message)
     }
   }
 
   const handleCheckNow = async () => {
-    console.log('🔍 handleCheckNow called')
+    console.log('ðŸ” handleCheckNow called')
     
     setShowValidationModal(false)
     
-    // ✅ SEMPLIFICATO: Usa sempre validationResult se disponibile
+    // âœ… SEMPLIFICATO: Usa sempre validationResult se disponibile
     if (validationResult) {
-      console.log('📄 Using document from validationResult')
+      console.log('ðŸ“„ Using document from validationResult')
       setSelectedDoc(validationResult)
       setShowReportModal(true)
     } else {
-      console.log('❌ No document for report')
+      console.log('âŒ No document for report')
       alert('No document available for report')
     }
 
@@ -777,35 +777,35 @@ export default function Dashboard() {
   }
 
   const handleViewDocument = (doc) => {
-    console.log('🔍 SELECTED DOCUMENT DASHBOARD:', doc);
-    console.log('🔍 AI STATUS:', doc.ai_status);
-    console.log('🔍 AI ANALYSIS:', doc.ai_analysis);
-    console.log('🔍 AI ISSUES:', doc.ai_issues);
+    console.log('ðŸ” SELECTED DOCUMENT DASHBOARD:', doc);
+    console.log('ðŸ” AI STATUS:', doc.ai_status);
+    console.log('ðŸ” AI ANALYSIS:', doc.ai_analysis);
+    console.log('ðŸ” AI ISSUES:', doc.ai_issues);
     setSelectedDoc(doc)
     setShowModal(true)
   }
 
   const handleDownload = async (doc) => {
     try {
-      console.log('📥 Attempting document download:', doc);
+      console.log('ðŸ“¥ Attempting document download:', doc);
       
       const possiblePaths = [
         `${API_BASE_URL}/uploads/${doc.file_path}`,
         `${API_BASE_URL.replace('/api', '')}/uploads/${doc.file_path}`,
-        `http://localhost:3003/uploads/${doc.file_path}`,
-        `http://localhost:3003/files/${doc.file_path}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/uploads/${doc.file_path}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/files/${doc.file_path}`,
         `${API_BASE_URL}/files/${doc.file_path}`
       ];
       
-      console.log('🔍 Paths to test:', possiblePaths);
+      console.log('ðŸ” Paths to test:', possiblePaths);
       
       for (const path of possiblePaths) {
         try {
-          console.log(`🔗 Testing: ${path}`);
+          console.log(`ðŸ”— Testing: ${path}`);
           const response = await fetch(path, { method: 'HEAD', headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` } });
           
           if (response.ok) {
-            console.log(`✅ File found at: ${path}`);
+            console.log(`âœ… File found at: ${path}`);
             
             const link = document.createElement('a');
             link.href = path;
@@ -815,7 +815,7 @@ export default function Dashboard() {
             document.body.appendChild(link);
             link.click();
             
-            // ✅ FIX: Delay the removal to prevent a race condition
+            // âœ… FIX: Delay the removal to prevent a race condition
             setTimeout(() => {
               document.body.removeChild(link);
             }, 0);
@@ -823,15 +823,15 @@ export default function Dashboard() {
             return;
           }
         } catch (e) {
-          console.log(`❌ Failed: ${path} - ${e.message}`);
+          console.log(`âŒ Failed: ${path} - ${e.message}`);
         }
       }
       
       throw new Error(`File not found at any path. File path: ${doc.file_path}`);
       
     } catch (error) {
-      console.error('❌ Full download error:', error);
-      alert(`❌ Download unavailable\n\nThe backend is not serving uploaded files.\nFile: ${doc.original_filename}\nPath: ${doc.file_path}\n\nContact the administrator to configure the file service.`);
+      console.error('âŒ Full download error:', error);
+      alert(`âŒ Download unavailable\n\nThe backend is not serving uploaded files.\nFile: ${doc.original_filename}\nPath: ${doc.file_path}\n\nContact the administrator to configure the file service.`);
     }
   }
 
@@ -851,12 +851,12 @@ export default function Dashboard() {
         {/* Header Centralized */}
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 dark:from-slate-200 dark:to-indigo-400 bg-clip-text text-transparent">
-            <span className="text-indigo-600">🎯</span> AI Dashboard
+            <span className="text-indigo-600">ðŸŽ¯</span> AI Dashboard
           </h1>
           <p className="text-slate-600 dark:text-slate-300 mt-3 text-lg">Manage your tax documents with artificial intelligence</p>
           <button onClick={openUploadModal} className="mt-6 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold flex items-center space-x-3 transition-all duration-300 transform hover:scale-105 shadow-xl mx-auto">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-            <span>📄 New Document</span>
+            <span>ðŸ“„ New Document</span>
           </button>
         </div>
 
@@ -865,7 +865,7 @@ export default function Dashboard() {
           <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 rounded-2xl p-6 border-2 border-red-200 dark:border-red-700 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-red-600 dark:text-red-400 text-sm font-bold uppercase tracking-wide">🚨 To Correct</p>
+                <p className="text-red-600 dark:text-red-400 text-sm font-bold uppercase tracking-wide">ðŸš¨ To Correct</p>
                 <p className="text-3xl font-bold text-red-700 dark:text-red-300 mt-2">
                   {documents.filter(d => getAiStatus(d) === 'error').length}
                 </p>
@@ -881,7 +881,7 @@ export default function Dashboard() {
           <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/30 rounded-2xl p-6 border-2 border-yellow-200 dark:border-yellow-700 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-yellow-600 dark:text-yellow-400 text-sm font-bold uppercase tracking-wide">⏳ Processing</p>
+                <p className="text-yellow-600 dark:text-yellow-400 text-sm font-bold uppercase tracking-wide">â³ Processing</p>
                 <p className="text-3xl font-bold text-yellow-700 dark:text-yellow-300 mt-2">
                   {documents.filter(d => getAiStatus(d) === 'processing').length}
                 </p>
@@ -897,7 +897,7 @@ export default function Dashboard() {
           <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-2xl p-6 border-2 border-green-200 dark:border-green-700 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-600 dark:text-green-400 text-sm font-bold uppercase tracking-wide">✅ Completed</p>
+                <p className="text-green-600 dark:text-green-400 text-sm font-bold uppercase tracking-wide">âœ… Completed</p>
                 <p className="text-3xl font-bold text-green-700 dark:text-green-300 mt-2">
                   {documents.filter(d => getAiStatus(d) === 'ok').length}
                 </p>
@@ -913,7 +913,7 @@ export default function Dashboard() {
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-2xl p-6 border-2 border-blue-200 dark:border-blue-700 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-600 dark:text-blue-400 text-sm font-bold uppercase tracking-wide">📊 Total</p>
+                <p className="text-blue-600 dark:text-blue-400 text-sm font-bold uppercase tracking-wide">ðŸ“Š Total</p>
                 <p className="text-3xl font-bold text-blue-700 dark:text-blue-300 mt-2">{documents.length}</p>
               </div>
               <div className="bg-blue-500 p-3 rounded-xl shadow-lg">
@@ -929,7 +929,7 @@ export default function Dashboard() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">⚡ Quick Actions</h3>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">âš¡ Quick Actions</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">Fast document management</p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -937,20 +937,20 @@ export default function Dashboard() {
                 onClick={() => setShowAllDocuments(false)}
                 className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-bold transition-all duration-300 flex items-center space-x-2"
               >
-                <span>🚨</span>
+                <span>ðŸš¨</span>
                 <span>Errors Only</span>
               </button>
               <button 
                 onClick={() => setShowAllDocuments(true)}
                 className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-bold transition-all duration-300 flex items-center space-x-2"
               >
-                <span>📊</span>
+                <span>ðŸ“Š</span>
                 <span>Show All</span>
               </button>
               <button 
                 className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg font-bold transition-all duration-300 flex items-center space-x-2"
               >
-                <span>📁</span>
+                <span>ðŸ“</span>
                 <span>Advanced Management</span>
               </button>
             </div>
@@ -961,7 +961,7 @@ export default function Dashboard() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
            <div className="bg-gradient-to-r from-slate-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 px-8 py-6 border-b border-slate-200 dark:border-slate-600">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">📁 Recent Documents</h2>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">ðŸ“ Recent Documents</h2>
               <button onClick={() => setShowAllDocuments(!showAllDocuments)} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
                 {showAllDocuments ? 'Show less' : 'View all'}
               </button>
@@ -969,7 +969,7 @@ export default function Dashboard() {
           </div>
           {documents.length === 0 ? (
             <div className="p-12 text-center">
-              <div className="text-6xl mb-4">📄</div>
+              <div className="text-6xl mb-4">ðŸ“„</div>
               <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">No documents uploaded</h3>
               <p className="text-slate-500 dark:text-slate-400">Start by uploading your first tax document using the button above</p>
             </div>
@@ -1015,18 +1015,18 @@ export default function Dashboard() {
                                     ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
                                     : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                                 }`}>
-                                    {getAiStatus(doc) === 'error' ? '❌ With Errors' : 
-                                     getAiStatus(doc) === 'processing' ? '⏳ Processing' : 
-                                     '✅ Processed'}
+                                    {getAiStatus(doc) === 'error' ? 'âŒ With Errors' : 
+                                     getAiStatus(doc) === 'processing' ? 'â³ Processing' : 
+                                     'âœ… Processed'}
                                 </span>
                             </td>
                             <td className="px-8 py-6 text-sm font-medium">
                                 <div className="flex space-x-3">
                                     <button onClick={() => handleViewDocument(doc)} className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105">
-                                        👁️ View
+                                        ðŸ‘ï¸ View
                                     </button>
                                     <button onClick={() => handleDeleteDocument(doc.id)} className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105">
-                                        🗑️ Delete
+                                        ðŸ—‘ï¸ Delete
                                     </button>
                                 </div>
                             </td>
@@ -1044,7 +1044,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-lg mx-4 shadow-2xl">
             <h3 className="text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
-              📤 Upload New Document
+              ðŸ“¤ Upload New Document
             </h3>
             
             {/* Selezione Cliente OBBLIGATORIA */}
@@ -1104,14 +1104,14 @@ export default function Dashboard() {
         </div> 
       )}
       
-      {/* ✅ MODAL VALIDATION CORRETTA CON TASTO CORREZIONE AI */}
+      {/* âœ… MODAL VALIDATION CORRETTA CON TASTO CORREZIONE AI */}
       {showValidationModal && validationResult && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-lg mx-auto shadow-2xl">
             {(() => {
               const hasIssues = validationResult.flag_manual_review || validationResult.ai_status === 'error';
               
-              console.log('🎨 MODAL DEBUG:', {
+              console.log('ðŸŽ¨ MODAL DEBUG:', {
                 flag_manual_review: validationResult.flag_manual_review,
                 ai_status: validationResult.ai_status,
                 hasIssues: hasIssues,
@@ -1122,7 +1122,7 @@ export default function Dashboard() {
               return (
                 <>
                   <div className="text-center mb-6">
-                    <div className="text-6xl mb-4">{hasIssues ? '⚠️' : '✅'}</div>
+                    <div className="text-6xl mb-4">{hasIssues ? 'âš ï¸' : 'âœ…'}</div>
                     <h3 className={`text-2xl font-bold mb-2 ${hasIssues ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
                       {hasIssues ? 'Errors Detected' : 'Analysis Completed'}
                     </h3>
@@ -1131,22 +1131,22 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div className={`p-4 rounded-xl border mb-6 ${hasIssues ? 'bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-700' : 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700'}`}>
-                    <h4 className={`font-bold mb-2 ${hasIssues ? 'text-orange-700 dark:text-orange-300' : 'text-green-700 dark:text-green-300'}`}>📋 Analysis Result:</h4>
+                    <h4 className={`font-bold mb-2 ${hasIssues ? 'text-orange-700 dark:text-orange-300' : 'text-green-700 dark:text-green-300'}`}>ðŸ“‹ Analysis Result:</h4>
                     <div className={`text-sm ${hasIssues ? 'text-orange-700 dark:text-orange-300' : 'text-green-700 dark:text-green-300'}`}>
                       {validationResult.ai_analysis || validationResult.message || (hasIssues ? 'Errors detected in the document' : 'Document analyzed successfully')}
                     </div>
                   </div>
                   
-                  {/* ✅ BOTTONI CORRETTI */}
+                  {/* âœ… BOTTONI CORRETTI */}
                   {hasIssues ? (
                     /* SE CI SONO ERRORI: Mostra 3 bottoni */
                     <div className="grid grid-cols-3 gap-3">
                         <button onClick={handleCheckNow} className="px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold flex items-center justify-center space-x-2">
-                          <span>🔍</span>
+                          <span>ðŸ”</span>
                           <span>Check Details</span>
                         </button>
                         <button onClick={handleSaveDocument} className="px-6 py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-bold flex items-center justify-center space-x-2">
-                          <span>✅</span>
+                          <span>âœ…</span>
                           <span>Save</span>
                         </button>
                         <button onClick={() => { setShowValidationModal(false); setPendingFile(null); setValidationResult(null); }} className="px-6 py-4 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold">
@@ -1157,11 +1157,11 @@ export default function Dashboard() {
                     /* SE NON CI SONO ERRORI: Mostra 3 bottoni MA SEMPRE CON SALVA */
                     <div className="grid grid-cols-3 gap-4">
                       <button onClick={handleCheckNow} className="px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold flex items-center justify-center space-x-2">
-                        <span>🔍</span>
+                        <span>ðŸ”</span>
                         <span>View Report</span>
                       </button>
                       <button onClick={handleSaveDocument} className="px-6 py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-bold flex items-center justify-center space-x-2">
-                        <span>✅</span>
+                        <span>âœ…</span>
                         <span>Save</span>
                       </button>
                       <button onClick={() => { setShowValidationModal(false); setPendingFile(null); setValidationResult(null); }} className="px-6 py-4 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold">
@@ -1209,7 +1209,7 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-8">
-              <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-4 uppercase tracking-wide">🤖 AI Analysis</label>
+              <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-4 uppercase tracking-wide">ðŸ¤– AI Analysis</label>
               <div className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 border-2 border-emerald-200 dark:border-emerald-700 rounded-xl p-6">
                 <div className="flex items-start space-x-4">
                   <div className="bg-emerald-100 dark:bg-emerald-800 p-3 rounded-xl">
@@ -1225,11 +1225,11 @@ export default function Dashboard() {
             <div className="flex justify-end space-x-4 mt-8">
               <button onClick={() => setShowModal(false)} className="px-6 py-3 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold">Close</button>
               {selectedDoc.ai_status === 'error' && (
-                <button className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-xl font-bold">🤖 AI Fix</button>
+                <button className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-xl font-bold">ðŸ¤– AI Fix</button>
               )}
-              <button onClick={handleSaveDocument} className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl font-bold">✅ Save</button>
-              <button onClick={() => { setSelectedDoc(selectedDoc); setShowReportModal(true); setShowModal(false); }} className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-bold">📊 AI Report</button>
-              <button onClick={() => handleDownload(selectedDoc)} className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-bold">📥 Download File</button>
+              <button onClick={handleSaveDocument} className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl font-bold">âœ… Save</button>
+              <button onClick={() => { setSelectedDoc(selectedDoc); setShowReportModal(true); setShowModal(false); }} className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-bold">ðŸ“Š AI Report</button>
+              <button onClick={() => handleDownload(selectedDoc)} className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-bold">ðŸ“¥ Download File</button>
             </div>
           </div>
         </div>

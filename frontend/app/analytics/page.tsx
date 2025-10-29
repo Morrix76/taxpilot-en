@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = 'http://localhost:3003';
+const API_BASE_URL = ' + process.env.NEXT_PUBLIC_API_URL + '';
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState('mese');
@@ -136,7 +136,7 @@ export default function AnalyticsPage() {
         <div className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 dark:from-slate-200 dark:to-indigo-400 bg-clip-text text-transparent">
-              📊 Analytics & Statistics
+              ðŸ“Š Analytics & Statistics
             </h1>
             <p className="text-slate-600 dark:text-slate-300 mt-3 text-lg">Detailed performance analysis</p>
           </div>
@@ -195,8 +195,8 @@ export default function AnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wide">Estimated Revenue</p>
-                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400 mt-2">€ {stats.monthlyRevenue.toFixed(1)}</p>
-                <p className="text-xs text-slate-400 mt-1">€0.50 per document</p>
+                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400 mt-2">â‚¬ {stats.monthlyRevenue.toFixed(1)}</p>
+                <p className="text-xs text-slate-400 mt-1">â‚¬0.50 per document</p>
               </div>
               <div className="bg-gradient-to-br from-purple-400 to-purple-600 p-4 rounded-2xl">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,7 +227,7 @@ export default function AnalyticsPage() {
           {/* Document Trend */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white">📈 Document Trend</h3>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">ðŸ“ˆ Document Trend</h3>
               <span className="text-sm text-slate-500">{trend.length} data points</span>
             </div>
             <div className="h-64 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl flex items-end justify-center space-x-2 p-4">
@@ -251,7 +251,7 @@ export default function AnalyticsPage() {
 
           {/* AI Performance */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700">
-            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">🧠 AI Performance</h3>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">ðŸ§  AI Performance</h3>
             <div className="space-y-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">Accuracy</div>
@@ -272,7 +272,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-green-800 dark:text-green-200">AI Status</span>
-                  <span className="text-sm font-bold text-green-800 dark:text-green-200">🤖 Active</span>
+                  <span className="text-sm font-bold text-green-800 dark:text-green-200">ðŸ¤– Active</span>
                 </div>
               </div>
             </div>
@@ -283,7 +283,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Document Types */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">📊 Document Types</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">ðŸ“Š Document Types</h3>
             <div className="space-y-4">
               {report?.distribuzionePerTipo?.length > 0 ? (
                 report.distribuzionePerTipo.map((tipo, index) => {
@@ -314,7 +314,7 @@ export default function AnalyticsPage() {
 
           {/* Report Summary */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">📋 Summary</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">ðŸ“‹ Summary</h3>
             <div className="space-y-4">
               {report ? (
                 <>
@@ -339,7 +339,7 @@ export default function AnalyticsPage() {
 
           {/* Top Clients */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">⭐ Top Clients</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">â­ Top Clients</h3>
             <div className="space-y-4">
               {topClienti.length > 0 ? (
                 topClienti.map((cliente, index) => (
@@ -365,7 +365,7 @@ export default function AnalyticsPage() {
 
         {/* Recent Activity Timeline */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700 mt-8">
-          <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">📅 Recent Activity Timeline</h3>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">ðŸ“… Recent Activity Timeline</h3>
           <div className="space-y-4">
             {attivita.length > 0 ? (
               attivita.map((item, index) => (
@@ -418,3 +418,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+

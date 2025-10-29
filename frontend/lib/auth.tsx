@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
@@ -21,7 +21,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [pathname])
 
   const checkAuth = async () => {
-    // Se è una pagina pubblica, non serve controllo
+    // Se Ã¨ una pagina pubblica, non serve controllo
     if (publicPages.includes(pathname)) {
       setIsAuthenticated(true)
       setIsLoading(false)
@@ -31,15 +31,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const token = localStorage.getItem('token')
     
     if (!token) {
-      console.log('❌ Token non trovato, redirect a login')
+      console.log('âŒ Token non trovato, redirect a login')
       router.push('/login')
       setIsLoading(false)
       return
     }
 
     try {
-      // Verifica se il token è valido
-      const response = await fetch('http://localhost:3003/api/auth/profile', {
+      // Verifica se il token Ã¨ valido
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/auth/profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -47,10 +47,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
 
       if (response.ok) {
-        console.log('✅ Token valido')
+        console.log('âœ… Token valido')
         setIsAuthenticated(true)
       } else {
-        console.log('❌ Token non valido, redirect a login')
+        console.log('âŒ Token non valido, redirect a login')
         localStorage.removeItem('token')
         router.push('/login')
       }
@@ -76,7 +76,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   // Se non autenticato e non in pagina pubblica, non mostrare nulla 
-  // (il redirect è già in corso)
+  // (il redirect Ã¨ giÃ  in corso)
   if (!isAuthenticated && !publicPages.includes(pathname)) {
     return null
   }

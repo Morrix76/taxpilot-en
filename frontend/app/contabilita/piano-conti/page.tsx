@@ -61,7 +61,7 @@ export default function PianoContiPage() {
 
   const caricaClienti = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/clients', {
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/clients', {
         headers: getAuthHeaders()
       })
 
@@ -85,7 +85,7 @@ export default function PianoContiPage() {
     try {
       setLoading(true)
       
-      const response = await fetch(`http://localhost:3003/api/piano-conti/${clienteId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/piano-conti/${clienteId}`, {
         headers: getAuthHeaders()
       })
 
@@ -100,10 +100,10 @@ export default function PianoContiPage() {
           setConti(data.conti || [])
         } else {
           console.error('Error loading chart of accounts:', data.error)
-          // Fallback ai dati mock se l'API non è ancora implementata
+          // Fallback ai dati mock se l'API non Ã¨ ancora implementata
           setConti([
-            { id: 1, codice: '110001', descrizione: 'Cassa', tipo: 'attivo', categoria: 'Liquidità', attivo: true, saldo: 1000 },
-            { id: 2, codice: '120001', descrizione: 'Banca c/c', tipo: 'attivo', categoria: 'Liquidità', attivo: true, saldo: 5000 },
+            { id: 1, codice: '110001', descrizione: 'Cassa', tipo: 'attivo', categoria: 'LiquiditÃ ', attivo: true, saldo: 1000 },
+            { id: 2, codice: '120001', descrizione: 'Banca c/c', tipo: 'attivo', categoria: 'LiquiditÃ ', attivo: true, saldo: 5000 },
             { id: 3, codice: '130001', descrizione: 'Crediti vs clienti', tipo: 'attivo', categoria: 'Crediti', attivo: true, saldo: 2500 },
             { id: 4, codice: '210001', descrizione: 'Debiti vs fornitori', tipo: 'passivo', categoria: 'Debiti', attivo: true, saldo: -1500 },
             { id: 5, codice: '310001', descrizione: 'Capitale sociale', tipo: 'patrimonio', categoria: 'Patrimonio netto', attivo: true, saldo: 10000 },
@@ -118,8 +118,8 @@ export default function PianoContiPage() {
       console.error('Error loading chart of accounts:', error)
       // Fallback ai dati mock
       setConti([
-        { id: 1, codice: '110001', descrizione: 'Cassa', tipo: 'attivo', categoria: 'Liquidità', attivo: true, saldo: 1000 },
-        { id: 2, codice: '120001', descrizione: 'Banca c/c', tipo: 'attivo', categoria: 'Liquidità', attivo: true, saldo: 5000 },
+        { id: 1, codice: '110001', descrizione: 'Cassa', tipo: 'attivo', categoria: 'LiquiditÃ ', attivo: true, saldo: 1000 },
+        { id: 2, codice: '120001', descrizione: 'Banca c/c', tipo: 'attivo', categoria: 'LiquiditÃ ', attivo: true, saldo: 5000 },
         { id: 3, codice: '130001', descrizione: 'Crediti vs clienti', tipo: 'attivo', categoria: 'Crediti', attivo: true, saldo: 2500 },
         { id: 4, codice: '210001', descrizione: 'Debiti vs fornitori', tipo: 'passivo', categoria: 'Debiti', attivo: true, saldo: -1500 },
         { id: 5, codice: '310001', descrizione: 'Capitale sociale', tipo: 'patrimonio', categoria: 'Patrimonio netto', attivo: true, saldo: 10000 },
@@ -153,7 +153,7 @@ export default function PianoContiPage() {
     try {
       setSaving(true)
 
-      const response = await fetch(`http://localhost:3003/api/piano-conti/${clienteSelezionato}/${contoInModifica}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/piano-conti/${clienteSelezionato}/${contoInModifica}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(formData)
@@ -207,7 +207,7 @@ export default function PianoContiPage() {
     try {
       setSaving(true)
 
-      const response = await fetch(`http://localhost:3003/api/piano-conti/${clienteSelezionato}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/piano-conti/${clienteSelezionato}`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(formData)
@@ -262,7 +262,7 @@ export default function PianoContiPage() {
     try {
       setSaving(true)
 
-      const response = await fetch(`http://localhost:3003/api/piano-conti/${clienteSelezionato}/${contoId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/piano-conti/${clienteSelezionato}/${contoId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       })
@@ -560,7 +560,7 @@ export default function PianoContiPage() {
                         <td className="px-4 py-4 text-sm capitalize">{conto.tipo}</td>
                         <td className="px-4 py-4 text-sm">{conto.categoria}</td>
                         <td className="px-4 py-4 text-sm text-right">
-                          €{conto.saldo?.toFixed(2) || '0.00'}
+                          â‚¬{conto.saldo?.toFixed(2) || '0.00'}
                         </td>
                         <td className="px-4 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">

@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import EditableDocumentForm from '../../components/EditableDocumentForm'; // ← CORREZIONE PATH
+import EditableDocumentForm from '../../components/EditableDocumentForm'; // â† CORREZIONE PATH
 import FileViewer, { useFileViewer } from '../../components/FileViewer';
 
 export default function DocumentsPage() {
@@ -47,7 +47,7 @@ export default function DocumentsPage() {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch('http://localhost:3003/api/documents', {
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/documents', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -68,7 +68,7 @@ export default function DocumentsPage() {
     
     try {
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch(`http://localhost:3003/api/documents/${docId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${docId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -88,7 +88,7 @@ export default function DocumentsPage() {
   const handleGenerateAccounting = async (doc) => {
     // CONTROLLO: Solo per file XML
     if (!doc.original_filename?.toLowerCase().endsWith('.xml')) {
-      alert('⚠️ Le scritture contabili sono disponibili solo per fatture elettroniche XML');
+      alert('âš ï¸ Le scritture contabili sono disponibili solo per fatture elettroniche XML');
       return;
     }
 
@@ -102,7 +102,7 @@ export default function DocumentsPage() {
     const token = localStorage.getItem('taxpilot_token');
     
     try {
-      const response = await fetch(`http://localhost:3003/api/documents/${doc.id}/generate-entries`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${doc.id}/generate-entries`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -173,15 +173,15 @@ export default function DocumentsPage() {
 
   // ===== CORREZIONE MANUALE CON EDITOR (SOLO FATTURE E BUSTE PAGA) =====
   const handleManualCorrect = async (doc) => {
-    console.log('✏️ Apertura editor per correzione manuale:', doc);
+    console.log('âœï¸ Apertura editor per correzione manuale:', doc);
     
     try {
       // Determina tipo documento
       const documentType = determineDocumentType(doc);
       
-      // ✅ CONTROLLO: Editor solo per fatture e buste paga
+      // âœ… CONTROLLO: Editor solo per fatture e buste paga
       if (documentType !== 'fattura' && documentType !== 'busta_paga') {
-        alert('⚠️ Editor disponibile solo per Fatture e Buste Paga');
+        alert('âš ï¸ Editor disponibile solo per Fatture e Buste Paga');
         return;
       }
       
@@ -192,13 +192,13 @@ export default function DocumentsPage() {
         originalDoc: doc
       };
       
-      console.log('📋 Dati preparati per editor:', documentData);
+      console.log('ðŸ“‹ Dati preparati per editor:', documentData);
       
       setDocumentForEdit(documentData);
       setShowEditorModal(true);
       
     } catch (error) {
-      console.error('⚠️ Errore preparazione editor:', error);
+      console.error('âš ï¸ Errore preparazione editor:', error);
       alert('Errore nell\'apertura dell\'editor: ' + error.message);
     }
   };
@@ -211,15 +211,15 @@ export default function DocumentsPage() {
     }
     const fixedPath = doc.file_path.replace(/\\/g, '/');
     const encodedPath = encodeURIComponent(fixedPath);
-    window.open(`http://localhost:3003/api/files/${encodedPath}`);
+    window.open(`${process.env.NEXT_PUBLIC_API_URL}/api/files/${encodedPath}`);
   };
 
   const handleSaveFromViewer = async (documentId, metadata) => {
     try {
-      console.log('💾 Salvando documento dal visualizzatore:', documentId, metadata);
+      console.log('ðŸ’¾ Salvando documento dal visualizzatore:', documentId, metadata);
       
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch(`http://localhost:3003/api/documents/${documentId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${documentId}`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -233,14 +233,14 @@ export default function DocumentsPage() {
       });
       
       if (response.ok) {
-        console.log('✅ Documento aggiornato con successo');
+        console.log('âœ… Documento aggiornato con successo');
         await fetchDocuments();
       } else {
         throw new Error('Errore durante l\'aggiornamento del documento');
       }
       
     } catch (error) {
-      console.error('⚠️ Errore salvataggio dal visualizzatore:', error);
+      console.error('âš ï¸ Errore salvataggio dal visualizzatore:', error);
       throw error;
     }
   };
@@ -251,7 +251,7 @@ export default function DocumentsPage() {
     const fileName = (doc.original_filename || doc.name || '').toLowerCase();
     const docType = (doc.type || '').toLowerCase();
     
-    // ✅ CONTROLLO ESTENSIONI FILE
+    // âœ… CONTROLLO ESTENSIONI FILE
     const fileExtension = fileName.split('.').pop();
     
     // Fatture: file XML o nomi che contengono "fattura"
@@ -271,9 +271,9 @@ export default function DocumentsPage() {
       return 'busta_paga';
     }
     
-    // ✅ IMPORTANTE: Se non riconosce il tipo, restituisce null
-    // Questo impedirà l'apertura dell'editor per documenti non supportati
-    console.warn('⚠️ Tipo documento non riconosciuto:', { fileName, docType, fileExtension });
+    // âœ… IMPORTANTE: Se non riconosce il tipo, restituisce null
+    // Questo impedirÃ  l'apertura dell'editor per documenti non supportati
+    console.warn('âš ï¸ Tipo documento non riconosciuto:', { fileName, docType, fileExtension });
     return null;
   };
 
@@ -325,7 +325,7 @@ export default function DocumentsPage() {
         }
       }
     } catch (error) {
-      console.warn('⚠️ Errore parsing analysis_result:', error);
+      console.warn('âš ï¸ Errore parsing analysis_result:', error);
     }
     
     // Fallback: usa dati base dal documento
@@ -366,13 +366,13 @@ export default function DocumentsPage() {
 
   // ===== HANDLERS EDITOR =====
   const handleEditorSave = async (formData) => {
-    console.log('💾 Salvando dati corretti:', formData);
+    console.log('ðŸ’¾ Salvando dati corretti:', formData);
     
     try {
       const token = localStorage.getItem('taxpilot_token');
       const originalDoc = documentForEdit.originalDoc;
       
-      const response = await fetch(`http://localhost:3003/api/documents/${originalDoc.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${originalDoc.id}`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -386,26 +386,26 @@ export default function DocumentsPage() {
       });
       
       if (response.ok) {
-        alert('✅ Document saved successfully!');
+        alert('âœ… Document saved successfully!');
         setShowEditorModal(false);
         setDocumentForEdit(null);
         await fetchDocuments(); // Reload list
       } else {
-        alert('⚠️ Error during save');
+        alert('âš ï¸ Error during save');
       }
       } catch (error) {
-      console.error('⚠️ Save error:', error);
-      alert('⚠️ Connection error during save');
+      console.error('âš ï¸ Save error:', error);
+      alert('âš ï¸ Connection error during save');
       }
       };
 
   const handleEditorGenerateXML = async (formData) => {
-    console.log('📄 Generando XML FatturaPA:', formData);
+    console.log('ðŸ“„ Generando XML FatturaPA:', formData);
     
     try {
       const token = localStorage.getItem('taxpilot_token');
       
-      const response = await fetch('http://localhost:3003/api/documents/generate-xml', {
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/documents/generate-xml', {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -423,13 +423,13 @@ export default function DocumentsPage() {
         link.click();
         URL.revokeObjectURL(url);
         
-        alert('✅ XML FatturaPA generato e scaricato!');
+        alert('âœ… XML FatturaPA generato e scaricato!');
       } else {
-        alert('⚠️ Errore durante la generazione XML');
+        alert('âš ï¸ Errore durante la generazione XML');
       }
     } catch (error) {
-      console.error('⚠️ Errore generazione XML:', error);
-      alert('⚠️ Errore di connessione durante la generazione XML');
+      console.error('âš ï¸ Errore generazione XML:', error);
+      alert('âš ï¸ Errore di connessione durante la generazione XML');
     }
   };
 
@@ -514,7 +514,7 @@ export default function DocumentsPage() {
         <div className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 dark:from-slate-200 dark:to-indigo-400 bg-clip-text text-transparent">
-              <span className="text-indigo-600">📁</span> Gestione Documenti
+              <span className="text-indigo-600">ðŸ“</span> Gestione Documenti
             </h1>
             <p className="text-slate-600 dark:text-slate-300 mt-3 text-lg">Tutti i tuoi documenti fiscali con analisi AI</p>
           </div>
@@ -561,7 +561,7 @@ export default function DocumentsPage() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 px-8 py-6 border-b border-slate-200 dark:border-slate-600">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">📋 Lista Documenti ({filteredDocuments.length})</h2>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">ðŸ“‹ Lista Documenti ({filteredDocuments.length})</h2>
               <button 
                 onClick={handleExport}
                 className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center space-x-2"
@@ -576,14 +576,14 @@ export default function DocumentsPage() {
 
           {filteredDocuments.length === 0 ? (
             <div className="p-12 text-center">
-              <div className="text-6xl mb-4">📄</div>
+              <div className="text-6xl mb-4">ðŸ“„</div>
               <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">Nessun documento trovato</h3>
               <p className="text-slate-500 dark:text-slate-400 mb-6">I documenti che carichi dalla dashboard appariranno qui</p>
               <button 
                 onClick={() => router.push('/dashboard')}
                 className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                📤 Vai alla Dashboard
+                ðŸ“¤ Vai alla Dashboard
               </button>
             </div>
           ) : (
@@ -632,9 +632,9 @@ export default function DocumentsPage() {
                             ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
                             : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                         }`}>
-                          {doc.ai_status === 'error' ? '❌ Errori rilevati' : 
-                           doc.ai_status === 'processing' ? '⏳ In Corso' : 
-                           '✅ Elaborato'}
+                          {doc.ai_status === 'error' ? 'âŒ Errori rilevati' : 
+                           doc.ai_status === 'processing' ? 'â³ In Corso' : 
+                           'âœ… Elaborato'}
                         </span>
                       </td>
                       <td className="px-4 py-6 text-sm font-medium">
@@ -643,14 +643,14 @@ export default function DocumentsPage() {
                             onClick={() => handleViewDetail(doc)}
                             className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
                           >
-                            📝 Dettaglio
+                            ðŸ“ Dettaglio
                           </button>
 
                           <button 
                             onClick={() => handleViewDocument(doc)}
                             className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
                           >
-                            👁️ Visualizza
+                            ðŸ‘ï¸ Visualizza
                           </button>
                           
                           {/* SCRITTURE SOLO PER XML */}
@@ -659,7 +659,7 @@ export default function DocumentsPage() {
                               onClick={() => handleGenerateAccounting(doc)}
                               className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
                             >
-                              📊 Scritture
+                              ðŸ“Š Scritture
                             </button>
                           )}
                           
@@ -669,7 +669,7 @@ export default function DocumentsPage() {
                               onClick={() => handleManualCorrect(doc)}
                               className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
                             >
-                              ✏️ Editor
+                              âœï¸ Editor
                             </button>
                           )}
                           
@@ -677,14 +677,14 @@ export default function DocumentsPage() {
                             onClick={() => handleDownloadDocument(doc)}
                             className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
                           >
-                            📥 Scarica
+                            ðŸ“¥ Scarica
                           </button>
                           
                           <button 
                             onClick={() => handleDelete(doc.id)}
                             className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
                           >
-                            🗑️ Elimina
+                            ðŸ—‘ï¸ Elimina
                           </button>
                         </div>
                       </td>
@@ -712,12 +712,12 @@ export default function DocumentsPage() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center p-6 border-b border-slate-200 dark:border-slate-600">
-              <h3 className="text-2xl font-bold text-slate-800 dark:text-white">📊 Scritture Contabili</h3>
+              <h3 className="text-2xl font-bold text-slate-800 dark:text-white">ðŸ“Š Scritture Contabili</h3>
               <button 
                 onClick={() => setShowAccountingModal(false)} 
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-3xl font-bold"
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -730,7 +730,7 @@ export default function DocumentsPage() {
                 </div>
               ) : accountingData?.error ? (
                 <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 text-red-700 dark:text-red-300 p-6 rounded-r-lg">
-                  <h4 className="font-bold text-lg mb-2">❌ Errore nella generazione</h4>
+                  <h4 className="font-bold text-lg mb-2">âŒ Errore nella generazione</h4>
                   <p className="mb-4">{accountingData.message}</p>
                   {accountingData.details && (
                     <div className="bg-red-100 dark:bg-red-800/30 p-3 rounded-md">
@@ -738,20 +738,20 @@ export default function DocumentsPage() {
                     </div>
                   )}
                   <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 rounded-r-lg">
-                    <h5 className="font-bold text-yellow-800 dark:text-yellow-300">💡 Suggerimenti:</h5>
+                    <h5 className="font-bold text-yellow-800 dark:text-yellow-300">ðŸ’¡ Suggerimenti:</h5>
                     <ul className="text-sm text-yellow-700 dark:text-yellow-300 mt-2 space-y-1">
-                      <li>• Verifica che il documento non abbia errori di CF/P.IVA</li>
-                      <li>• Assicurati che i totali della fattura siano corretti</li>
-                      <li>• Controlla che il file XML sia una fattura elettronica valida</li>
+                      <li>â€¢ Verifica che il documento non abbia errori di CF/P.IVA</li>
+                      <li>â€¢ Assicurati che i totali della fattura siano corretti</li>
+                      <li>â€¢ Controlla che il file XML sia una fattura elettronica valida</li>
                     </ul>
                   </div>
                 </div>
               ) : accountingData ? (
                 <div>
                   <div className="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 text-green-800 dark:text-green-300 p-4 rounded-r-lg mb-6">
-                    <h4 className="font-bold text-lg">✅ {accountingData.message}</h4>
+                    <h4 className="font-bold text-lg">âœ… {accountingData.message}</h4>
                     <p className="text-sm mt-1">
-                      Documento: <strong>{accountingDocument?.original_filename}</strong> • 
+                      Documento: <strong>{accountingDocument?.original_filename}</strong> â€¢ 
                       Righe generate: <strong>{accountingData.accounting?.entries_count}</strong>
                     </p>
                   </div>
@@ -761,7 +761,7 @@ export default function DocumentsPage() {
                       onClick={handleDownloadAccountingCSV} 
                       className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg"
                     >
-                      💾 Scarica CSV per Gestionale
+                      ðŸ’¾ Scarica CSV per Gestionale
                     </button>
                   </div>
 
@@ -773,8 +773,8 @@ export default function DocumentsPage() {
                           <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Data</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Conto</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Descrizione</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Dare €</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Avere €</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Dare â‚¬</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Avere â‚¬</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-600">
@@ -797,24 +797,24 @@ export default function DocumentsPage() {
 
                   {/* Totali */}
                   <div className="mt-6 bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                    <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-3">📈 Controllo Bilanciamento</h4>
+                    <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-3">ðŸ“ˆ Controllo Bilanciamento</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="text-center">
                         <p className="text-sm text-slate-600 dark:text-slate-300">Totale Dare</p>
                         <p className="text-2xl font-bold text-green-600">
-                          €{accountingData.accounting?.entries_json?.reduce((sum, e) => sum + e.debit, 0).toFixed(2)}
+                          â‚¬{accountingData.accounting?.entries_json?.reduce((sum, e) => sum + e.debit, 0).toFixed(2)}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-slate-600 dark:text-slate-300">Totale Avere</p>
                         <p className="text-2xl font-bold text-blue-600">
-                          €{accountingData.accounting?.entries_json?.reduce((sum, e) => sum + e.credit, 0).toFixed(2)}
+                          â‚¬{accountingData.accounting?.entries_json?.reduce((sum, e) => sum + e.credit, 0).toFixed(2)}
                         </p>
                       </div>
                     </div>
                     <div className="mt-3 text-center">
                       <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-4 py-2 rounded-full text-sm font-bold">
-                        ✅ Scritture Perfettamente Bilanciate
+                        âœ… Scritture Perfettamente Bilanciate
                       </span>
                     </div>
                   </div>
@@ -840,7 +840,7 @@ export default function DocumentsPage() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-6xl mx-auto max-h-[95vh] flex flex-col shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 dark:from-slate-200 dark:to-indigo-400 bg-clip-text text-transparent">
-                📄 Dettaglio Documento
+                ðŸ“„ Dettaglio Documento
               </h3>
               <button 
                 onClick={() => setShowDetailModal(false)} 
@@ -856,22 +856,22 @@ export default function DocumentsPage() {
               {/* Header Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 p-6 rounded-xl border border-indigo-200 dark:border-indigo-700">
-                  <h4 className="font-bold text-indigo-600 dark:text-indigo-400 mb-2">📁 Nome File</h4>
+                  <h4 className="font-bold text-indigo-600 dark:text-indigo-400 mb-2">ðŸ“ Nome File</h4>
                   <p className="text-slate-800 dark:text-white font-medium">{selectedDocument.original_filename || selectedDocument.name}</p>
                 </div>
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 p-6 rounded-xl border border-blue-200 dark:border-blue-700">
-                  <h4 className="font-bold text-blue-600 dark:text-blue-400 mb-2">📋 Tipo</h4>
+                  <h4 className="font-bold text-blue-600 dark:text-blue-400 mb-2">ðŸ“‹ Tipo</h4>
                   <p className="text-slate-800 dark:text-white font-medium">{selectedDocument.type || 'Documento Fiscale'}</p>
                 </div>
                 <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 p-6 rounded-xl border border-emerald-200 dark:border-emerald-700">
-                  <h4 className="font-bold text-emerald-600 dark:text-emerald-400 mb-2">📅 Data</h4>
+                  <h4 className="font-bold text-emerald-600 dark:text-emerald-400 mb-2">ðŸ“… Data</h4>
                   <p className="text-slate-800 dark:text-white font-medium">{new Date(selectedDocument.created_at || selectedDocument.upload_date || Date.now()).toLocaleDateString('it-IT')}</p>
                 </div>
               </div>
 
               {/* Stato e Analisi AI */}
               <div className="mb-8">
-                <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">🤖 Analisi AI</h4>
+                <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">ðŸ¤– Analisi AI</h4>
                 <div className={`p-6 rounded-xl border-2 ${
                   selectedDocument.ai_status === 'error' 
                     ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700' 
@@ -881,8 +881,8 @@ export default function DocumentsPage() {
                 }`}>
                   <div className="flex items-center mb-4">
                     <span className="text-2xl mr-3">
-                      {selectedDocument.ai_status === 'error' ? '❌' : 
-                       selectedDocument.ai_status === 'processing' ? '⏳' : '✅'}
+                      {selectedDocument.ai_status === 'error' ? 'âŒ' : 
+                       selectedDocument.ai_status === 'processing' ? 'â³' : 'âœ…'}
                     </span>
                     <h5 className={`text-xl font-bold ${
                       selectedDocument.ai_status === 'error' ? 'text-red-700 dark:text-red-300' :
@@ -901,8 +901,8 @@ export default function DocumentsPage() {
                   }`}>
                     {selectedDocument.ai_analysis || 
                      (selectedDocument.ai_status === 'error' ? 'Il documento presenta errori che richiedono correzione' :
-                      selectedDocument.ai_status === 'processing' ? 'Il documento è in fase di elaborazione' :
-                      'Il documento è conforme alle normative fiscali')}
+                      selectedDocument.ai_status === 'processing' ? 'Il documento Ã¨ in fase di elaborazione' :
+                      'Il documento Ã¨ conforme alle normative fiscali')}
                   </p>
                 </div>
               </div>
@@ -918,20 +918,20 @@ export default function DocumentsPage() {
                   }}
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
-                  ✏️ Editor Manuale
+                  âœï¸ Editor Manuale
                 </button>
               )}
               <button 
                 onClick={() => handleShowReport(selectedDocument)}
                 className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                📊 Report Completo
+                ðŸ“Š Report Completo
               </button>
               <button 
                 onClick={() => handleDownloadDocument(selectedDocument)}
                 className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                💾 Download
+                ðŸ’¾ Download
               </button>
               <button 
                 onClick={() => setShowDetailModal(false)}
@@ -950,7 +950,7 @@ export default function DocumentsPage() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-5xl mx-auto max-h-[95vh] flex flex-col shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 dark:from-slate-200 dark:to-indigo-400 bg-clip-text text-transparent">
-                📊 Report Analisi AI - Controlli Fiscali
+                ðŸ“Š Report Analisi AI - Controlli Fiscali
               </h3>
               <button 
                 onClick={() => setShowReportModal(false)} 
@@ -973,10 +973,10 @@ export default function DocumentsPage() {
 
               {/* Risultato Finale */}
               <div className="mt-8 p-6 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600">
-                <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">📋 Esito Complessivo</h4>
+                <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">ðŸ“‹ Esito Complessivo</h4>
                 {selectedDocument.ai_status === 'error' ? (
                   <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-400 p-4 rounded-r-lg">
-                    <p className="text-red-800 dark:text-red-300 font-medium">❌ Documento presenta errori da correggere</p>
+                    <p className="text-red-800 dark:text-red-300 font-medium">âŒ Documento presenta errori da correggere</p>
                     <p className="text-sm text-red-700 dark:text-red-300 mt-2">
                       L'analisi AI ha rilevato problemi nel documento che richiedono attenzione. 
                       Utilizzare l'editor manuale o la correzione automatica AI.
@@ -984,9 +984,9 @@ export default function DocumentsPage() {
                   </div>
                 ) : (
                   <div className="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-400 p-4 rounded-r-lg">
-                    <p className="text-green-800 dark:text-green-300 font-medium">✅ Documento pienamente conforme alla normativa</p>
+                    <p className="text-green-800 dark:text-green-300 font-medium">âœ… Documento pienamente conforme alla normativa</p>
                     <p className="text-sm text-green-700 dark:text-green-300 mt-2">
-                      Tutti i controlli automatici sono stati superati con successo. Il documento è conforme a DM 55/2013.
+                      Tutti i controlli automatici sono stati superati con successo. Il documento Ã¨ conforme a DM 55/2013.
                     </p>
                   </div>
                 )}
@@ -998,7 +998,7 @@ export default function DocumentsPage() {
                 onClick={() => {setShowReportModal(false); setShowDetailModal(true);}}
                 className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                ← Torna al Dettaglio
+                â† Torna al Dettaglio
               </button>
               <button 
                 onClick={() => setShowReportModal(false)}
@@ -1010,7 +1010,7 @@ export default function DocumentsPage() {
                 onClick={() => window.print()}
                 className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                🖨️ Stampa Report
+                ðŸ–¨ï¸ Stampa Report
               </button>
             </div>
           </div>

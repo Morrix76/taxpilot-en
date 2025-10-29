@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,7 +36,7 @@ export default function ContabilitaDashboard() {
 
   const verificaInizializzazione = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/contabilita/status')
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/contabilita/status')
       const data = await response.json()
       setContabilitaInizializzata(data.initialized || false)
     } catch (error) {
@@ -48,7 +48,7 @@ export default function ContabilitaDashboard() {
 
   const inizializzaContabilita = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/contabilita/initialize', {
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/contabilita/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -124,21 +124,21 @@ export default function ContabilitaDashboard() {
           <Card>
             <CardContent className="p-4 text-center">
               <TrendingUp className="mx-auto h-8 w-8 text-green-600 mb-2" />
-              <div className="text-2xl font-bold">€{stats.ivaCredito.toFixed(0)}</div>
+              <div className="text-2xl font-bold">â‚¬{stats.ivaCredito.toFixed(0)}</div>
               <div className="text-xs text-gray-600">VAT Credit</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
               <TrendingUp className="mx-auto h-8 w-8 text-red-500 mb-2" />
-              <div className="text-2xl font-bold">€{stats.ivaDebito.toFixed(0)}</div>
+              <div className="text-2xl font-bold">â‚¬{stats.ivaDebito.toFixed(0)}</div>
               <div className="text-xs text-gray-600">VAT Debit</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
               <Calculator className="mx-auto h-8 w-8 text-purple-500 mb-2" />
-              <div className="text-2xl font-bold">€{stats.saldoCassa.toFixed(0)}</div>
+              <div className="text-2xl font-bold">â‚¬{stats.saldoCassa.toFixed(0)}</div>
               <div className="text-xs text-gray-600">Cash Balance</div>
             </CardContent>
           </Card>

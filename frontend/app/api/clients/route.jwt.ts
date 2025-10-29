@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = 'http://localhost:3003/api/clients';
+const BACKEND_URL = ' + process.env.NEXT_PUBLIC_API_URL + '/api/clients';
 
 /**
  * Gestisce GET /api/clients
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const backendResponse = await fetch(BACKEND_URL);
 
-    // Controlla se la risposta dal backend è valida
+    // Controlla se la risposta dal backend Ã¨ valida
     if (!backendResponse.ok) {
       // Inoltra la risposta di errore del backend al frontend
       const errorData = await backendResponse.json();
@@ -61,3 +61,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

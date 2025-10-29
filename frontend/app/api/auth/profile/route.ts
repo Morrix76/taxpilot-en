@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = 'http://localhost:3003/api/auth/profile';
+const BACKEND_URL = ' + process.env.NEXT_PUBLIC_API_URL + '/api/auth/profile';
 
 /**
  * Gestisce GET /api/auth/profile
@@ -29,10 +29,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data, { status: backendResponse.status });
 
   } catch (error) {
-    console.error(`❌ Errore di connessione al backend per /profile:`, error);
+    console.error(`âŒ Errore di connessione al backend per /profile:`, error);
     return NextResponse.json(
       { error: 'Impossibile connettersi al servizio di autenticazione.' },
       { status: 503 }
     );
   }
 }
+

@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = 'http://localhost:3003';
+const API_BASE_URL = ' + process.env.NEXT_PUBLIC_API_URL + '';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -277,11 +277,11 @@ export default function SettingsPage() {
   }, []);
 
   const tabs = [
-    { id: 'profilo', label: 'Profile', icon: '👤' },
-    { id: 'preferenze', label: 'Preferences', icon: '⚙️' },
-    { id: 'ai', label: 'AI & Automation', icon: '🤖' },
-    { id: 'notifiche', label: 'Notifications', icon: '🔔' },
-    { id: 'sicurezza', label: 'Security', icon: '🔒' }
+    { id: 'profilo', label: 'Profile', icon: 'ðŸ‘¤' },
+    { id: 'preferenze', label: 'Preferences', icon: 'âš™ï¸' },
+    { id: 'ai', label: 'AI & Automation', icon: 'ðŸ¤–' },
+    { id: 'notifiche', label: 'Notifications', icon: 'ðŸ””' },
+    { id: 'sicurezza', label: 'Security', icon: 'ðŸ”’' }
   ];
 
   if (loading) {
@@ -298,7 +298,7 @@ export default function SettingsPage() {
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 dark:from-slate-200 dark:to-indigo-400 bg-clip-text text-transparent mb-4">
-            ⚙️ Settings
+            âš™ï¸ Settings
           </h1>
           <p className="text-slate-600 dark:text-slate-300 text-lg">Configure your account and preferences</p>
         </div>
@@ -344,13 +344,13 @@ export default function SettingsPage() {
               {activeTab === 'profilo' && (
                 <div className="p-8">
                   <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">👤 Profile Information</h2>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">ðŸ‘¤ Profile Information</h2>
                     <button 
                       onClick={saveProfile}
                       disabled={saving}
                       className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
                     >
-                      {saving ? 'Saving...' : '💾 Save Changes'}
+                      {saving ? 'Saving...' : 'ðŸ’¾ Save Changes'}
                     </button>
                   </div>
 
@@ -443,19 +443,19 @@ export default function SettingsPage() {
               {activeTab === 'preferenze' && (
                 <div className="p-8">
                   <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">⚙️ General Preferences</h2>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">âš™ï¸ General Preferences</h2>
                     <button 
                       onClick={savePreferences}
                       disabled={saving}
                       className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
                     >
-                      {saving ? 'Saving...' : '💾 Save Preferences'}
+                      {saving ? 'Saving...' : 'ðŸ’¾ Save Preferences'}
                     </button>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                      <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">🌍 Language</label>
+                      <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">ðŸŒ Language</label>
                       <select 
                         value={preferences.lingua}
                         onChange={(e) => setPreferences({...preferences, lingua: e.target.value})}
@@ -463,13 +463,13 @@ export default function SettingsPage() {
                       >
                         <option value="IT Italian">IT Italian</option>
                         <option value="EN English">EN English</option>
-                        <option value="FR Français">FR French</option>
-                        <option value="ES Español">ES Spanish</option>
+                        <option value="FR FranÃ§ais">FR French</option>
+                        <option value="ES EspaÃ±ol">ES Spanish</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">⏰ Time Zone</label>
+                      <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">â° Time Zone</label>
                       <select 
                         value={preferences.fusoOrario}
                         onChange={(e) => setPreferences({...preferences, fusoOrario: e.target.value})}
@@ -482,7 +482,7 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">📅 Date Format</label>
+                      <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">ðŸ“… Date Format</label>
                       <select 
                         value={preferences.formatoData}
                         onChange={(e) => setPreferences({...preferences, formatoData: e.target.value})}
@@ -495,22 +495,22 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">💰 Currency</label>
+                      <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">ðŸ’° Currency</label>
                       <select 
                         value={preferences.valuta}
                         onChange={(e) => setPreferences({...preferences, valuta: e.target.value})}
                         className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                       >
-                        <option value="EUR Euro">€ Euro</option>
+                        <option value="EUR Euro">â‚¬ Euro</option>
                         <option value="USD Dollar">$ USD</option>
-                        <option value="GBP Pound">£ GBP</option>
-                        <option value="JPY Yen">¥ JPY</option>
+                        <option value="GBP Pound">Â£ GBP</option>
+                        <option value="JPY Yen">Â¥ JPY</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="mt-8">
-                    <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-4">🎨 Theme</label>
+                    <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-4">ðŸŽ¨ Theme</label>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {['Light', 'Dark', 'Automatic'].map((tema) => (
                         <div
@@ -524,7 +524,7 @@ export default function SettingsPage() {
                         >
                           <div className="text-center">
                             <div className="text-2xl mb-2">
-                              {tema === 'Light' ? '☀️' : tema === 'Dark' ? '🌙' : '🔄'}
+                              {tema === 'Light' ? 'â˜€ï¸' : tema === 'Dark' ? 'ðŸŒ™' : 'ðŸ”„'}
                             </div>
                             <div className="font-bold text-slate-800 dark:text-white">
                               {tema === 'Light' ? 'Light' : tema === 'Dark' ? 'Dark' : 'Automatic'}
@@ -541,13 +541,13 @@ export default function SettingsPage() {
               {activeTab === 'ai' && (
                 <div className="p-8">
                   <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">🤖 AI Settings</h2>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">ðŸ¤– AI Settings</h2>
                     <button 
                       onClick={saveAiSettings}
                       disabled={saving}
                       className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
                     >
-                      {saving ? 'Saving...' : '🤖 Save AI Settings'}
+                      {saving ? 'Saving...' : 'ðŸ¤– Save AI Settings'}
                     </button>
                   </div>
 
@@ -555,7 +555,7 @@ export default function SettingsPage() {
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 p-6 rounded-xl border border-blue-200 dark:border-blue-700">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <h3 className="text-lg font-bold text-blue-800 dark:text-blue-200">⚡ Automatic Processing</h3>
+                          <h3 className="text-lg font-bold text-blue-800 dark:text-blue-200">âš¡ Automatic Processing</h3>
                           <p className="text-sm text-blue-600 dark:text-blue-300">Automatically process uploaded documents</p>
                         </div>
                         <div className="relative">
@@ -576,7 +576,7 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 p-6 rounded-xl border border-purple-200 dark:border-purple-700">
-                      <h3 className="text-lg font-bold text-purple-800 dark:text-purple-200 mb-4">🎯 Confidence Threshold</h3>
+                      <h3 className="text-lg font-bold text-purple-800 dark:text-purple-200 mb-4">ðŸŽ¯ Confidence Threshold</h3>
                       <p className="text-sm text-purple-600 dark:text-purple-300 mb-4">Minimum AI accuracy: {aiSettings.sogliaConfidenza}%</p>
                       
                       <div className="relative">
@@ -603,18 +603,18 @@ export default function SettingsPage() {
               {activeTab === 'notifiche' && (
                 <div className="p-8">
                   <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">🔔 Notification Preferences</h2>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">ðŸ”” Notification Preferences</h2>
                     <button 
                       onClick={saveNotifications}
                       disabled={saving}
                       className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
                     >
-                      {saving ? 'Saving...' : '🔔 Save Notifications'}
+                      {saving ? 'Saving...' : 'ðŸ”” Save Notifications'}
                     </button>
                   </div>
 
                   <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 p-6 rounded-xl border border-green-200 dark:border-green-700">
-                    <h3 className="text-lg font-bold text-green-800 dark:text-green-200 mb-6">📧 Email Notifications</h3>
+                    <h3 className="text-lg font-bold text-green-800 dark:text-green-200 mb-6">ðŸ“§ Email Notifications</h3>
                     
                     <div className="space-y-6">
                       {[
@@ -653,12 +653,12 @@ export default function SettingsPage() {
               {activeTab === 'sicurezza' && (
                 <div className="p-8">
                   <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">🔒 Security</h2>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">ðŸ”’ Security</h2>
                   </div>
 
                   <div className="space-y-8">
                     <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/30 dark:to-pink-900/30 p-6 rounded-xl border border-red-200 dark:border-red-700">
-                      <h3 className="text-lg font-bold text-red-800 dark:text-red-200 mb-6">🔑 Change Password</h3>
+                      <h3 className="text-lg font-bold text-red-800 dark:text-red-200 mb-6">ðŸ”‘ Change Password</h3>
                       
                       <div className="space-y-4">
                         <div>
@@ -696,7 +696,7 @@ export default function SettingsPage() {
                           disabled={saving}
                           className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
                         >
-                          {saving ? 'Changing...' : '🔑 Change Password'}
+                          {saving ? 'Changing...' : 'ðŸ”‘ Change Password'}
                         </button>
                       </div>
                     </div>

@@ -26,7 +26,7 @@ export default function DocumentDetail() {
 
   const fetchDocument = async (id, token) => {
     try {
-      const response = await fetch(`http://localhost:3003/api/documents/${id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -44,7 +44,7 @@ export default function DocumentDetail() {
   };
 
   const handleDownload = () => {
-    window.location.href = `http://localhost:3003/api/documents/download/${document.id}`;
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/documents/download/${document.id}`;
   };
 
   const handleGenerateAccounting = async () => {
@@ -54,7 +54,7 @@ export default function DocumentDetail() {
     const token = localStorage.getItem('ai_tax_token');
 
     try {
-      const response = await fetch(`http://localhost:3003/api/documents/${document.id}/generate-entries`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${document.id}/generate-entries`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -264,7 +264,7 @@ export default function DocumentDetail() {
                 <span>Entries</span>
               </button>
             )}
-            <a href={`http://localhost:3003/api/documents/${document.id}/report?format=txt`} className="bg-green-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-green-700 flex items-center justify-center space-x-2 text-center">
+            <a href={`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${document.id}/report?format=txt`} className="bg-green-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-green-700 flex items-center justify-center space-x-2 text-center">
               <span>Report</span>
             </a>
             <button onClick={() => router.push('/dashboard')} className="bg-gray-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-gray-700 flex items-center justify-center space-x-2">

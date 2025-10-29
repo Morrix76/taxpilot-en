@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useEffect } from 'react'
 
-const API_BASE_URL = 'http://localhost:3003'
+const API_BASE_URL = ' + process.env.NEXT_PUBLIC_API_URL + ''
 
 export default function Dashboard() {
   const [documents, setDocuments] = useState([])
@@ -131,8 +131,8 @@ export default function Dashboard() {
   const handleCheckNow = () => {
     setShowValidationModal(false)
     if (validationResult && validationResult.issues) {
-      const issuesText = validationResult.issues.join('\n• ')
-      alert(`🔍 ANALISI AI DETTAGLIATA:\n\n• ${issuesText}\n\nConfidenza AI: ${(validationResult.confidence * 100).toFixed(1)}%`)
+      const issuesText = validationResult.issues.join('\nâ€¢ ')
+      alert(`ðŸ” ANALISI AI DETTAGLIATA:\n\nâ€¢ ${issuesText}\n\nConfidenza AI: ${(validationResult.confidence * 100).toFixed(1)}%`)
     }
   }
 
@@ -143,13 +143,13 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 text-center shadow-2xl max-w-md">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">🤖 Analisi AI in corso...</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">ðŸ¤– Analisi AI in corso...</h3>
             <p className="text-slate-600 mb-4">Groq sta analizzando il documento per identificare errori fiscali</p>
             <div className="bg-slate-100 rounded-lg p-3">
               <p className="text-sm text-slate-700">
-                ⚡ Controllo campi obbligatori<br/>
-                🧮 Verifica calcoli IVA/IRPEF<br/>
-                📋 Validazione formato
+                âš¡ Controllo campi obbligatori<br/>
+                ðŸ§® Verifica calcoli IVA/IRPEF<br/>
+                ðŸ“‹ Validazione formato
               </p>
             </div>
           </div>
@@ -166,8 +166,8 @@ export default function Dashboard() {
               </svg>
             </div>
             <div>
-              <h3 className="font-bold text-lg">🚀 Trial Premium Attivo</h3>
-              <p className="text-indigo-100 font-medium">{trialData.daysLeft} giorni rimasti • {trialData.documentsUsed}/{trialData.documentsLimit} documenti utilizzati</p>
+              <h3 className="font-bold text-lg">ðŸš€ Trial Premium Attivo</h3>
+              <p className="text-indigo-100 font-medium">{trialData.daysLeft} giorni rimasti â€¢ {trialData.documentsUsed}/{trialData.documentsLimit} documenti utilizzati</p>
               <div className="w-48 bg-white/20 rounded-full h-2 mt-2">
                 <div 
                   className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
@@ -177,7 +177,7 @@ export default function Dashboard() {
             </div>
           </div>
           <button className="bg-white text-indigo-600 px-8 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-all duration-300 transform hover:scale-105 shadow-lg">
-            ⚡ Upgrade Premium
+            âš¡ Upgrade Premium
           </button>
         </div>
       </div>
@@ -187,7 +187,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 bg-clip-text text-transparent">
-              🎯 Dashboard AI
+              ðŸŽ¯ Dashboard AI
             </h1>
             <p className="text-slate-600 mt-3 text-lg">Gestisci i tuoi documenti fiscali con intelligenza artificiale</p>
           </div>
@@ -198,7 +198,7 @@ export default function Dashboard() {
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            <span>📄 Nuovo Documento</span>
+            <span>ðŸ“„ Nuovo Documento</span>
           </button>
         </div>
 
@@ -239,7 +239,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-slate-500 text-sm font-medium uppercase tracking-wide">Accuratezza AI</p>
                 <p className="text-3xl font-bold text-slate-800 mt-2">98.7%</p>
-                <p className="text-purple-500 text-sm font-semibold mt-1">🔥 Ottima precisione</p>
+                <p className="text-purple-500 text-sm font-semibold mt-1">ðŸ”¥ Ottima precisione</p>
               </div>
               <div className="bg-gradient-to-br from-purple-400 to-purple-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,7 +254,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-slate-500 text-sm font-medium uppercase tracking-wide">Tempo Risparmiato</p>
                 <p className="text-3xl font-bold text-slate-800 mt-2">24h</p>
-                <p className="text-orange-500 text-sm font-semibold mt-1">⚡ Super efficiente</p>
+                <p className="text-orange-500 text-sm font-semibold mt-1">âš¡ Super efficiente</p>
               </div>
               <div className="bg-gradient-to-br from-orange-400 to-orange-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,13 +269,13 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-50 to-indigo-50 px-8 py-6 border-b border-slate-200">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-800">📁 Documenti Recenti</h2>
+              <h2 className="text-2xl font-bold text-slate-800">ðŸ“ Documenti Recenti</h2>
               <div className="flex space-x-3">
                 <button className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg transition-colors">
-                  🔍 Cerca
+                  ðŸ” Cerca
                 </button>
                 <button className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg transition-colors">
-                  📊 Filtri
+                  ðŸ“Š Filtri
                 </button>
               </div>
             </div>
@@ -316,7 +316,7 @@ export default function Dashboard() {
                           ? 'bg-gradient-to-r from-blue-100 to-indigo-100 text-indigo-700' 
                           : 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700'
                       }`}>
-                        {doc.type === 'Fattura Elettronica' ? '🧾' : '💰'} {doc.type}
+                        {doc.type === 'Fattura Elettronica' ? 'ðŸ§¾' : 'ðŸ’°'} {doc.type}
                       </span>
                     </td>
                     <td className="px-8 py-6 text-sm font-medium text-slate-700">{doc.date}</td>
@@ -326,7 +326,7 @@ export default function Dashboard() {
                           ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700' 
                           : 'bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-700'
                       }`}>
-                        {doc.status === 'Elaborato' ? '✅' : '⏳'} {doc.status}
+                        {doc.status === 'Elaborato' ? 'âœ…' : 'â³'} {doc.status}
                       </span>
                     </td>
                     <td className="px-8 py-6 text-sm font-medium">
@@ -335,10 +335,10 @@ export default function Dashboard() {
                           onClick={() => {setSelectedDoc(doc); setShowModal(true)}}
                           className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105"
                         >
-                          👁️ Visualizza
+                          ðŸ‘ï¸ Visualizza
                         </button>
                         <button className="bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105">
-                          🗑️ Elimina
+                          ðŸ—‘ï¸ Elimina
                         </button>
                       </div>
                     </td>
@@ -355,15 +355,15 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 w-full max-w-lg mx-4 shadow-2xl">
             <h3 className="text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              📤 Carica Documento per Analisi AI
+              ðŸ“¤ Carica Documento per Analisi AI
             </h3>
             
             <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 mb-6">
-              <h4 className="font-bold text-blue-700 mb-2">🤖 Analisi AI Supportate:</h4>
+              <h4 className="font-bold text-blue-700 mb-2">ðŸ¤– Analisi AI Supportate:</h4>
               <ul className="text-sm text-blue-700 space-y-1">
-                <li>• <strong>PDF:</strong> Buste paga, ricevute (OCR + controllo IRPEF)</li>
-                <li>• <strong>XML:</strong> Fatture elettroniche (parsing + validazione IVA)</li>
-                <li>• <strong>Groq AI:</strong> Identifica errori fiscali automaticamente</li>
+                <li>â€¢ <strong>PDF:</strong> Buste paga, ricevute (OCR + controllo IRPEF)</li>
+                <li>â€¢ <strong>XML:</strong> Fatture elettroniche (parsing + validazione IVA)</li>
+                <li>â€¢ <strong>Groq AI:</strong> Identifica errori fiscali automaticamente</li>
               </ul>
             </div>
 
@@ -384,7 +384,7 @@ export default function Dashboard() {
                 htmlFor="file-upload"
                 className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-3 rounded-xl cursor-pointer hover:from-indigo-600 hover:to-purple-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                📁 Seleziona Documento
+                ðŸ“ Seleziona Documento
               </label>
             </div>
             <div className="flex justify-end space-x-4 mt-8">
@@ -405,8 +405,8 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl p-8 w-full max-w-lg mx-4 shadow-2xl">
             <div className="text-center mb-6">
               <div className="text-6xl mb-4">
-                {validationResult.status === 'error' ? '❌' : 
-                 validationResult.status === 'warning' ? '⚠️' : '✅'}
+                {validationResult.status === 'error' ? 'âŒ' : 
+                 validationResult.status === 'warning' ? 'âš ï¸' : 'âœ…'}
               </div>
               <h3 className={`text-2xl font-bold mb-2 ${
                 validationResult.status === 'error' ? 'text-red-600' :
@@ -420,7 +420,7 @@ export default function Dashboard() {
               </p>
               {validationResult.confidence && (
                 <p className="text-sm text-slate-500 mt-2">
-                  🤖 Confidenza AI: {(validationResult.confidence * 100).toFixed(1)}%
+                  ðŸ¤– Confidenza AI: {(validationResult.confidence * 100).toFixed(1)}%
                 </p>
               )}
             </div>
@@ -432,12 +432,12 @@ export default function Dashboard() {
                 <h4 className={`font-bold mb-2 ${
                   validationResult.status === 'error' ? 'text-red-700' : 'text-orange-700'
                 }`}>
-                  📋 Problemi identificati dall'AI:
+                  ðŸ“‹ Problemi identificati dall'AI:
                 </h4>
                 <ul className="space-y-1">
                   {validationResult.issues.map((issue, index) => (
                     <li key={index} className="flex items-center space-x-2">
-                      <span className={validationResult.status === 'error' ? 'text-red-500' : 'text-orange-500'}>•</span>
+                      <span className={validationResult.status === 'error' ? 'text-red-500' : 'text-orange-500'}>â€¢</span>
                       <span className={`text-sm ${
                         validationResult.status === 'error' ? 'text-red-700' : 'text-orange-700'
                       }`}>{issue}</span>
@@ -452,14 +452,14 @@ export default function Dashboard() {
                 onClick={handleCheckNow}
                 className="px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
               >
-                <span>🔍</span>
+                <span>ðŸ”</span>
                 <span>Dettagli AI</span>
               </button>
               <button 
                 onClick={handleProceedAnyway}
                 className="px-6 py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
               >
-                <span>✅</span>
+                <span>âœ…</span>
                 <span>Procedi</span>
               </button>
             </div>
@@ -473,7 +473,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl p-8 w-full max-w-3xl mx-4 max-h-[85vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                📋 Dettagli Documento
+                ðŸ“‹ Dettagli Documento
               </h3>
               <button 
                 onClick={() => setShowModal(false)}
@@ -510,7 +510,7 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-8">
-              <label className="block text-sm font-bold text-slate-600 mb-4 uppercase tracking-wide">🤖 Analisi AI Groq</label>
+              <label className="block text-sm font-bold text-slate-600 mb-4 uppercase tracking-wide">ðŸ¤– Analisi AI Groq</label>
               <div className="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl p-6">
                 <div className="flex items-start space-x-4">
                   <div className="bg-emerald-100 p-3 rounded-xl">
@@ -520,7 +520,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="text-emerald-800 font-medium text-lg">{selectedDoc.aiAnalysis}</p>
-                    <p className="text-emerald-600 text-sm mt-2">✨ Powered by Groq AI</p>
+                    <p className="text-emerald-600 text-sm mt-2">âœ¨ Powered by Groq AI</p>
                   </div>
                 </div>
               </div>
@@ -534,7 +534,7 @@ export default function Dashboard() {
                 Chiudi
               </button>
               <button className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg">
-                📥 Scarica
+                ðŸ“¥ Scarica
               </button>
             </div>
           </div>

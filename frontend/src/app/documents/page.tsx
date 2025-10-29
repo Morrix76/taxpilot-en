@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ' + process.env.NEXT_PUBLIC_API_URL + '/api'
 
 // ========================================================================
 // FUNZIONE HELPER AGGIUNTA COME DA ISTRUZIONI
@@ -197,13 +197,13 @@ export default function Documents() {
       if (response.ok) {
         await fetchDocuments()
         setSelectedDocs(prev => prev.filter(docId => docId !== id))
-        alert('✅ Documento eliminato con successo!')
+        alert('âœ… Documento eliminato con successo!')
       } else {
         throw new Error('Errore durante eliminazione')
       }
     } catch (error) {
       console.error('Errore eliminazione:', error)
-      alert('❌ Errore durante l\'eliminazione del documento')
+      alert('âŒ Errore durante l\'eliminazione del documento')
     }
   }
 
@@ -219,10 +219,10 @@ export default function Documents() {
       await Promise.all(deletePromises)
       await fetchDocuments()
       setSelectedDocs([])
-      alert(`✅ ${selectedDocs.length} documenti eliminati con successo!`)
+      alert(`âœ… ${selectedDocs.length} documenti eliminati con successo!`)
     } catch (error) {
       console.error('Errore eliminazione batch:', error)
-      alert('❌ Errore durante l\'eliminazione dei documenti')
+      alert('âŒ Errore durante l\'eliminazione dei documenti')
     }
   }
 
@@ -230,7 +230,7 @@ export default function Documents() {
     if (!confirm('Rilanciare l\'analisi AI per questo documento?')) return;
   
     try {
-      console.log('🔄 Ri-analisi da dashboard per documento:', docId);
+      console.log('ðŸ”„ Ri-analisi da dashboard per documento:', docId);
   
       const response = await fetch(`${API_BASE_URL}/documents/${docId}/reanalyze`, {
         method: 'PUT',
@@ -244,7 +244,7 @@ export default function Documents() {
       const result = await response.json();
   
       if (result.success) {
-        alert('🤖 Ri-analisi completata!\n\nIl documento è stato riprocessato con successo.');
+        alert('ðŸ¤– Ri-analisi completata!\n\nIl documento Ã¨ stato riprocessato con successo.');
         // Ricarica documenti se hai una funzione per farlo
         await fetchDocuments?.();
       } else {
@@ -252,8 +252,8 @@ export default function Documents() {
       }
   
     } catch (error) {
-      console.error('❌ Errore ri-analisi:', error);
-      alert('❌ Errore durante la ri-analisi: ' + error.message);
+      console.error('âŒ Errore ri-analisi:', error);
+      alert('âŒ Errore durante la ri-analisi: ' + error.message);
     }
   };
 
@@ -291,20 +291,20 @@ export default function Documents() {
       return { 
         text: 'Con errori', 
         color: 'from-red-100 to-pink-100 dark:from-red-900 dark:to-pink-900 text-red-700 dark:text-red-300',
-        icon: '❌'
+        icon: 'âŒ'
       }
     }
     if (doc.flag_manual_review) {
       return { 
         text: 'Da rivedere', 
         color: 'from-yellow-100 to-orange-100 dark:from-yellow-900 dark:to-orange-900 text-yellow-700 dark:text-yellow-300',
-        icon: '⚠️'
+        icon: 'âš ï¸'
       }
     }
     return { 
       text: 'Conforme', 
       color: 'from-emerald-100 to-green-100 dark:from-emerald-900 dark:to-green-900 text-emerald-700 dark:text-emerald-300',
-      icon: '✅'
+      icon: 'âœ…'
     }
   }
 
@@ -342,7 +342,7 @@ export default function Documents() {
         <div className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 dark:from-slate-200 dark:to-indigo-400 bg-clip-text text-transparent">
-              📁 Gestione Documenti
+              ðŸ“ Gestione Documenti
             </h1>
             <p className="text-slate-600 dark:text-slate-300 mt-3 text-lg">
               Visualizza e gestisci tutti i documenti analizzati ({filteredDocuments.length} di {documents.length})
@@ -353,13 +353,13 @@ export default function Documents() {
               onClick={exportToExcel}
               className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
             >
-              📊 Export CSV
+              ðŸ“Š Export CSV
             </button>
             <button 
               onClick={fetchDocuments}
               className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
             >
-              🔄 Aggiorna
+              ðŸ”„ Aggiorna
             </button>
           </div>
         </div>
@@ -391,7 +391,7 @@ export default function Documents() {
         {/* Filtri Funzionali */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-6 mb-8">
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center">
-            🔍 Filtri Ricerca
+            ðŸ” Filtri Ricerca
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
@@ -453,7 +453,7 @@ export default function Documents() {
                 onClick={resetFilters}
                 className="w-full bg-slate-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-slate-600 transition-colors"
               >
-                🗑️ Reset
+                ðŸ—‘ï¸ Reset
               </button>
             </div>
           </div>
@@ -470,7 +470,7 @@ export default function Documents() {
                 onClick={handleBatchDelete}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold"
               >
-                🗑️ Elimina Selezionati
+                ðŸ—‘ï¸ Elimina Selezionati
               </button>
             </div>
           </div>
@@ -480,7 +480,7 @@ export default function Documents() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 px-8 py-6 border-b border-slate-200 dark:border-slate-600">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">📄 Documenti</h2>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">ðŸ“„ Documenti</h2>
               <span className="text-sm text-slate-600 dark:text-slate-300">
                 Mostrando {paginatedDocuments.length} di {filteredDocuments.length} documenti
               </span>
@@ -489,7 +489,7 @@ export default function Documents() {
           
           {filteredDocuments.length === 0 ? (
             <div className="p-12 text-center">
-              <div className="text-6xl mb-4">📂</div>
+              <div className="text-6xl mb-4">ðŸ“‚</div>
               <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">
                 {documents.length === 0 ? 'Nessun documento caricato' : 'Nessun documento corrisponde ai filtri'}
               </h3>
@@ -504,14 +504,14 @@ export default function Documents() {
                   href="/dashboard"
                   className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg inline-block"
                 >
-                  🎯 Vai alla Dashboard
+                  ðŸŽ¯ Vai alla Dashboard
                 </a>
               ) : (
                 <button 
                   onClick={resetFilters}
                   className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
-                  🔄 Rimuovi Filtri
+                  ðŸ”„ Rimuovi Filtri
                 </button>
               )}
             </div>
@@ -535,7 +535,7 @@ export default function Documents() {
                       <div className="flex items-center space-x-1">
                         <span>Nome File</span>
                         {sortField === 'name' && (
-                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                          <span>{sortDirection === 'asc' ? 'â†‘' : 'â†“'}</span>
                         )}
                       </div>
                     </th>
@@ -546,7 +546,7 @@ export default function Documents() {
                       <div className="flex items-center space-x-1">
                         <span>Tipo</span>
                         {sortField === 'type' && (
-                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                          <span>{sortDirection === 'asc' ? 'â†‘' : 'â†“'}</span>
                         )}
                       </div>
                     </th>
@@ -557,7 +557,7 @@ export default function Documents() {
                       <div className="flex items-center space-x-1">
                         <span>Data</span>
                         {sortField === 'created_at' && (
-                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                          <span>{sortDirection === 'asc' ? 'â†‘' : 'â†“'}</span>
                         )}
                       </div>
                     </th>
@@ -569,7 +569,7 @@ export default function Documents() {
                       <div className="flex items-center space-x-1">
                         <span>Confidence</span>
                         {sortField === 'ai_confidence' && (
-                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                          <span>{sortDirection === 'asc' ? 'â†‘' : 'â†“'}</span>
                         )}
                       </div>
                     </th>
@@ -610,7 +610,7 @@ export default function Documents() {
                               ? 'bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 text-indigo-700 dark:text-indigo-300' 
                               : 'bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 text-purple-700 dark:text-purple-300'
                           }`}>
-                            {(doc.document_type_detected || doc.type) === 'Fattura Elettronica' ? '🧾' : '💰'} {doc.document_type_detected || doc.type}
+                            {(doc.document_type_detected || doc.type) === 'Fattura Elettronica' ? 'ðŸ§¾' : 'ðŸ’°'} {doc.document_type_detected || doc.type}
                           </span>
                         </td>
                         <td className="px-8 py-6 text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -630,20 +630,20 @@ export default function Documents() {
                               onClick={() => handleViewDocument(doc)}
                               className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
                             >
-                              👁️ Visualizza
+                              ðŸ‘ï¸ Visualizza
                             </button>
                             <button 
                               onClick={() => handleDownload(doc)}
                               className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
                             >
-                              📥 Scarica
+                              ðŸ“¥ Scarica
                             </button>
                           
                             <button 
                               onClick={() => handleDeleteDocument(doc.id)}
                               className="bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
                             >
-                              🗑️ Elimina
+                              ðŸ—‘ï¸ Elimina
                             </button>
                           </div>
                         </td>
@@ -668,14 +668,14 @@ export default function Documents() {
                     disabled={currentPage === 1}
                     className="px-3 py-2 bg-white dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-500 transition-colors"
                   >
-                    ⏮️ Prima
+                    â®ï¸ Prima
                   </button>
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
                     className="px-3 py-2 bg-white dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-500 transition-colors"
                   >
-                    ← Precedente
+                    â† Precedente
                   </button>
                   <span className="px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-lg font-bold">
                     {currentPage} di {totalPages}
@@ -685,14 +685,14 @@ export default function Documents() {
                     disabled={currentPage === totalPages}
                     className="px-3 py-2 bg-white dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-500 transition-colors"
                   >
-                    Successivo →
+                    Successivo â†’
                   </button>
                   <button
                     onClick={() => setCurrentPage(totalPages)}
                     disabled={currentPage === totalPages}
                     className="px-3 py-2 bg-white dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-500 transition-colors"
                   >
-                    ⏭️ Ultima
+                    â­ï¸ Ultima
                   </button>
                 </div>
               </div>
@@ -710,7 +710,7 @@ export default function Documents() {
             <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 rounded-t-2xl">
               <div className="flex justify-between items-center">
                 <h3 className="text-2xl font-bold text-white flex items-center">
-                  📋 Dettagli Documento
+                  ðŸ“‹ Dettagli Documento
                 </h3>
                 <button 
                   onClick={() => setShowModal(false)}
@@ -728,19 +728,19 @@ export default function Documents() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <div className="space-y-6">
                   <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 p-6 rounded-xl border border-indigo-200 dark:border-indigo-700">
-                    <label className="block text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-2 uppercase tracking-wide">📄 Nome File</label>
+                    <label className="block text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-2 uppercase tracking-wide">ðŸ“„ Nome File</label>
                     <p className="text-slate-800 dark:text-white font-medium text-lg break-all">{selectedDoc.name}</p>
                   </div>
                   
                   <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 p-6 rounded-xl border border-purple-200 dark:border-purple-700">
-                    <label className="block text-sm font-bold text-purple-600 dark:text-purple-400 mb-2 uppercase tracking-wide">📋 Tipo Documento</label>
+                    <label className="block text-sm font-bold text-purple-600 dark:text-purple-400 mb-2 uppercase tracking-wide">ðŸ“‹ Tipo Documento</label>
                     <p className="text-slate-800 dark:text-white font-medium text-lg">
                       {selectedDoc.document_type_detected || selectedDoc.type}
                     </p>
                   </div>
                   
                   <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 p-6 rounded-xl border border-emerald-200 dark:border-emerald-700">
-                    <label className="block text-sm font-bold text-emerald-600 dark:text-emerald-400 mb-2 uppercase tracking-wide">💾 Dimensione File</label>
+                    <label className="block text-sm font-bold text-emerald-600 dark:text-emerald-400 mb-2 uppercase tracking-wide">ðŸ’¾ Dimensione File</label>
                     <p className="text-slate-800 dark:text-white font-medium text-lg">
                       {selectedDoc.file_size ? `${(selectedDoc.file_size / 1024).toFixed(1)} KB` : 'N/A'}
                     </p>
@@ -749,14 +749,14 @@ export default function Documents() {
                 
                 <div className="space-y-6">
                   <div className="bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/30 dark:to-yellow-900/30 p-6 rounded-xl border border-orange-200 dark:border-orange-700">
-                    <label className="block text-sm font-bold text-orange-600 dark:text-orange-400 mb-2 uppercase tracking-wide">📅 Data Elaborazione</label>
+                    <label className="block text-sm font-bold text-orange-600 dark:text-orange-400 mb-2 uppercase tracking-wide">ðŸ“… Data Elaborazione</label>
                     <p className="text-slate-800 dark:text-white font-medium text-lg">
                       {new Date(selectedDoc.created_at).toLocaleString('it-IT')}
                     </p>
                   </div>
                   
                   <div className="bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/30 dark:to-rose-900/30 p-6 rounded-xl border border-pink-200 dark:border-pink-700">
-                    <label className="block text-sm font-bold text-pink-600 dark:text-pink-400 mb-2 uppercase tracking-wide">🎯 Status</label>
+                    <label className="block text-sm font-bold text-pink-600 dark:text-pink-400 mb-2 uppercase tracking-wide">ðŸŽ¯ Status</label>
                     <div className="flex items-center space-x-2">
                       {(() => {
                         const statusInfo = getStatusInfo(selectedDoc)
@@ -770,7 +770,7 @@ export default function Documents() {
                   </div>
                   
                   <div className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/30 dark:to-blue-900/30 p-6 rounded-xl border border-cyan-200 dark:border-cyan-700">
-                    <label className="block text-sm font-bold text-cyan-600 dark:text-cyan-400 mb-2 uppercase tracking-wide">📊 Confidence AI</label>
+                    <label className="block text-sm font-bold text-cyan-600 dark:text-cyan-400 mb-2 uppercase tracking-wide">ðŸ“Š Confidence AI</label>
                     <div className="flex items-center space-x-3">
                       <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                         <div 
@@ -788,7 +788,7 @@ export default function Documents() {
 
               {/* Analisi AI */}
               <div className="mb-8">
-                <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-4 uppercase tracking-wide">🤖 Analisi AI Dettagliata</label>
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-4 uppercase tracking-wide">ðŸ¤– Analisi AI Dettagliata</label>
                 <div className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 border-2 border-emerald-200 dark:border-emerald-700 rounded-xl p-6">
                   <div className="flex items-start space-x-4">
                     <div className="bg-emerald-100 dark:bg-emerald-800 p-3 rounded-xl flex-shrink-0">
@@ -817,7 +817,7 @@ export default function Documents() {
                   }
                 })() && (
                 <div className="mb-8">
-                  <label className="block text-sm font-bold text-red-600 dark:text-red-400 mb-4 uppercase tracking-wide">⚠️ Errori Rilevati</label>
+                  <label className="block text-sm font-bold text-red-600 dark:text-red-400 mb-4 uppercase tracking-wide">âš ï¸ Errori Rilevati</label>
                   <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/30 dark:to-pink-900/30 border-2 border-red-200 dark:border-red-700 rounded-xl p-6">
                     <pre className="text-red-800 dark:text-red-200 text-sm whitespace-pre-wrap font-mono">
                       {(() => {
@@ -840,7 +840,7 @@ export default function Documents() {
                 <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-xl">
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Revisione Manuale</label>
                   <p className="text-lg font-bold text-slate-800 dark:text-white">
-                    {selectedDoc.flag_manual_review ? '⚠️ Richiesta' : '✅ Non Necessaria'}
+                    {selectedDoc.flag_manual_review ? 'âš ï¸ Richiesta' : 'âœ… Non Necessaria'}
                   </p>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-xl">
@@ -859,38 +859,38 @@ export default function Documents() {
                   onClick={() => setShowModal(false)}
                   className="px-6 py-3 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-500 font-bold transition-all duration-300"
                 >
-                  ✕ Chiudi
+                  âœ• Chiudi
                 </button>
                 <button 
                   onClick={() => handleReAnalyze(selectedDoc.id)}
                   className="px-6 py-3 bg-gradient-to-r from-orange-500 to-yellow-600 text-white rounded-xl hover:from-orange-600 hover:to-yellow-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
-                  🔄 Ri-analizza
+                  ðŸ”„ Ri-analizza
                 </button>
                 <button 
                   onClick={() => {
-                    const reportContent = `📊 REPORT AI DETTAGLIATO
+                    const reportContent = `ðŸ“Š REPORT AI DETTAGLIATO
 
-📄 File: ${selectedDoc.name}
-🤖 Tipo: ${selectedDoc.document_type_detected || selectedDoc.type}
-📅 Data: ${new Date(selectedDoc.created_at).toLocaleString('it-IT')}
-📈 Confidence: ${(selectedDoc.ai_confidence * 100).toFixed(1)}%
-🎯 Status: ${selectedDoc.ai_status?.toUpperCase()}
+ðŸ“„ File: ${selectedDoc.name}
+ðŸ¤– Tipo: ${selectedDoc.document_type_detected || selectedDoc.type}
+ðŸ“… Data: ${new Date(selectedDoc.created_at).toLocaleString('it-IT')}
+ðŸ“ˆ Confidence: ${(selectedDoc.ai_confidence * 100).toFixed(1)}%
+ðŸŽ¯ Status: ${selectedDoc.ai_status?.toUpperCase()}
 
-🔍 Revisione Manuale: ${selectedDoc.flag_manual_review ? 'RICHIESTA' : 'NON NECESSARIA'}
+ðŸ” Revisione Manuale: ${selectedDoc.flag_manual_review ? 'RICHIESTA' : 'NON NECESSARIA'}
 
-💡 Analisi AI:
+ðŸ’¡ Analisi AI:
 ${selectedDoc.ai_analysis || 'Analisi completata con successo'}
 
 ${safeParseJSON(selectedDoc.ai_issues).length > 0 ? 
-`⚠️ ERRORI RILEVATI:
+`âš ï¸ ERRORI RILEVATI:
 ${JSON.stringify(safeParseJSON(selectedDoc.ai_issues), null, 2)}` : 
-'✅ Nessun errore rilevato'
+'âœ… Nessun errore rilevato'
 }
 
 ---
-🤖 Report generato da TaxPilot Assistant Pro
-📅 ${new Date().toLocaleString('it-IT')}`;
+ðŸ¤– Report generato da TaxPilot Assistant Pro
+ðŸ“… ${new Date().toLocaleString('it-IT')}`;
 
                     // Crea e scarica il report
                     const blob = new Blob([reportContent], { type: 'text/plain' });
@@ -903,13 +903,13 @@ ${JSON.stringify(safeParseJSON(selectedDoc.ai_issues), null, 2)}` :
                   }}
                   className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:from-purple-600 hover:to-pink-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
-                  📊 Scarica Report
+                  ðŸ“Š Scarica Report
                 </button>
                 <button 
                   onClick={() => handleDownload(selectedDoc)}
                   className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
-                  📥 Scarica File
+                  ðŸ“¥ Scarica File
                 </button>
               </div>
             </div>
@@ -919,3 +919,4 @@ ${JSON.stringify(safeParseJSON(selectedDoc.ai_issues), null, 2)}` :
     </div>
   )
 }
+

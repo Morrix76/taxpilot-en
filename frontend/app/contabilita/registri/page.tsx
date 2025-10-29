@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -63,7 +63,7 @@ export default function RegistriIVAPage() {
 
   const caricaClienti = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/clients', {
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/clients', {
         headers: getAuthHeaders()
       })
 
@@ -162,7 +162,7 @@ export default function RegistriIVAPage() {
       formData.append('document', file)
       formData.append('client_id', clienteSelezionato)
 
-      const response = await fetch('http://localhost:3003/api/documents', {
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/documents', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` },
         body: formData
@@ -268,7 +268,7 @@ export default function RegistriIVAPage() {
             onClick={() => window.history.back()}
             className="flex items-center gap-2"
           >
-            ← Back
+            â† Back
           </Button>
           <div>
             <h1 className="text-3xl font-bold">VAT Registers</h1>
@@ -378,7 +378,7 @@ export default function RegistriIVAPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  €{totali.imponibile.toFixed(2)}
+                  â‚¬{totali.imponibile.toFixed(2)}
                 </div>
                 <div className="text-sm text-gray-600">Total Taxable</div>
               </CardContent>
@@ -386,7 +386,7 @@ export default function RegistriIVAPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  €{totali.iva.toFixed(2)}
+                  â‚¬{totali.iva.toFixed(2)}
                 </div>
                 <div className="text-sm text-gray-600">Total VAT</div>
               </CardContent>
@@ -394,7 +394,7 @@ export default function RegistriIVAPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  €{totali.totale.toFixed(2)}
+                  â‚¬{totali.totale.toFixed(2)}
                 </div>
                 <div className="text-sm text-gray-600">Grand Total</div>
               </CardContent>
@@ -438,9 +438,9 @@ export default function RegistriIVAPage() {
                           <td className="px-4 py-4 text-sm font-mono">{registro.numero}</td>
                           <td className="px-4 py-4 text-sm">{registro.clienteNome}</td>
                           <td className="px-4 py-4 text-sm font-mono">{registro.partitaIva}</td>
-                          <td className="px-4 py-4 text-sm text-right">€{registro.imponibile.toFixed(2)}</td>
-                          <td className="px-4 py-4 text-sm text-right">€{registro.iva.toFixed(2)}</td>
-                          <td className="px-4 py-4 text-sm text-right font-medium">€{registro.totale.toFixed(2)}</td>
+                          <td className="px-4 py-4 text-sm text-right">â‚¬{registro.imponibile.toFixed(2)}</td>
+                          <td className="px-4 py-4 text-sm text-right">â‚¬{registro.iva.toFixed(2)}</td>
+                          <td className="px-4 py-4 text-sm text-right font-medium">â‚¬{registro.totale.toFixed(2)}</td>
                           <td className="px-4 py-4 text-center">
                             <Button variant="outline" size="sm">
                               <Eye className="h-4 w-4" />

@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Loader2, AlertCircle, FileText, ServerCrash } from 'lucide-react';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ' + process.env.NEXT_PUBLIC_API_URL + '/api';
 
 // Funzione helper per formattare i bytes
 const formatBytes = (bytes, decimals = 2) => {
@@ -191,7 +191,7 @@ export default function Analytics() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-indigo-600 bg-clip-text text-transparent">
-                📊 Analytics & Statistiche Reali
+                ðŸ“Š Analytics & Statistiche Reali
               </h1>
               <p className="text-slate-600 mt-2 text-lg">Analisi dettagliate delle performance del sistema</p>
             </div>
@@ -217,26 +217,26 @@ export default function Analytics() {
               <p className="text-slate-500 text-sm font-medium uppercase">Documenti Elaborati</p>
               <p className="text-3xl font-bold text-slate-800">{realMetrics.totalDocs.toLocaleString('it-IT')}</p>
               <p className={`text-sm font-semibold mt-1 ${realMetrics.growthPercentage >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                {realMetrics.growthPercentage >= 0 ? '↗️' : '↘️'} {realMetrics.growthPercentage.toFixed(1)}% vs mese scorso
+                {realMetrics.growthPercentage >= 0 ? 'â†—ï¸' : 'â†˜ï¸'} {realMetrics.growthPercentage.toFixed(1)}% vs mese scorso
               </p>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 hover:shadow-xl transition-all duration-300">
               <p className="text-slate-500 text-sm font-medium uppercase">Accuratezza Media AI</p>
               <p className="text-3xl font-bold text-slate-800">{realMetrics.accuracy.toFixed(1)}%</p>
-              <p className="text-emerald-500 text-sm font-semibold mt-1">🎯 Alta confidenza</p>
+              <p className="text-emerald-500 text-sm font-semibold mt-1">ðŸŽ¯ Alta confidenza</p>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 hover:shadow-xl transition-all duration-300">
               <p className="text-slate-500 text-sm font-medium uppercase">Storage Utilizzato</p>
               <p className="text-3xl font-bold text-slate-800">{formatBytes(realMetrics.totalStorage)}</p>
-              <p className="text-purple-500 text-sm font-semibold mt-1">💾 Dati totali</p>
+              <p className="text-purple-500 text-sm font-semibold mt-1">ðŸ’¾ Dati totali</p>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 hover:shadow-xl transition-all duration-300">
               <p className="text-slate-500 text-sm font-medium uppercase">Tempo Risparmiato</p>
               <p className="text-3xl font-bold text-slate-800">{realMetrics.timeSavedHours.toFixed(0)}h</p>
-              <p className="text-orange-500 text-sm font-semibold mt-1">⚡ Basato su 5min/doc</p>
+              <p className="text-orange-500 text-sm font-semibold mt-1">âš¡ Basato su 5min/doc</p>
             </div>
           </div>
         </div>
@@ -244,7 +244,7 @@ export default function Analytics() {
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-            <h3 className="text-xl font-bold text-slate-800 mb-6">📈 Documenti Elaborati per Mese</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-6">ðŸ“ˆ Documenti Elaborati per Mese</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData.byMonth}>
                 <XAxis dataKey="name" stroke="#94a3b8" />
@@ -258,7 +258,7 @@ export default function Analytics() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-            <h3 className="text-xl font-bold text-slate-800 mb-6">💾 Analisi Storage per Dimensione</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-6">ðŸ’¾ Analisi Storage per Dimensione</h3>
             <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData.bySize} layout="vertical">
                     <XAxis type="number" stroke="#94a3b8" />
@@ -274,7 +274,7 @@ export default function Analytics() {
         {/* Second Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-            <h3 className="text-xl font-bold text-slate-800 mb-6">🥧 Tipologie Documenti</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-6">ðŸ¥§ Tipologie Documenti</h3>
             <div className="space-y-4">
               {chartData.byType.map((type, index) => (
                 <div key={index} className="flex items-center justify-between">
@@ -292,7 +292,7 @@ export default function Analytics() {
           </div>
           
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-            <h3 className="text-xl font-bold text-slate-800 mb-6">🤖 Performance AI</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-6">ðŸ¤– Performance AI</h3>
             <div className="space-y-6">
               <div>
                 <div className="flex justify-between items-center mb-2">
@@ -312,7 +312,7 @@ export default function Analytics() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-            <h3 className="text-xl font-bold text-slate-800 mb-6">📄 Documenti Recenti</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-6">ðŸ“„ Documenti Recenti</h3>
             <div className="space-y-4">
               {documents.slice(0, 5).map((doc, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
@@ -328,7 +328,7 @@ export default function Analytics() {
 
         {/* Activity Timeline */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-          <h3 className="text-xl font-bold text-slate-800 mb-6">📅 Timeline Attività Recenti</h3>
+          <h3 className="text-xl font-bold text-slate-800 mb-6">ðŸ“… Timeline AttivitÃ  Recenti</h3>
           <div className="space-y-6">
             {documents.slice(0, 5).map((doc, index) => (
               <div key={index} className="flex items-start space-x-4">
@@ -346,3 +346,4 @@ export default function Analytics() {
     </div>
   )
 }
+

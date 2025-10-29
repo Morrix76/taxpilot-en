@@ -32,7 +32,7 @@ export default function Upload() {
 
     try {
       const token = localStorage.getItem('ai_tax_token');
-      const response = await fetch('http://localhost:3003/api/documents', {
+      const response = await fetch(' + process.env.NEXT_PUBLIC_API_URL + '/api/documents', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = 'http://localhost:3003';
+const API_BASE_URL = ' + process.env.NEXT_PUBLIC_API_URL + '';
 
 export default function BillingPage() {
   const [loading, setLoading] = useState(true);
@@ -103,7 +103,7 @@ export default function BillingPage() {
                 <div>
                   <h2 className="text-2xl font-bold">Trial Active</h2>
                   <p className="text-indigo-100 font-medium text-lg">
-                    {billingData.periodo.giorni_rimasti} days remaining • {billingData.utilizzo.documenti_utilizzati}/{billingData.utilizzo.documenti_limite || '∞'} documents used
+                    {billingData.periodo.giorni_rimasti} days remaining â€¢ {billingData.utilizzo.documenti_utilizzati}/{billingData.utilizzo.documenti_limite || 'âˆž'} documents used
                   </p>
                   <div className="w-64 bg-white/20 rounded-full h-3 mt-3">
                     <div 
@@ -165,7 +165,7 @@ export default function BillingPage() {
                         {billingData.utilizzo.documenti_utilizzati}
                       </div>
                       <div className="text-sm text-slate-500 dark:text-slate-400">
-                        of {billingData.utilizzo.documenti_limite || '∞'} documents
+                        of {billingData.utilizzo.documenti_limite || 'âˆž'} documents
                       </div>
                     </div>
                     <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 mb-2">
@@ -186,7 +186,7 @@ export default function BillingPage() {
                         {Math.round(billingData.utilizzo.storage_utilizzato / 1024)}
                       </div>
                       <div className="text-sm text-slate-500 dark:text-slate-400">
-                        of {billingData.utilizzo.storage_limite ? Math.round(billingData.utilizzo.storage_limite / 1024) : '∞'}MB storage
+                        of {billingData.utilizzo.storage_limite ? Math.round(billingData.utilizzo.storage_limite / 1024) : 'âˆž'}MB storage
                       </div>
                     </div>
                     <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 mb-2">
