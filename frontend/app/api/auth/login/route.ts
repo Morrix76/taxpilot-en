@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL 
-  ? `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`
+const BACKEND_URL = process.env.API_URL 
+  ? `${process.env.API_URL}/api/auth/login`
   : 'https://taxpilot-en-production.up.railway.app/api/auth/login';
 
 /**
