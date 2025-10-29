@@ -83,4 +83,57 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// ====== PROFILE (verifica token e ritorna info utente + piano) ======
+router.get('/profile', async (req, res) => {
+  try {
+    // Estrai token dall'header Authorization
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Token mancante' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Verifica token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, error: 'Token non valido' });
+    }
+
+    // Recupera utente dal database
+    const userResult = await db.execute({
+      sql: 'SELECT id, email FROM users WHERE id = ?',
+      args: [decoded.userId]
+    });
+
+    const user = userResult.rows[0];
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Utente non trovato' });
+    }
+
+    // Per ora ritorniamo piano fittizio (puoi implementare la logica vera dopo)
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email
+      },
+      piano: {
+        active: true,
+        scaduto: false,
+        piano_nome: 'Free Trial',
+        days_remaining: 30,
+        documenti_utilizzati: 0,
+        documenti_limite: 100
+      }
+    });
+
+  } catch (err) {
+    console.error("Errore profile:", err);
+    res.status(500).json({ success: false, error: 'Errore server' });
+  }
+});
+
 export default router;
