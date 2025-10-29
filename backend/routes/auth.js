@@ -66,7 +66,7 @@ router.post('/register', async (req, res) => {
       args: [email, hashedPassword]
     });
     
-    const newUserId = insertResult.lastInsertRowid;
+    const newUserId = Number(insertResult.lastInsertRowid);
     
     res.status(201).json({ 
       success: true, 
