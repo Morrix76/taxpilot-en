@@ -1,22 +1,20 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
-// 1. IMPORTA il client Turso dal NUOVO file db.js
 import { db } from '../db.js';
 
 const router = express.Router();
 
-/**
- * =================================================================
- * Rotta di Login (asincrona con @libsql/client)
- * =================================================================
- */
+/* ============================================================
+   LOGIN
+   ============================================================ */
 router.post('/login', async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ success: false, error: 'Email e password sono richiesti' });
+    return res
+      .status(400)
+      .json({ success: false, error: 'Email e password sono richiesti' });
   }
 
   try {
@@ -27,21 +25,24 @@ router.post('/login', async (req, res, next) => {
 
     const user = userResult.rows[0];
     if (!user) {
-      return res.status(401).json({ success: false, error: 'Credenziali non valide' });
+      return res
+        .status(401)
+        .json({ success: false, error: 'Credenziali non valide' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, error: 'Credenziali non valide' });
+      return res
+        .status(401)
+        .json({ success: false, error: 'Credenziali non valide' });
     }
 
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET, // Assicurati che sia settata
+      process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    // Nota: la colonna "name" non esiste: evito di includerla nella risposta
     res.json({
       success: true,
       token,
@@ -53,28 +54,28 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
-/**
- * =================================================================
- * Rotta di Registrazione (asincrona con @libsql/client)
- * - RIMOSSA la colonna "name" perché NON esiste in DB
- * =================================================================
- */
+/* ============================================================
+   REGISTRAZIONE
+   ============================================================ */
 router.post('/register', async (req, res, next) => {
-  const { email, password } = req.body; // <-- tolto "name"
+  const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ success: false, error: 'Email e password sono richiesti' });
+    return res
+      .status(400)
+      .json({ success: false, error: 'Email e password sono richiesti' });
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const insertResult = await db.execute({
-      sql: 'INSERT INTO users (email, password) VALUES (?, ?)', // <-- tolto "name"
-      args: [email, hashedPassword],                            // <-- 2 argomenti
+      sql: 'INSERT INTO users (email, password) VALUES (?, ?)',
+      args: [email, hashedPassword],
     });
 
-    const newUserId = insertResult.lastInsertRowid;
+    // 🔧 fix BigInt → converto in numero
+    const newUserId = Number(insertResult.lastInsertRowid);
 
     res.status(201).json({
       success: true,
@@ -83,18 +84,54 @@ router.post('/register', async (req, res, next) => {
     });
   } catch (err) {
     console.error('Errore durante la registrazione:', err);
+
     if (err.message && err.message.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ success: false, error: 'Email già in uso' });
+      return res
+        .status(409)
+        .json({ success: false, error: 'Email già in uso' });
     }
+
     next(err);
   }
 });
 
-/**
- * =================================================================
- * Esempio: Rotta lista clienti (asincrona con @libsql/client)
- * =================================================================
- */
+/* ============================================================
+   PROFILO UTENTE (dal token)
+   ============================================================ */
+router.get('/profile', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res
+        .status(401)
+        .json({ success: false, error: 'Token mancante' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const userResult = await db.execute({
+      sql: 'SELECT id, email FROM users WHERE id = ?',
+      args: [decoded.userId],
+    });
+
+    const user = userResult.rows[0];
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, error: 'Utente non trovato' });
+    }
+
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('Errore profilo:', err);
+    res.status(401).json({ success: false, error: 'Token non valido' });
+  }
+});
+
+/* ============================================================
+   LISTA CLIENTI
+   ============================================================ */
 router.get('/clients/:userId', async (req, res, next) => {
   const { userId } = req.params;
 
