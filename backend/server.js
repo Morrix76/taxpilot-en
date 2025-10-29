@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-// Import database
 import { initializeDatabase } from './db.js';
 import authRoutes from './routes/auth.js'; 
 
@@ -16,52 +15,57 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3003;
 
-// Middleware
+// ====== CORS ======
 app.use(cors({
   origin: [
-    'http://localhost:3001', 
     'http://localhost:3000',
+    'http://localhost:3001',
     'https://taxpilot-en-git-main-franks-projects-c85cd5ad.vercel.app',
     'https://taxpilot-en.vercel.app',
-    'https://taxpilot-en-franks-projects-c85cd5ad.vercel.app'
+    'https://taxpilot-en-franks-projects-c85cd5ad.vercel.app',
+    // ✅ aggiungi dominio Railway (frontend in produzione)
+    'https://taxpilot-en-production.up.railway.app'
   ],
-  credentials: true
+  credentials: true,
 }));
+
+// ====== Middleware ======
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Static files
+// ====== Static files ======
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use('/api/auth', authRoutes);
+// ====== API Routes ======
+app.use('/api/auth', authRoutes); // ✅ corretto per compatibilità col frontend
 
-// Health check
+// ====== Health Check ======
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    version: '3.7.0-turso'
+    version: '3.7.0-turso',
   });
 });
 
-// Error handling
+// ====== Error Handling ======
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(500).json({
     success: false,
-    error: 'Internal server error'
+    error: 'Internal server error',
   });
 });
 
-// Start server
+// ====== Start Server ======
 async function startServer() {
   try {
     await initializeDatabase();
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(`✅ Server running on port ${PORT}`);
     });
   } catch (err) {
-    console.error('Fatal error:', err);
+    console.error('❌ Fatal error:', err);
     process.exit(1);
   }
 }
