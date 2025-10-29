@@ -7,19 +7,11 @@ import { db } from '../db.js';
 
 const router = express.Router();
 
-/** 
+/**
  * =================================================================
- * ESEMPIO DI REFACTORING OBBLIGATORIO per le tue rotte
+ * Rotta di Login (asincrona con @libsql/client)
  * =================================================================
- *
- * Devi rendere ASINCRONE tutte le funzioni delle rotte che
- * interagiscono con il database.
  */
-
-
-// ESEMPIO DI REFACTORING: Rotta di Login (per db.prepare().get())
-//
-// 2. La funzione della rotta DEVE diventare 'async'
 router.post('/login', async (req, res, next) => {
   const { email, password } = req.body;
 
@@ -28,57 +20,47 @@ router.post('/login', async (req, res, next) => {
   }
 
   try {
-    // 3. REFACTORING da db.prepare().get()
-    //
-    // === VECCHIO CODICE (Sincrono con better-sqlite3) ===
-    // const stmt = db.prepare('SELECT * FROM users WHERE email = ?');
-    // const user = stmt.get(email);
-    //
-    // === NUOVO CODICE (Asincrono con @libsql/client) ===
     const userResult = await db.execute({
       sql: 'SELECT * FROM users WHERE email = ?',
-      args: [email] // Usa 'args' per i parametri
+      args: [email],
     });
 
-    // 4. 'get()' ora equivale a prendere il primo elemento (rows[0])
     const user = userResult.rows[0];
-
     if (!user) {
       return res.status(401).json({ success: false, error: 'Credenziali non valide' });
     }
 
-    // Confronto password (bcrypt è già asincrono, 'await' è corretto)
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ success: false, error: 'Credenziali non valide' });
     }
 
-    // Creazione token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET, // Assicurati sia settato!
+      process.env.JWT_SECRET, // Assicurati che sia settata
       { expiresIn: '1h' }
     );
 
+    // Nota: la colonna "name" non esiste: evito di includerla nella risposta
     res.json({
       success: true,
-      token: token,
-      user: { id: user.id, email: user.email, name: user.name }
+      token,
+      user: { id: user.id, email: user.email },
     });
-
   } catch (err) {
-    console.error("Errore durante il login:", err);
-    // Passa l'errore al middleware di gestione errori
-    next(err); 
+    console.error('Errore durante il login:', err);
+    next(err);
   }
 });
 
-
-// ESEMPIO DI REFACTORING: Rotta di Registrazione (per db.prepare().run())
-//
-// 2. La rotta DEVE diventare 'async'
+/**
+ * =================================================================
+ * Rotta di Registrazione (asincrona con @libsql/client)
+ * - RIMOSSA la colonna "name" perché NON esiste in DB
+ * =================================================================
+ */
 router.post('/register', async (req, res, next) => {
-  const { email, password, name } = req.body;
+  const { email, password } = req.body; // <-- tolto "name"
 
   if (!email || !password) {
     return res.status(400).json({ success: false, error: 'Email e password sono richiesti' });
@@ -86,72 +68,50 @@ router.post('/register', async (req, res, next) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
-    
-    // 3. REFACTORING da db.prepare().run()
-    //
-    // === VECCHIO CODICE (Sincrono con better-sqlite3) ===
-    // const stmt = db.prepare('INSERT INTO users (email, password, name) VALUES (?, ?, ?)');
-    // const info = stmt.run(email, hashedPassword, name);
-    // const newUserId = info.lastInsertRowid;
-    //
-    // === NUOVO CODICE (Asincrono con @libsql/client) ===
+
     const insertResult = await db.execute({
-      sql: 'INSERT INTO users (email, password, name) VALUES (?, ?, ?)',
-      args: [email, hashedPassword]
-    });
-    
-    // 4. 'run()' ora restituisce 'lastInsertRowid' direttamente nel risultato
-    const newUserId = insertResult.lastInsertRowid;
-    
-    res.status(201).json({ 
-      success: true, 
-      message: 'Utente registrato', 
-      userId: newUserId 
+      sql: 'INSERT INTO users (email, password) VALUES (?, ?)', // <-- tolto "name"
+      args: [email, hashedPassword],                            // <-- 2 argomenti
     });
 
+    const newUserId = insertResult.lastInsertRowid;
+
+    res.status(201).json({
+      success: true,
+      message: 'Utente registrato',
+      userId: newUserId,
+    });
   } catch (err) {
-    console.error("Errore durante la registrazione:", err);
-    // Gestione degli errori (es. email duplicata)
+    console.error('Errore durante la registrazione:', err);
     if (err.message && err.message.includes('UNIQUE constraint failed')) {
-       return res.status(409).json({ success: false, error: 'Email già in uso' });
+      return res.status(409).json({ success: false, error: 'Email già in uso' });
     }
     next(err);
   }
 });
 
-
-// ESEMPIO DI REFACTORING: Rotta 'all()' (per db.prepare().all())
-//
-// 2. La rotta DEVE diventare 'async'
+/**
+ * =================================================================
+ * Esempio: Rotta lista clienti (asincrona con @libsql/client)
+ * =================================================================
+ */
 router.get('/clients/:userId', async (req, res, next) => {
   const { userId } = req.params;
 
   try {
-    // 3. REFACTORING da db.prepare().all()
-    //
-    // === VECCHIO CODICE (Sincrono con better-sqlite3) ===
-    // const stmt = db.prepare('SELECT * FROM clients WHERE user_id = ?');
-    // const clients = stmt.all(userId);
-    //
-    // === NUOVO CODICE (Asincrono con @libsql/client) ===
     const clientsResult = await db.execute({
       sql: 'SELECT * FROM clients WHERE user_id = ?',
-      args: [userId]
+      args: [userId],
     });
-
-    // 4. 'all()' ora equivale a prendere 'rows'
-    const clients = clientsResult.rows;
 
     res.json({
       success: true,
-      clients: clients
+      clients: clientsResult.rows,
     });
-
   } catch (err) {
-    console.error("Errore nel recupero clienti:", err);
+    console.error('Errore nel recupero clienti:', err);
     next(err);
   }
 });
-
 
 export default router;
