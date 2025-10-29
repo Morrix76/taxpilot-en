@@ -1,15 +1,12 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`;
+const BACKEND_URL = process.env.API_URL 
+  ? `${process.env.API_URL}/api/auth/register`
+  : 'https://taxpilot-en-production.up.railway.app/api/auth/register';
 
-/**
- * Gestisce POST /api/auth/register
- * Inoltra la richiesta di registrazione al backend Express.
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-
     const backendResponse = await fetch(BACKEND_URL, {
       method: 'POST',
       headers: {
@@ -17,18 +14,13 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(body),
     });
-
-    // Leggi la risposta JSON dal backend, che sia di successo o di errore
     const data = await backendResponse.json();
-
-    // Inoltra la risposta e lo status code esatto al frontend
     return NextResponse.json(data, { status: backendResponse.status });
-
   } catch (error) {
-    console.error(`❌ Errore di connessione al backend per /register:`, error);
+    console.error('❌ Errore register:', error);
     return NextResponse.json(
-      { error: 'Impossibile connettersi al servizio di autenticazione.' },
-      { status: 503 } // Service Unavailable
+      { error: 'Impossibile connettersi al servizio.' },
+      { status: 503 }
     );
   }
 }
