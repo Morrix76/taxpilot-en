@@ -1,6 +1,8 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`;
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL 
+  ? `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`
+  : 'https://taxpilot-en-production.up.railway.app/api/auth/login';
 
 /**
  * Gestisce POST /api/auth/login
@@ -9,7 +11,6 @@ const BACKEND_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-
     const backendResponse = await fetch(BACKEND_URL, {
       method: 'POST',
       headers: {
@@ -17,11 +18,8 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(body),
     });
-
     const data = await backendResponse.json();
-
     return NextResponse.json(data, { status: backendResponse.status });
-
   } catch (error) {
     console.error('❌ Errore di connessione al backend per /login:', error);
     return NextResponse.json(
