@@ -2,10 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { initializeDatabase } from './db.js';
-import authRoutes from './routes/auth.js'; 
+import authRoutes from './routes/auth.js';
 
 dotenv.config();
 
@@ -23,7 +22,6 @@ app.use(cors({
     'https://taxpilot-en-git-main-franks-projects-c85cd5ad.vercel.app',
     'https://taxpilot-en.vercel.app',
     'https://taxpilot-en-franks-projects-c85cd5ad.vercel.app',
-    // ✅ aggiungi dominio Railway (frontend in produzione)
     'https://taxpilot-en-production.up.railway.app'
   ],
   credentials: true,
@@ -37,7 +35,13 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ====== API Routes ======
-app.use('/api/auth', authRoutes); // ✅ corretto per compatibilità col frontend
+app.use('/api/auth', authRoutes);
+console.log('✅ Rotte /api/auth montate');
+
+// ====== Test interno ======
+app.get('/api/auth/test-inline', (req, res) => {
+  res.json({ message: 'Rotta inline funzionante!' });
+});
 
 // ====== Health Check ======
 app.get('/api/health', (req, res) => {
@@ -51,10 +55,7 @@ app.get('/api/health', (req, res) => {
 // ====== Error Handling ======
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  res.status(500).json({
-    success: false,
-    error: 'Internal server error',
-  });
+  res.status(500).json({ success: false, error: 'Internal server error' });
 });
 
 // ====== Start Server ======
