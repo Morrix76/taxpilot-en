@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 // 1. IMPORTA il client Turso dal NUOVO file db.js
-import { db } from '../database/db.js';
+import { db } from '../db.js';
 
 const router = express.Router();
 
@@ -63,7 +63,7 @@ router.post('/login', async (req, res, next) => {
     res.json({
       success: true,
       token: token,
-      user: { id: user.id, email: user.email, nome: user.nome }
+      user: { id: user.id, email: user.email, name: user.name }
     });
 
   } catch (err) {
@@ -78,7 +78,11 @@ router.post('/login', async (req, res, next) => {
 //
 // 2. La rotta DEVE diventare 'async'
 router.post('/register', async (req, res, next) => {
-  const { email, password, nome, cognome } = req.body;
+  const { email, password, name } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ success: false, error: 'Email e password sono richiesti' });
+  }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -86,14 +90,14 @@ router.post('/register', async (req, res, next) => {
     // 3. REFACTORING da db.prepare().run()
     //
     // === VECCHIO CODICE (Sincrono con better-sqlite3) ===
-    // const stmt = db.prepare('INSERT INTO users (email, password, nome, cognome) VALUES (?, ?, ?, ?)');
-    // const info = stmt.run(email, hashedPassword, nome, cognome);
+    // const stmt = db.prepare('INSERT INTO users (email, password, name) VALUES (?, ?, ?)');
+    // const info = stmt.run(email, hashedPassword, name);
     // const newUserId = info.lastInsertRowid;
     //
     // === NUOVO CODICE (Asincrono con @libsql/client) ===
     const insertResult = await db.execute({
-      sql: 'INSERT INTO users (email, password, nome, cognome) VALUES (?, ?, ?, ?)',
-      args: [email, hashedPassword, nome, cognome]
+      sql: 'INSERT INTO users (email, password, name) VALUES (?, ?, ?)',
+      args: [email, hashedPassword, name || null]
     });
     
     // 4. 'run()' ora restituisce 'lastInsertRowid' direttamente nel risultato
@@ -108,7 +112,7 @@ router.post('/register', async (req, res, next) => {
   } catch (err) {
     console.error("Errore durante la registrazione:", err);
     // Gestione degli errori (es. email duplicata)
-    if (err.message && err.message.includes('UNIQUE constraint failed')) { // Il messaggio di errore può variare
+    if (err.message && err.message.includes('UNIQUE constraint failed')) {
        return res.status(409).json({ success: false, error: 'Email già in uso' });
     }
     next(err);
