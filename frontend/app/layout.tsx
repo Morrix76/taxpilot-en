@@ -78,7 +78,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       }
 
       try {
-        const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
