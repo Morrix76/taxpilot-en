@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -61,7 +61,7 @@ export default function PianoContiPage() {
 
   const caricaClienti = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/clients', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
         headers: getAuthHeaders()
       })
 
@@ -85,7 +85,7 @@ export default function PianoContiPage() {
     try {
       setLoading(true)
       
-      const response = await fetch(`http://localhost:3003/api/piano-conti/${clienteId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/piano-conti/${clienteId}`, {
         headers: getAuthHeaders()
       })
 
@@ -153,7 +153,7 @@ export default function PianoContiPage() {
     try {
       setSaving(true)
 
-      const response = await fetch(`http://localhost:3003/api/piano-conti/${clienteSelezionato}/${contoInModifica}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/piano-conti/${clienteSelezionato}/${contoInModifica}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(formData)
@@ -207,7 +207,7 @@ export default function PianoContiPage() {
     try {
       setSaving(true)
 
-      const response = await fetch(`http://localhost:3003/api/piano-conti/${clienteSelezionato}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/piano-conti/${clienteSelezionato}`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(formData)
@@ -262,7 +262,7 @@ export default function PianoContiPage() {
     try {
       setSaving(true)
 
-      const response = await fetch(`http://localhost:3003/api/piano-conti/${clienteSelezionato}/${contoId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/piano-conti/${clienteSelezionato}/${contoId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       })

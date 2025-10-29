@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     try {
       // Verifica se il token è valido
-      const response = await fetch('http://localhost:3003/api/auth/profile', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

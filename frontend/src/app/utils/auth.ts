@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'ai_tax_token';
+﻿const TOKEN_KEY = 'ai_tax_token';
 
 export const authUtils = {
   setToken: (token: string) => {

@@ -1,4 +1,4 @@
-// File: frontend/src/components/UpgradeModal.tsx
+﻿// File: frontend/src/components/UpgradeModal.tsx
 // NUOVO FILE DA CREARE
 
 import React from 'react';

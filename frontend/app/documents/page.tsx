@@ -1,4 +1,4 @@
-// frontend/app/documents/page.tsx - VERSIONE COMPLETA CON SCRITTURE CONTABILI
+﻿// frontend/app/documents/page.tsx - VERSIONE COMPLETA CON SCRITTURE CONTABILI
 
 'use client';
 
@@ -47,7 +47,7 @@ export default function DocumentsPage() {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch('http://localhost:3003/api/documents', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/documents', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -68,7 +68,7 @@ export default function DocumentsPage() {
     
     try {
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch(`http://localhost:3003/api/documents/${docId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${docId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -102,7 +102,7 @@ export default function DocumentsPage() {
     const token = localStorage.getItem('taxpilot_token');
     
     try {
-      const response = await fetch(`http://localhost:3003/api/documents/${doc.id}/generate-entries`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${doc.id}/generate-entries`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -211,7 +211,7 @@ export default function DocumentsPage() {
     }
     const fixedPath = doc.file_path.replace(/\\/g, '/');
     const encodedPath = encodeURIComponent(fixedPath);
-    window.open(`http://localhost:3003/api/files/${encodedPath}`);
+    window.open(`${process.env.NEXT_PUBLIC_API_URL}/api/files/${encodedPath}`);
   };
 
   const handleSaveFromViewer = async (documentId, metadata) => {
@@ -219,7 +219,7 @@ export default function DocumentsPage() {
       console.log('💾 Salvando documento dal visualizzatore:', documentId, metadata);
       
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch(`http://localhost:3003/api/documents/${documentId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${documentId}`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -372,7 +372,7 @@ export default function DocumentsPage() {
       const token = localStorage.getItem('taxpilot_token');
       const originalDoc = documentForEdit.originalDoc;
       
-      const response = await fetch(`http://localhost:3003/api/documents/${originalDoc.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${originalDoc.id}`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -405,7 +405,7 @@ export default function DocumentsPage() {
     try {
       const token = localStorage.getItem('taxpilot_token');
       
-      const response = await fetch('http://localhost:3003/api/documents/generate-xml', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/documents/generate-xml', {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,

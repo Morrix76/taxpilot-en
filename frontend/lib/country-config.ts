@@ -1,4 +1,4 @@
-// frontend/lib/countryConfig.ts
+﻿// frontend/lib/countryConfig.ts
 export interface TaxRate {
   type: string;
   rate: number;

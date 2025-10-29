@@ -1,4 +1,4 @@
-// File: backend/routes/auth.js
+﻿// File: backend/routes/auth.js
 // CANCELLA IL FILE ESISTENTE E RICREA CON QUESTO
 
 const express = require('express');

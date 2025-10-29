@@ -1,3 +1,3 @@
-module.exports = {
+﻿module.exports = {
   extends: ['next/core-web-vitals'],
 }

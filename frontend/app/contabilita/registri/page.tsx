@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -63,7 +63,7 @@ export default function RegistriIVAPage() {
 
   const caricaClienti = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/clients', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
         headers: getAuthHeaders()
       })
 
@@ -162,7 +162,7 @@ export default function RegistriIVAPage() {
       formData.append('document', file)
       formData.append('client_id', clienteSelezionato)
 
-      const response = await fetch('http://localhost:3003/api/documents', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/documents', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` },
         body: formData

@@ -1,4 +1,4 @@
-// frontend/pages/api/clients.ts
+﻿// frontend/pages/api/clients.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 // mock in memoria – sostituisci con DB quando vuoi

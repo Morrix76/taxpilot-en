@@ -1,4 +1,4 @@
-export const authUtils = {
+﻿export const authUtils = {
   setToken: (token) => {
     localStorage.setItem("taxpilot_token", token); // ✅ Nome corretto
   },

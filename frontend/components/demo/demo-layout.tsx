@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 // Mock delle dipendenze per la demo
 const COUNTRIES = [

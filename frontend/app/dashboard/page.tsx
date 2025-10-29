@@ -1,9 +1,9 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = 'http://localhost:3003/api'
+const API_BASE_URL = '${process.env.NEXT_PUBLIC_API_URL}/api'
 
 // Interfaccia per il tipo Cliente, per la tipizzazione
 interface Client {
@@ -545,7 +545,7 @@ export default function Dashboard() {
   // Funzione per caricare documenti dal backend
   const fetchDocuments = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/documents', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/documents', {
   headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` }
 });
       if (response.ok) {
@@ -583,7 +583,7 @@ export default function Dashboard() {
   const loadClients = async () => {
     try {
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch('http://localhost:3003/api/clients', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -652,7 +652,7 @@ export default function Dashboard() {
       formData.append('document', fileToUpload);
       formData.append('client_id', selectedClient.id.toString()); // Aggiunge l'ID del cliente
 
-      const uploadUrl = 'http://localhost:3003/api/documents';
+      const uploadUrl = '${process.env.NEXT_PUBLIC_API_URL}/api/documents';
       const uploadRes = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
@@ -792,8 +792,8 @@ export default function Dashboard() {
       const possiblePaths = [
         `${API_BASE_URL}/uploads/${doc.file_path}`,
         `${API_BASE_URL.replace('/api', '')}/uploads/${doc.file_path}`,
-        `http://localhost:3003/uploads/${doc.file_path}`,
-        `http://localhost:3003/files/${doc.file_path}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/uploads/${doc.file_path}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/files/${doc.file_path}`,
         `${API_BASE_URL}/files/${doc.file_path}`
       ];
       

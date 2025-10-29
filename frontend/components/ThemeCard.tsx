@@ -1,4 +1,4 @@
-// frontend/components/ThemeCard.tsx
+﻿// frontend/components/ThemeCard.tsx
 'use client';
 
 import React from 'react';

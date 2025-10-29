@@ -1,4 +1,4 @@
-// File: frontend/src/lib/demoAuthService.ts
+﻿// File: frontend/src/lib/demoAuthService.ts
 // NUOVO FILE DA CREARE
 
 // Demo Auth Service che funziona completamente offline per Vercel

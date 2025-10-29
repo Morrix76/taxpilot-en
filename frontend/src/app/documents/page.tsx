@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '${process.env.NEXT_PUBLIC_API_URL}/api'
 
 // ========================================================================
 // FUNZIONE HELPER AGGIUNTA COME DA ISTRUZIONI

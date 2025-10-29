@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '../../lib/auth'; // percorso corretto
 
 // Mock database di clienti in memoria

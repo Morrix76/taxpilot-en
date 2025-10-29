@@ -1,4 +1,4 @@
-module.exports = {
+﻿module.exports = {
   darkMode: 'class',   // ← obbligatorio
   content: [
     './app/**/*.{js,ts,jsx,tsx}',

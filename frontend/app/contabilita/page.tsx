@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,7 +36,7 @@ export default function ContabilitaDashboard() {
 
   const verificaInizializzazione = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/contabilita/status')
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/contabilita/status')
       const data = await response.json()
       setContabilitaInizializzata(data.initialized || false)
     } catch (error) {
@@ -48,7 +48,7 @@ export default function ContabilitaDashboard() {
 
   const inizializzaContabilita = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/contabilita/initialize', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/contabilita/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })

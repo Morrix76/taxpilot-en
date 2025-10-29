@@ -1,4 +1,4 @@
-// File: frontend/src/components/LoginPage.tsx
+﻿// File: frontend/src/components/LoginPage.tsx
 // AGGIORNA IL FILE ESISTENTE
 
 "use client";

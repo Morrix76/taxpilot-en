@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 
 export const useThemeForce = (dependencies: any[] = []) => {
   useEffect(() => {

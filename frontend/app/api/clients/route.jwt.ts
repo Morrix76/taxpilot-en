@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = 'http://localhost:3003/api/clients';
+const BACKEND_URL = '${process.env.NEXT_PUBLIC_API_URL}/api/clients';
 
 /**
  * Gestisce GET /api/clients

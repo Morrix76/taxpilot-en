@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 
 const FileViewer = ({ filename, isOpen, onClose, documentTitle = "Documento", documentId = null, onSave = null }) => {
   const [fileInfo, setFileInfo] = useState(null);
@@ -21,7 +21,7 @@ const FileViewer = ({ filename, isOpen, onClose, documentTitle = "Documento", do
     try {
       console.log(`📂 Caricando info per file: ${filename}`);
       
-      const response = await fetch(`http://localhost:3003/api/files/${encodeURIComponent(filename)}/info`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/files/${encodeURIComponent(filename)}/info`);
       const info = await response.json();
       
       if (!response.ok) {
@@ -45,7 +45,7 @@ const FileViewer = ({ filename, isOpen, onClose, documentTitle = "Documento", do
 
   const loadXmlContent = async () => {
     try {
-      const response = await fetch(`http://localhost:3003/api/files/${encodeURIComponent(filename)}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/files/${encodeURIComponent(filename)}`);
       
       if (!response.ok) {
         throw new Error('Errore caricamento contenuto XML');
@@ -129,7 +129,7 @@ const FileViewer = ({ filename, isOpen, onClose, documentTitle = "Documento", do
   const handleDownload = () => {
     if (!filename) return;
     
-    const downloadUrl = `http://localhost:3003/api/files/${encodeURIComponent(filename)}`;
+    const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/files/${encodeURIComponent(filename)}`;
     const link = document.createElement('a');
     link.href = downloadUrl;
     link.download = filename;
@@ -140,7 +140,7 @@ const FileViewer = ({ filename, isOpen, onClose, documentTitle = "Documento", do
   };
 
   const getFileUrl = () => {
-    return `http://localhost:3003/api/files/${encodeURIComponent(filename)}`;
+    return `${process.env.NEXT_PUBLIC_API_URL}/api/files/${encodeURIComponent(filename)}`;
   };
 
   if (!isOpen) return null;

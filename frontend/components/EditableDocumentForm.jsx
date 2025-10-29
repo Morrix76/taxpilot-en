@@ -1,4 +1,4 @@
-// frontend/components/EditableDocumentForm.jsx
+﻿// frontend/components/EditableDocumentForm.jsx
 
 import React, { useState, useEffect } from 'react';
 

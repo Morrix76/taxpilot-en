@@ -1,4 +1,4 @@
-// File: frontend/src/components/TrialBanner.tsx
+﻿// File: frontend/src/components/TrialBanner.tsx
 // NUOVO FILE DA CREARE
 
 import React from 'react';

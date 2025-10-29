@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = 'http://localhost:3003';
+const API_BASE_URL = '${process.env.NEXT_PUBLIC_API_URL}';
 
 export default function BillingPage() {
   const [loading, setLoading] = useState(true);

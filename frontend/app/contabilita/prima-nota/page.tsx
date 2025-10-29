@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -77,7 +77,7 @@ export default function PrimaNotaPage() {
 
   const caricaClienti = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/clients', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
         headers: getAuthHeaders()
       })
 
@@ -114,12 +114,12 @@ export default function PrimaNotaPage() {
       ])
       
       // Chiamate API commentate fino all'implementazione backend
-      // const movimentiRes = await fetch(`http://localhost:3003/api/contabilita/movimenti/${clienteId}`, {
+      // const movimentiRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contabilita/movimenti/${clienteId}`, {
       //   headers: getAuthHeaders()
       // })
       // const movimentiData = await movimentiRes.json()
 
-      // const contiRes = await fetch(`http://localhost:3003/api/contabilita/piano-conti/${clienteId}`, {
+      // const contiRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contabilita/piano-conti/${clienteId}`, {
       //   headers: getAuthHeaders()
       // })
       // const contiData = await contiRes.json()
@@ -152,7 +152,7 @@ export default function PrimaNotaPage() {
       resetForm()
       
       // Chiamata API commentata fino all'implementazione backend
-      // const response = await fetch(`http://localhost:3003/api/contabilita/movimenti/${clienteSelezionato}`, {
+      // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contabilita/movimenti/${clienteSelezionato}`, {
       //   method: 'POST',
       //   headers: getAuthHeaders(),
       //   body: JSON.stringify(formData)

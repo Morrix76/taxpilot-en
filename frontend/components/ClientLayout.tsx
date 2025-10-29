@@ -1,4 +1,4 @@
-// frontend/components/ClientLayout.tsx
+﻿// frontend/components/ClientLayout.tsx
 'use client';
 
 import Link from 'next/link';

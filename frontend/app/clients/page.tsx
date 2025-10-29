@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,7 +56,7 @@ export default function ClientsPage() {
   const loadClients = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:3003/api/clients', {
+      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
         headers: getAuthHeaders()
       })
 
@@ -115,8 +115,8 @@ export default function ClientsPage() {
       }
 
       const url = editingClient 
-        ? `http://localhost:3003/api/clients/${editingClient.id}`
-        : 'http://localhost:3003/api/clients'
+        ? `${process.env.NEXT_PUBLIC_API_URL}/api/clients/${editingClient.id}`
+        : '${process.env.NEXT_PUBLIC_API_URL}/api/clients'
       
       const method = editingClient ? 'PUT' : 'POST'
 
@@ -144,7 +144,7 @@ export default function ClientsPage() {
     if (!confirm('Are you sure you want to delete this client?')) return
 
     try {
-      const response = await fetch(`http://localhost:3003/api/clients/${id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clients/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       })

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { generateToken } from '@/lib/auth'
 
 const FAKE_USER = {
