@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 
-const BACKEND_URL = '${process.env.NEXT_PUBLIC_API_URL}'
+const BACKEND_URL = `${process.env.NEXT_PUBLIC_API_URL}`
 
 // GET /api/documents
 export async function GET() {

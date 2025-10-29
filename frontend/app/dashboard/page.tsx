@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = '${process.env.NEXT_PUBLIC_API_URL}/api'
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api'
 
 // Interfaccia per il tipo Cliente, per la tipizzazione
 interface Client {
@@ -545,7 +545,7 @@ export default function Dashboard() {
   // Funzione per caricare documenti dal backend
   const fetchDocuments = async () => {
     try {
-      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/documents', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents', {
   headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` }
 });
       if (response.ok) {
@@ -583,7 +583,7 @@ export default function Dashboard() {
   const loadClients = async () => {
     try {
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -652,7 +652,7 @@ export default function Dashboard() {
       formData.append('document', fileToUpload);
       formData.append('client_id', selectedClient.id.toString()); // Aggiunge l'ID del cliente
 
-      const uploadUrl = '${process.env.NEXT_PUBLIC_API_URL}/api/documents';
+      const uploadUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/documents';
       const uploadRes = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,

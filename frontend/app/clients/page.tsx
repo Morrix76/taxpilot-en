@@ -56,7 +56,7 @@ export default function ClientsPage() {
   const loadClients = async () => {
     try {
       setLoading(true)
-      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
         headers: getAuthHeaders()
       })
 
@@ -116,7 +116,7 @@ export default function ClientsPage() {
 
       const url = editingClient 
         ? `${process.env.NEXT_PUBLIC_API_URL}/api/clients/${editingClient.id}`
-        : '${process.env.NEXT_PUBLIC_API_URL}/api/clients'
+        : `${process.env.NEXT_PUBLIC_API_URL}/api/clients'
       
       const method = editingClient ? 'PUT' : 'POST'
 

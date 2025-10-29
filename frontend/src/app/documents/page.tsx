@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '${process.env.NEXT_PUBLIC_API_URL}/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL}/api'
 
 // ========================================================================
 // FUNZIONE HELPER AGGIUNTA COME DA ISTRUZIONI

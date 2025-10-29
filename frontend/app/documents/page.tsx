@@ -47,7 +47,7 @@ export default function DocumentsPage() {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/documents', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -405,7 +405,7 @@ export default function DocumentsPage() {
     try {
       const token = localStorage.getItem('taxpilot_token');
       
-      const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/api/documents/generate-xml', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/generate-xml', {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
