@@ -97,7 +97,7 @@ router.post('/register', async (req, res, next) => {
     // === NUOVO CODICE (Asincrono con @libsql/client) ===
     const insertResult = await db.execute({
       sql: 'INSERT INTO users (email, password, name) VALUES (?, ?, ?)',
-      args: [email, hashedPassword, name || null]
+      args: [email, hashedPassword]
     });
     
     // 4. 'run()' ora restituisce 'lastInsertRowid' direttamente nel risultato
