@@ -1,7 +1,6 @@
-﻿// File: backend/routes/auth.js
-// CANCELLA IL FILE ESISTENTE E RICREA CON QUESTO
+// File: backend/routes/auth.js
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 // Demo login funzionante
@@ -17,9 +16,9 @@ router.post('/demo-login', (req, res) => {
         isTrialActive: true,
         daysLeft: 12,
         documentsUsed: 3,
-        documentsLimit: 20
-      }
-    }
+        documentsLimit: 20,
+      },
+    },
   });
 });
 
@@ -28,4 +27,4 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Auth routes funzionanti!' });
 });
 
-module.exports = router;
+export default router;
