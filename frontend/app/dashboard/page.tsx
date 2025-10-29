@@ -545,7 +545,7 @@ export default function Dashboard() {
   // Funzione per caricare documenti dal backend
   const fetchDocuments = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents`, {
   headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` }
 });
       if (response.ok) {

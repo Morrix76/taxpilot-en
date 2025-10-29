@@ -22,7 +22,7 @@ export default function DocumentiCompleta() {
 
   const fetchDocuments = async (token) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
