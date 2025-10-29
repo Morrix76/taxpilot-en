@@ -1,9 +1,10 @@
 // File: backend/routes/auth.js
-
 import express from 'express';
 const router = express.Router();
 
-// Demo login funzionante
+console.log('📦 routes/auth.js caricato');
+
+// ====== Demo login ======
 router.post('/demo-login', (req, res) => {
   res.json({
     success: true,
@@ -22,7 +23,7 @@ router.post('/demo-login', (req, res) => {
   });
 });
 
-// Test endpoint
+// ====== Test endpoint ======
 router.get('/test', (req, res) => {
   res.json({ message: 'Auth routes funzionanti!' });
 });
