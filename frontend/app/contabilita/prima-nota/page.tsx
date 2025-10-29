@@ -77,7 +77,7 @@ export default function PrimaNotaPage() {
 
   const caricaClienti = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clients`, {
         headers: getAuthHeaders()
       })
 

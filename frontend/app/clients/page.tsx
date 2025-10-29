@@ -116,7 +116,7 @@ export default function ClientsPage() {
 
       const url = editingClient 
         ? `${process.env.NEXT_PUBLIC_API_URL}/api/clients/${editingClient.id}`
-        : `${process.env.NEXT_PUBLIC_API_URL}/api/clients'
+        : `${process.env.NEXT_PUBLIC_API_URL}/api/clients`
       
       const method = editingClient ? 'PUT' : 'POST'
 
