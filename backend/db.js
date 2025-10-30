@@ -33,6 +33,21 @@ export async function initializeDatabase() {
         password TEXT NOT NULL,
         nome TEXT,
         cognome TEXT,
+        piano_id INTEGER DEFAULT 1,
+        documenti_utilizzati INTEGER DEFAULT 0,
+        storage_utilizzato INTEGER DEFAULT 0,
+        piano_data_inizio DATETIME DEFAULT CURRENT_TIMESTAMP,
+        piano_data_fine DATETIME DEFAULT (datetime('now', '+30 days')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE TABLE IF NOT EXISTS piani (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        prezzo REAL DEFAULT 0,
+        documenti_mensili INTEGER DEFAULT 20,
+        storage_mb INTEGER DEFAULT 100,
+        features TEXT DEFAULT '[]',
+        attivo INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`,
       `CREATE TABLE IF NOT EXISTS clients (
@@ -48,18 +63,52 @@ export async function initializeDatabase() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         client_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        file_name TEXT NOT NULL,
+        name TEXT NOT NULL,
+        type TEXT,
+        original_filename TEXT NOT NULL,
         file_path TEXT NOT NULL,
-        file_type TEXT,
-        category TEXT,
-        upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_modified DATETIME DEFAULT CURRENT_TIMESTAMP,
-        ocr_data TEXT,
-        status TEXT DEFAULT 'pending',
+        file_size INTEGER,
+        mime_type TEXT,
+        ai_analysis TEXT,
+        ai_status TEXT DEFAULT 'pending',
+        ai_confidence REAL DEFAULT 0,
+        ai_issues TEXT DEFAULT '[]',
+        analysis_result TEXT,
+        confidence REAL DEFAULT 0,
+        flag_manual_review INTEGER DEFAULT 0,
+        processing_version TEXT,
+        document_category TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      )`,
+      `CREATE TABLE IF NOT EXISTS fatture (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        numero_fattura TEXT NOT NULL,
+        piano_id INTEGER,
+        periodo_da DATE,
+        periodo_a DATE,
+        importo REAL NOT NULL,
+        status TEXT DEFAULT 'pending',
+        data_pagamento DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (piano_id) REFERENCES piani (id)
       )`
     ], 'write');
+    
+    // Inserisci piano free di default se non esiste
+    const pianiCheck = await db.execute('SELECT COUNT(*) as count FROM piani');
+    if (pianiCheck.rows[0].count === 0) {
+      await db.execute({
+        sql: `INSERT INTO piani (nome, prezzo, documenti_mensili, storage_mb, features) 
+              VALUES ('Free Trial', 0, 20, 100, '["Analisi AI", "Export CSV"]')`,
+        args: []
+      });
+      console.log('✅ Piano Free Trial creato');
+    }
     
     console.log('✅ Database inizializzato');
   } catch (e) {
