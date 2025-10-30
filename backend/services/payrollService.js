@@ -2,8 +2,7 @@
 
 /**
  * 🧾 SERVIZIO BUSTE PAGA - PARSER OCR AVANZATO
- * 
- * Funzionalità implementate:
+ * * Funzionalità implementate:
  * ✅ Estrazione dati strutturati da PDF buste paga
  * ✅ Riconoscimento voci stipendiali standard italiane
  * ✅ Calcolo automatico competenze e trattenute

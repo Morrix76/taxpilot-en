@@ -1,11 +1,10 @@
 // backend/services/ivaService.js - SERVIZIO LIQUIDAZIONI IVA AUTOMATICHE
 
-import { getAllDocuments } from '../database/db.js';
+import { getAllDocuments } from '../db.js';
 
 /**
  * 🔧 SERVIZIO LIQUIDAZIONI IVA - CONFORME DPR 633/72
- * 
- * Funzionalità implementate:
+ * * Funzionalità implementate:
  * ✅ Calcolo liquidazioni mensili/trimestrali
  * ✅ Registri IVA vendite/acquisti
  * ✅ Generazione F24 per versamenti
