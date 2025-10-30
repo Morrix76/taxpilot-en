@@ -708,6 +708,49 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 /**
+ * @route   PATCH /api/documents/:id
+ * @desc    Aggiorna dati parziali di un documento (es. associazione cliente).
+ * @desc    NUOVA ROTTA AGGIUNTA
+ */
+router.patch('/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { client_id, document_category } = req.body;
+
+  console.log(`PATCH /api/documents/${id} chiamato con:`, req.body);
+
+  // Costruisci l'oggetto di aggiornamento solo con i campi permessi
+  const updateData = {};
+  if (client_id !== undefined) {
+    updateData.client_id = parseInt(client_id);
+  }
+  if (document_category !== undefined) {
+    updateData.document_category = String(document_category);
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return res.status(400).json({ error: 'Nessun campo valido fornito per aggiornamento', allowed_fields: ['client_id', 'document_category'] });
+  }
+
+  try {
+    // Prima verifica se il documento esiste
+    const document = await getDocumentById(id);
+    if (!document) {
+      return res.status(404).json({ error: 'Documento non trovato' });
+    }
+
+    // Esegui l'aggiornamento
+    const updatedDocument = await updateDocument(id, updateData);
+    console.log(`✅ Documento ${id} aggiornato con successo.`);
+    res.json({ success: true, message: 'Documento aggiornato', document: updatedDocument });
+
+  } catch (error) {
+    console.error(`❌ Errore durante PATCH documento ${id}:`, error);
+    res.status(500).json({ error: 'Aggiornamento fallito', details: error.message });
+  }
+});
+
+
+/**
  * @route   PUT /api/documents/:id/fix
  * @desc    Correzione automatica AI degli errori nel documento.
  */
@@ -1052,7 +1095,7 @@ router.get('/export', authMiddleware, async (req, res) => {
     if (status_filter && status_filter !== 'all') {
       if (status_filter === 'ok') documents = documents.filter(doc => doc.ai_status === 'ok' && !doc.flag_manual_review);
       else if (status_filter === 'error') documents = documents.filter(doc => doc.ai_status === 'error');
-      else if (status_filter === 'review') documents = documents.filter(doc => doc.flag_manual_review);
+      else if (status_filter === 'review') documents = documents.filter(doc => d.flag_manual_review);
     }
     if (date_from) documents = documents.filter(doc => new Date(doc.created_at).toISOString().split('T')[0] >= date_from);
     if (date_to) documents = documents.filter(doc => new Date(doc.created_at).toISOString().split('T')[0] <= date_to);
@@ -1430,4 +1473,3 @@ router.stack.forEach(layer => {
 });
 
 export default router;
-

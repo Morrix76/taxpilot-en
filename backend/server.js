@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDatabase } from './db.js';
 import authRoutes from './routes/auth.js';
+import clientsRoutes from './routes/clients.js';
 
 dotenv.config();
 
@@ -37,6 +38,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ====== API Routes ======
 app.use('/api/auth', authRoutes);
 console.log('✅ Rotte /api/auth montate');
+
+app.use('/api/clients', clientsRoutes);
+console.log('✅ Rotte /api/clients montate');
 
 // ====== Test interno ======
 app.get('/api/auth/test-inline', (req, res) => {
