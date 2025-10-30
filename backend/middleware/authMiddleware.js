@@ -41,7 +41,7 @@ const authMiddleware = async (req, res, next) => {
     const result = await db.execute({
       sql: `
         SELECT 
-          u.id, u.email, u.name, 
+          u.id, u.email, u.nome, 
           u.trial_end_date, u.documents_used, u.documents_limit,
           u.piano_data_fine, u.documenti_utilizzati,
           p.documenti_mensili
@@ -81,7 +81,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = {
       id: user.id,
       email: user.email,
-      name: user.name
+      name: user.nome
     };
     
     req.userId = user.id;
