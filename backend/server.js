@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url';
 import { initializeDatabase } from './db.js';
 import authRoutes from './routes/auth.js';
 import clientsRoutes from './routes/clients.js';
+import documentsRoutes from './routes/documents.js';
+import billingRoutes from './routes/billing.js';
 
 dotenv.config();
 
@@ -42,6 +44,12 @@ console.log('✅ Rotte /api/auth montate');
 app.use('/api/clients', clientsRoutes);
 console.log('✅ Rotte /api/clients montate');
 
+app.use('/api/documents', documentsRoutes);
+console.log('✅ Rotte /api/documents montate');
+
+app.use('/api/billing', billingRoutes);
+console.log('✅ Rotte /api/billing montate');
+
 // ====== Test interno ======
 app.get('/api/auth/test-inline', (req, res) => {
   res.json({ message: 'Rotta inline funzionante!' });
@@ -76,3 +84,4 @@ async function startServer() {
 }
 
 startServer();
+
