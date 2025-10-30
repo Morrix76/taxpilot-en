@@ -19,8 +19,8 @@ const authMiddleware = async (req, res, next) => {
     // Verifica token JWT
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    // VALIDAZIONE: verifica che decoded.id esista e sia valido
-    if (!decoded || !decoded.id) {
+    // VALIDAZIONE: verifica che decoded.userId esista e sia valido
+    if (!decoded || !decoded.userId) {
       return res.status(401).json({ 
         success: false,
         error: 'Token non valido: ID utente mancante' 
@@ -28,7 +28,7 @@ const authMiddleware = async (req, res, next) => {
     }
 
     // Converti in numero se è stringa
-    const userId = typeof decoded.id === 'string' ? parseInt(decoded.id) : decoded.id;
+    const userId = typeof decoded.userId === 'string' ? parseInt(decoded.userId) : decoded.userId;
     
     if (isNaN(userId)) {
       return res.status(401).json({ 
