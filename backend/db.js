@@ -66,3 +66,88 @@ export async function initializeDatabase() {
     console.error('❌ Errore database:', e);
   }
 }
+
+// ========== FUNZIONI DOCUMENTS ==========
+
+export async function getAllDocuments() {
+  const result = await db.execute('SELECT * FROM documents ORDER BY created_at DESC');
+  return result.rows;
+}
+
+export async function getDocumentById(id) {
+  const result = await db.execute({
+    sql: 'SELECT * FROM documents WHERE id = ?',
+    args: [id]
+  });
+  return result.rows[0];
+}
+
+export async function saveDocument(documentData) {
+  const result = await db.execute({
+    sql: `INSERT INTO documents (
+      user_id, client_id, name, type, original_filename, file_path, 
+      file_size, mime_type, ai_analysis, ai_status, ai_confidence, 
+      ai_issues, analysis_result, confidence, flag_manual_review, 
+      processing_version, document_category
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      documentData.user_id,
+      documentData.client_id,
+      documentData.name,
+      documentData.type,
+      documentData.original_filename,
+      documentData.file_path,
+      documentData.file_size,
+      documentData.mime_type,
+      documentData.ai_analysis,
+      documentData.ai_status,
+      documentData.ai_confidence,
+      documentData.ai_issues,
+      documentData.analysis_result,
+      documentData.confidence,
+      documentData.flag_manual_review ? 1 : 0,
+      documentData.processing_version,
+      documentData.document_category
+    ]
+  });
+  
+  return await getDocumentById(result.lastInsertRowid);
+}
+
+export async function updateDocument(id, updateData) {
+  const fields = [];
+  const values = [];
+  
+  for (const [key, value] of Object.entries(updateData)) {
+    fields.push(`${key} = ?`);
+    values.push(value);
+  }
+  
+  values.push(id);
+  
+  await db.execute({
+    sql: `UPDATE documents SET ${fields.join(', ')} WHERE id = ?`,
+    args: values
+  });
+  
+  return await getDocumentById(id);
+}
+
+export async function deleteDocument(id) {
+  await db.execute({
+    sql: 'DELETE FROM documents WHERE id = ?',
+    args: [id]
+  });
+}
+
+export async function getSystemStats() {
+  const docsResult = await db.execute('SELECT COUNT(*) as count FROM documents');
+  const usersResult = await db.execute('SELECT COUNT(*) as count FROM users');
+  const clientsResult = await db.execute('SELECT COUNT(*) as count FROM clients');
+  
+  return {
+    total_documents: docsResult.rows[0].count,
+    total_users: usersResult.rows[0].count,
+    total_clients: clientsResult.rows[0].count
+  };
+}
