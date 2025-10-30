@@ -39,7 +39,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     try {
       // Verifica se il token è valido
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
