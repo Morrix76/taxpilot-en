@@ -34,10 +34,11 @@ import PayrollService from '../services/payrollService.js';
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const UPLOADS_DIR = path.join(__dirname, '../uploads');
 
 // Configurazione Multer per upload file
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, path.join(__dirname, '../uploads')),
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
   filename: (_req, file, cb) =>
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(file.originalname)}`)
 });
@@ -410,7 +411,10 @@ router.post(
 
       // === Conteggio documenti totali ===
       // *** CONVERTED: db.prepare().get() to await db.execute() ***
-      const docsTotalResult = await db.execute({ sql: `SELECT COUNT(*) AS n FROM documents` });
+      const docsTotalResult = await db.execute({
+        sql: `SELECT COUNT(*) AS n FROM documents WHERE user_id = ?`,
+        args: [userId]
+      });
       const docsTotal = docsTotalResult.rows[0].n;
 
       console.log('🔒 Limits -> docsTotal:', docsTotal, 'limit:', Number(limits.documenti_mensili || 0));
@@ -573,6 +577,7 @@ router.post(
       console.log('🤖 Analisi completata:', analysisResult.combined?.overall_status);
 
       const documentData = {
+        user_id: userId, // ← AGGIUNGI QUESTA RIGA
         name: req.file.originalname,
         type: analysisResult.metadata?.documentTypeDetected || classificationResult.category,
         original_filename: req.file.originalname,
@@ -654,7 +659,11 @@ router.post(
 router.get('/', authMiddleware, async (req, res) => {
   try {
     console.log('📋 GET /api/documents chiamato');
-    const documents = await getAllDocuments();
+    const { rows } = await db.execute({
+      sql: 'SELECT * FROM documents WHERE user_id = ? ORDER BY created_at DESC',
+      args: [req.user.id]
+    });
+    const documents = rows;
     console.log(`📋 Trovati ${documents.length} documenti`);
     const processedDocuments = documents.map(doc => ({
       ...doc,
@@ -769,7 +778,7 @@ router.put('/:id/fix', authMiddleware, async (req, res) => {
     console.log('✅ Step 2 OK: Documento trovato:', document.original_filename);
 
     console.log('🔧 Step 3: Costruisco percorso file...');
-    const filePath = path.join(__dirname, '../uploads', document.file_path);
+    const filePath = path.join(UPLOADS_DIR, document.file_path);
     console.log('📁 Step 3: Percorso completo:', filePath);
 
     console.log('🔧 Step 4: Leggo contenuto file...');
@@ -803,7 +812,7 @@ router.put('/:id/fix', authMiddleware, async (req, res) => {
 
     console.log('🔧 Step 6: Salvo file corretto...');
     const correctedFileName = `corrected-${Date.now()}-${document.file_path}`;
-    const correctedPath = path.join(__dirname, '../uploads', correctedFileName);
+    const correctedPath = path.join(UPLOADS_DIR, correctedFileName);
     await fs.writeFile(correctedPath, xmlContent);
     console.log('✅ Step 6 OK: File salvato come:', correctedFileName);
 
@@ -855,7 +864,7 @@ router.put('/:id/reanalyze', authMiddleware, async (req, res) => {
     }
     console.log('📄 Ri-analisi per:', document.original_filename);
 
-    const filePath = path.join(__dirname, '../uploads', document.file_path);
+    const filePath = path.join(UPLOADS_DIR, document.file_path);
     await fs.access(filePath).catch(() => { throw new Error('File fisico non trovato'); });
     
     console.log('🤖 Avvio ri-analisi AI...');
@@ -898,7 +907,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Documento non trovato' });
     }
 
-    const filePath = path.join(__dirname, '../uploads', document.file_path);
+    const filePath = path.join(UPLOADS_DIR, document.file_path);
     await fs.unlink(filePath).catch(fileError => console.warn('⚠️ File fisico non trovato:', fileError.message));
     console.log('📁 File fisico eliminato:', document.file_path);
     
@@ -911,11 +920,11 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 /**
- * @route   GET /api/documents/download/:id
+ * @route   GET /api/documents/:id/download
  * @desc    Download del file originale del documento
  */
 // Original was already async and used async helper
-router.get('/download/:id', authMiddleware, async (req, res) => {
+router.get('/:id/download', authMiddleware, async (req, res) => {
   try {
     const docId = req.params.id;
     console.log(`📥 Download richiesto per documento ID: ${docId}`);
@@ -924,7 +933,7 @@ router.get('/download/:id', authMiddleware, async (req, res) => {
     if (!document) {
       return res.status(404).json({ error: 'Documento non trovato' });
     }
-    const filePath = path.join(__dirname, '../uploads', document.file_path);
+    const filePath = path.join(UPLOADS_DIR, document.file_path);
     console.log(`📂 Percorso file: ${filePath}`);
 
     await fs.access(filePath).catch(() => { throw new Error('File fisico non trovato'); });
@@ -1062,7 +1071,7 @@ router.post('/batch/delete', authMiddleware, async (req, res) => {
           results.errori.push({ id, errore: 'Documento non trovato nel database' });
           continue;
         }
-        const filePath = path.join(__dirname, '../uploads', document.file_path);
+        const filePath = path.join(UPLOADS_DIR, document.file_path);
         await fs.unlink(filePath).catch(err => console.warn(`⚠️ File fisico non trovato: ${document.file_path}`, err.message));
         await deleteDocument(id);
         results.eliminati.push({ id, nome: document.original_filename, messaggio: 'Eliminato con successo' });
@@ -1134,8 +1143,8 @@ router.get('/:id/content', authMiddleware, async (req, res) => {
     if (!document) return res.status(404).json({ error: 'Documento non trovato' });
     if (!document.file_path) return res.status(404).json({ error: 'Percorso file non disponibile' });
 
-    const filePath = path.join(__dirname, '../uploads', document.file_path);
-    const uploadsDir = path.join(__dirname, '../uploads');
+    const filePath = path.join(UPLOADS_DIR, document.file_path);
+    const uploadsDir = UPLOADS_DIR;
     if (!filePath.startsWith(uploadsDir)) return res.status(403).json({ error: 'Accesso negato' });
 
     await fs.access(filePath).catch(() => { throw new Error('File non trovato sul server'); });
@@ -1198,7 +1207,7 @@ router.post('/:id/generate-entries', authMiddleware, async (req, res) => {
     const document = await getDocumentById(id);
     if (!document) return res.status(404).json({ error: 'Documento non trovato', code: 'DOCUMENT_NOT_FOUND' });
 
-    const filePath = path.join(__dirname, '../uploads', document.file_path);
+    const filePath = path.join(UPLOADS_DIR, document.file_path);
     await fs.access(filePath).catch(() => { throw new Error('FILE_NOT_FOUND'); });
 
     const fileContent = await fs.readFile(filePath, 'utf8');
@@ -1241,7 +1250,7 @@ router.get('/:id/entries-csv', authMiddleware, async (req, res) => {
     const document = await getDocumentById(id);
     if (!document) return res.status(404).json({ error: 'Documento non trovato' });
 
-    const filePath = path.join(__dirname, '../uploads', document.file_path);
+    const filePath = path.join(UPLOADS_DIR, document.file_path);
     const fileContent = await fs.readFile(filePath, 'utf8');
     const fileType = detectDocumentType(document.original_filename, fileContent);
 
