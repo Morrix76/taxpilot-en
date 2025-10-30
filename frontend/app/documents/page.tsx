@@ -405,7 +405,9 @@ export default function DocumentsPage() {
     try {
       const token = localStorage.getItem('taxpilot_token');
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/generate-xml', {
+      // ===== CORREZIONE QUI =====
+      // Sostituito '${...}' con `${...}`
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/generate-xml`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,

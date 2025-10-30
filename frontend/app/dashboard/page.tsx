@@ -1,9 +1,7 @@
 ﻿'use client'
-
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation';
-
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api'
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`;
 
 // Interfaccia per il tipo Cliente, per la tipizzazione
 interface Client {
@@ -11,7 +9,6 @@ interface Client {
   name: string;
   company?: string;
 }
-
 
 // Componente per il Modale del Report, ora con dati reali dal backend
 const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal, handleSaveDocument, setShowModal }) => {
@@ -23,7 +20,6 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
 
   const handleGoBack = () => {
     onClose(); // Chiude il ReportModal
-    
     // Se setShowValidationModal esiste, riapre il validation modal
     if (setShowValidationModal) {
       setShowValidationModal(true);
@@ -37,15 +33,15 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
 
   // CORREZIONE: Legge i dati reali dal backend
   const analysisResult = doc.analysis_result || {};
-  
+
   // ✅ CORREZIONE: Usa i campi reali del backend
   const aiStatus = doc.ai_status || analysisResult.status || 'ok';
   const confidence = doc.ai_confidence || analysisResult.confidence || 0.8; // Fallback più realistico
   const aiAnalysis = doc.ai_analysis || "Analysis completed";
-  
+
   // ✅ CORREZIONE: Determina se ci sono errori basandosi sui dati reali
   const hasIssues = aiStatus === 'error' || doc.flag_manual_review || confidence < 0.7;
-  
+
   // ✅ DEBUG: Log per vedere i dati reali
   console.log('🔍 REPORT MODAL DEBUG:', {
     aiStatus,
@@ -56,12 +52,12 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
     flag_manual_review: doc.flag_manual_review,
     analysis_result: doc.analysis_result
   });
-  
+
   // ✅ DEBUG DETTAGLIATO ERRORI
   console.log('🔍 DETAILED ERROR ANALYSIS:');
   console.log('ai_issues (raw):', doc.ai_issues);
   console.log('analysis_result (raw):', doc.analysis_result);
-  
+
   // Prova a parsare ai_issues se è stringa
   let parsedAiIssues = [];
   try {
@@ -74,7 +70,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
   } catch (e) {
     console.log('ai_issues parse error:', e.message);
   }
-  
+
   // Prova a parsare analysis_result se è stringa
   let parsedAnalysisResult: any = {}; // CORREZIONE: Aggiunto tipo 'any'
   try {
@@ -88,13 +84,12 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
   } catch (e) {
     console.log('analysis_result parse error:', e.message);
   }
-  
+
   const issues = [];
   if (aiStatus === 'error') {
     // ✅ Prova a estrarre errori reali dal backend
     try {
       let realIssues = [];
-      
       // Opzione 1: da ai_issues
       if (doc.ai_issues) {
         if (typeof doc.ai_issues === 'string') {
@@ -103,7 +98,6 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
           realIssues = doc.ai_issues;
         }
       }
-      
       // Opzione 2: da analysis_result.technical.errors
       if ((!realIssues || realIssues.length === 0) && doc.analysis_result) {
         let analysisData = doc.analysis_result;
@@ -112,9 +106,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
         }
         realIssues = analysisData?.technical?.errors || [];
       }
-      
       console.log('🔍 EXTRACTED ERRORS:', realIssues);
-      
       // Aggiungi errori reali se trovati
       if (realIssues && realIssues.length > 0) {
         realIssues.forEach(error => {
@@ -123,36 +115,32 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
       } else {
         issues.push("Errors detected by AI analysis");
       }
-      
     } catch (e) {
       console.error('Error parsing issues:', e);
       issues.push("Errors detected by AI analysis");
     }
   }
+
   if (confidence < 0.5) {
     issues.push("Low confidence in analysis");
   }
 
   // ✅ CONTROLLI REALI DAL BACKEND - Non più fittizi!
   const realChecks = [];
-  
   try {
     // Estrai controlli reali dal backend
     let analysisData = doc.analysis_result;
     if (typeof analysisData === 'string') {
       analysisData = JSON.parse(analysisData);
     }
-    
     const technicalData = analysisData?.technical || {};
     const allIssues = [...(technicalData.errors || []), ...(technicalData.warnings || [])];
-    
     console.log('🔍 REAL CHECKS FROM BACKEND:', {
       technical: technicalData,
       allIssues: allIssues
     });
-    
+
     // ✅ GENERA CONTROLLI BASATI SUI RISULTATI REALI
-    
     // 1. Struttura documento
     if (technicalData.details?.structure) {
       realChecks.push({
@@ -165,7 +153,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
         reference: "FatturaPA Technical Specs v1.7.1"
       });
     }
-    
+
     // 2. Campi obbligatori
     if (technicalData.details?.mandatoryFields) {
       realChecks.push({
@@ -178,7 +166,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
         reference: "Art. 21 DPR 633/72"
       });
     }
-    
+
     // 3. Validazione P.IVA
     if (technicalData.details?.vatValidation) {
       const vatErrors = allIssues.filter(issue => issue.code?.includes('VAT'));
@@ -192,7 +180,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
         reference: "Art. 35 DPR 633/72"
       });
     }
-    
+
     // 4. Validazione Codici Fiscali
     if (technicalData.details?.taxCodeValidation) {
       const cfErrors = allIssues.filter(issue => issue.code?.includes('CF'));
@@ -206,7 +194,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
         reference: "Art. 35 DPR 633/72"
       });
     }
-    
+
     // 5. Codice Destinatario
     if (technicalData.details?.destinationCode) {
       const destErrors = allIssues.filter(issue => issue.code?.includes('DEST'));
@@ -220,7 +208,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
         reference: "Provv. Agenzia Entrate 89757/2018"
       });
     }
-    
+
     // 6. Calcoli matematici
     if (technicalData.details?.calculations) {
       const calcErrors = allIssues.filter(issue => issue.code?.includes('CALC'));
@@ -234,7 +222,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
         reference: "Art. 13-16 DPR 633/72"
       });
     }
-    
+
     // 7. Validazione date
     if (technicalData.details?.dateValidation) {
       const dateWarnings = allIssues.filter(issue => issue.code?.includes('DATE'));
@@ -248,7 +236,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
         reference: "Art. 21 DPR 633/72"
       });
     }
-    
+
     // 8. Validazione formati
     if (technicalData.details?.formatValidation) {
       const formatErrors = allIssues.filter(issue => issue.code?.includes('FORMAT'));
@@ -262,7 +250,6 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
         reference: "FatturaPA Technical Specs v1.7.1"
       });
     }
-    
   } catch (error) {
     console.error('Error parsing real checks:', error);
     // Fallback: almeno mostra lo stato generale
@@ -274,9 +261,9 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
       reference: " Assistant"
     });
   }
-  
+
   console.log('🎯 FINAL CHECKS TO DISPLAY:', realChecks);
-  
+
   // Raggruppa per categoria
   const checksByCategory = realChecks.reduce((acc, check) => {
     if (!acc[check.category]) {
@@ -285,7 +272,7 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
     acc[check.category].push(check);
     return acc;
   }, {});
-  
+
   const aiChecks = Object.entries(checksByCategory).map(([category, checks]) => ({
     category,
     checks
@@ -330,7 +317,6 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        
         <div className="overflow-y-auto flex-grow pr-4">
           {/* Header Report */}
           <div className="border-b-2 border-slate-200 dark:border-slate-600 pb-4 mb-6">
@@ -373,7 +359,6 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
                 <span className="font-bold text-slate-700 dark:text-slate-300 ml-3">{(confidence * 100).toFixed(1)}%</span>
               </div>
             </div>
-            
             <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-lg border border-slate-200 dark:border-slate-600">
               <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-2">⚖️ Regulatory Compliance</h4>
               <p className={`text-2xl font-bold ${hasIssues ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
@@ -383,7 +368,6 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
                 {hasIssues ? 'Requires corrections' : 'Compliant DM 55/2013'}
               </p>
             </div>
-
             <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-lg border border-slate-200 dark:border-slate-600">
               <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-2">🔍 Checks Performed</h4>
               <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">15</p>
@@ -398,7 +382,6 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
                 <h4 className="text-lg font-bold text-indigo-700 dark:text-indigo-400 mb-4 border-b pb-2">
                   📋 {category.category}
                 </h4>
-                
                 <div className="space-y-4">
                   {category.checks.map((check, checkIndex) => (
                     <div key={checkIndex} className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-600">
@@ -480,7 +463,6 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
             </p>
           </div>
         </div>
-
         <div className="grid grid-cols-4 gap-3 mt-6 pt-4 border-t border-slate-200 dark:border-slate-600 no-print">
           <button onClick={handleGoBack} className="px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 font-bold transition-all duration-300 transform hover:scale-105 shadow-lg">
             ← Go Back
@@ -502,38 +484,34 @@ const ReportModal = ({ doc, onClose, setShowValidationModal, setShowReportModal,
 
 export default function Dashboard() {
   const [showAllDocuments, setShowAllDocuments] = useState(false);
-  const [documents, setDocuments] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [showUpload, setShowUpload] = useState(false)
-  const [showModal, setShowModal] = useState(false)
-  const [showValidationModal, setShowValidationModal] = useState(false)
-  const [showReportModal, setShowReportModal] = useState(false)
-  const [selectedDoc, setSelectedDoc] = useState(null)
-  const [pendingFile, setPendingFile] = useState(null)
-  const [validationResult, setValidationResult] = useState(null)
-  
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [pendingFile, setPendingFile] = useState(null);
+  const [validationResult, setValidationResult] = useState(null);
+
   // Stati per la selezione cliente
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
 
-
   // Helper per ottenere l'AI status da analysis_result se ai_status non c'è
   const getAiStatus = (doc) => {
     // Se c'è ai_status, usalo
     if (doc.ai_status) return doc.ai_status;
-    
     // WORKAROUND: Usa flag_manual_review
     if (doc.flag_manual_review === 1 || doc.flag_manual_review === true) {
       return 'error';
     }
-    
     // Altrimenti prova da analysis_result
     try {
       const analysis = typeof doc.analysis_result === 'string' 
         ? JSON.parse(doc.analysis_result) 
         : doc.analysis_result;
-      
       return analysis?.technical?.status || 
              analysis?.combined?.overall_status || 
              'ok';
@@ -541,19 +519,18 @@ export default function Dashboard() {
       return 'ok';
     }
   };
-  
+
   // Funzione per caricare documenti dal backend
   const fetchDocuments = async () => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents`, {
-  headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` }
-});
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` }
+      });
       if (response.ok) {
         const result = await response.json();
         console.log('📋 Documents loaded:', result);
         // ✅ CORREZIONE: Il backend restituisce direttamente l'array, non { data: [...] }
         const documents = Array.isArray(result) ? result : (result.data || []);
-        
         // 🔍 DEBUG: Mostra tutti i campi del primo documento
         if (documents.length > 0) {
           console.log('🔍 FIRST DOCUMENT COMPLETE:', documents[0]);
@@ -566,11 +543,9 @@ export default function Dashboard() {
           Object.keys(documents[0]).forEach(key => {
             console.log(`  - ${key}:`, documents[0][key]);
           });
-          
           // Test getAiStatus
           console.log('🔍 GET AI STATUS RESULT:', getAiStatus(documents[0]));
         }
-        
         setDocuments(documents);
       }
     } catch (error) {
@@ -583,7 +558,7 @@ export default function Dashboard() {
   const loadClients = async () => {
     try {
       const token = localStorage.getItem('taxpilot_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clients', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clients`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -621,13 +596,11 @@ export default function Dashboard() {
   // Blocca scroll quando i modal sono aperti
   useEffect(() => {
     const shouldBlockScroll = showUpload || showModal || showValidationModal || showReportModal || loading;
-    
     if (shouldBlockScroll) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
-
     // Cleanup quando il componente si smonta
     return () => {
       document.body.style.overflow = 'unset';
@@ -643,7 +616,6 @@ export default function Dashboard() {
       alert('Select a file before proceeding');
       return;
     }
-
     setPendingFile(fileToUpload);
     closeUploadModal();
     setLoading(true);
@@ -651,32 +623,26 @@ export default function Dashboard() {
       const formData = new FormData();
       formData.append('document', fileToUpload);
       formData.append('client_id', selectedClient.id.toString()); // Aggiunge l'ID del cliente
-
-      const uploadUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/documents';
+      const uploadUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/documents`;
       const uploadRes = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
         headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` }
       });
-      
       const text = await uploadRes.text();
       if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
         throw new Error('The server returned an HTML page instead of JSON. Check that the backend is active on port 3003.');
       }
-      
       let uploadData;
       try {
         uploadData = JSON.parse(text);
       } catch (parseError) {
         throw new Error('Server response is not valid JSON: ' + (parseError as Error).message);
       }
-      
       if (!uploadRes.ok) {
         throw new Error(`HTTP Error: ${uploadRes.status} - ${uploadData.error || text}`);
       }
-      
       setLoading(false);
-      
       const doc = uploadData.document || uploadData;
       const validationResult = {
         id: doc.id,
@@ -690,7 +656,6 @@ export default function Dashboard() {
         status: doc.status || 'Processed',
         saved: true
       };
-      
       setValidationResult(validationResult);
       setSelectedDoc(validationResult);
       setShowValidationModal(true);
@@ -706,15 +671,12 @@ export default function Dashboard() {
     try {
       // Cerca il documento da validationResult o da selectedDoc
       const docToSave = validationResult || selectedDoc;
-      
       if (!docToSave || !docToSave.id) {
         console.log('❌ No document to save')
         alert('Error: no valid document to save')
         return
       }
-      
       console.log('💾 Saving document:', docToSave.id)
-      
       // Il documento è già salvato nel backend, aggiorna solo lo stato locale
       setShowValidationModal(false)
       setShowReportModal(false)
@@ -722,23 +684,18 @@ export default function Dashboard() {
       setPendingFile(null)
       setValidationResult(null)
       setSelectedDoc(null) // Reset selectedDoc
-      
       // Ricarica la lista documenti per assicurarsi che sia aggiornata
       await fetchDocuments()
-      
       alert('✅ Document saved successfully!')
-      
     } catch (error) {
       console.error('❌ Error saving:', error)
-      alert('Error during save: ' + error.message)
+      alert('Error during save: ' + (error as Error).message)
     }
   }
 
   const handleCheckNow = async () => {
     console.log('🔍 handleCheckNow called')
-    
     setShowValidationModal(false)
-    
     // ✅ SEMPLIFICATO: Usa sempre validationResult se disponibile
     if (validationResult) {
       console.log('📄 Using document from validationResult')
@@ -748,7 +705,6 @@ export default function Dashboard() {
       console.log('❌ No document for report')
       alert('No document available for report')
     }
-
     setPendingFile(null)
     setValidationResult(null)
   }
@@ -757,13 +713,11 @@ export default function Dashboard() {
     if (!confirm('Are you sure you want to delete this document?')) {
       return
     }
-    
     try {
       const response = await fetch(`${API_BASE_URL}/documents/${docId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` }
       })
-      
       if (response.ok) {
         await fetchDocuments() // Ricarica la lista
         alert('Document deleted successfully')
@@ -788,7 +742,6 @@ export default function Dashboard() {
   const handleDownload = async (doc) => {
     try {
       console.log('📥 Attempting document download:', doc);
-      
       const possiblePaths = [
         `${API_BASE_URL}/uploads/${doc.file_path}`,
         `${API_BASE_URL.replace('/api', '')}/uploads/${doc.file_path}`,
@@ -796,42 +749,37 @@ export default function Dashboard() {
         `${process.env.NEXT_PUBLIC_API_URL}/files/${doc.file_path}`,
         `${API_BASE_URL}/files/${doc.file_path}`
       ];
-      
       console.log('🔍 Paths to test:', possiblePaths);
-      
       for (const path of possiblePaths) {
         try {
           console.log(`🔗 Testing: ${path}`);
           const response = await fetch(path, { method: 'HEAD', headers: { 'Authorization': `Bearer ${localStorage.getItem('taxpilot_token')}` } });
-          
           if (response.ok) {
             console.log(`✅ File found at: ${path}`);
-            
             const link = document.createElement('a');
             link.href = path;
             link.download = doc.original_filename || doc.name || 'document.xml';
             link.target = '_blank';
-            
             document.body.appendChild(link);
             link.click();
-            
             // ✅ FIX: Delay the removal to prevent a race condition
             setTimeout(() => {
               document.body.removeChild(link);
             }, 0);
-            
             return;
           }
         } catch (e) {
           console.log(`❌ Failed: ${path} - ${e.message}`);
         }
       }
-      
       throw new Error(`File not found at any path. File path: ${doc.file_path}`);
-      
     } catch (error) {
       console.error('❌ Full download error:', error);
-      alert(`❌ Download unavailable\n\nThe backend is not serving uploaded files.\nFile: ${doc.original_filename}\nPath: ${doc.file_path}\n\nContact the administrator to configure the file service.`);
+      alert(`❌ Download unavailable
+The backend is not serving uploaded files.
+File: ${doc.original_filename}
+Path: ${doc.file_path}
+Contact the administrator to configure the file service.`);
     }
   }
 
@@ -877,7 +825,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
           <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/30 rounded-2xl p-6 border-2 border-yellow-200 dark:border-yellow-700 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
@@ -893,7 +840,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
           <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-2xl p-6 border-2 border-green-200 dark:border-green-700 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
@@ -909,7 +855,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-2xl p-6 border-2 border-blue-200 dark:border-blue-700 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
@@ -1046,7 +991,6 @@ export default function Dashboard() {
             <h3 className="text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
               📤 Upload New Document
             </h3>
-            
             {/* Selezione Cliente OBBLIGATORIA */}
             <div className="mb-6">
               <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-3">
@@ -1081,7 +1025,6 @@ export default function Dashboard() {
                 </p>
               )}
             </div>
-
             <div className="border-2 border-dashed border-indigo-300 dark:border-indigo-600 rounded-2xl p-8 text-center bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-800/30 dark:hover:to-purple-800/30 transition-all duration-300">
               <svg className="mx-auto h-12 w-12 text-indigo-400 dark:text-indigo-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
               <p className="text-slate-600 dark:text-slate-300 mb-4 font-medium">
@@ -1103,14 +1046,13 @@ export default function Dashboard() {
           </div>
         </div> 
       )}
-      
+
       {/* ✅ MODAL VALIDATION CORRETTA CON TASTO CORREZIONE AI */}
       {showValidationModal && validationResult && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-lg mx-auto shadow-2xl">
             {(() => {
               const hasIssues = validationResult.flag_manual_review || validationResult.ai_status === 'error';
-              
               console.log('🎨 MODAL DEBUG:', {
                 flag_manual_review: validationResult.flag_manual_review,
                 ai_status: validationResult.ai_status,
@@ -1118,7 +1060,6 @@ export default function Dashboard() {
                 ai_analysis: validationResult.ai_analysis,
                 ai_issues: validationResult.ai_issues
               });
-              
               return (
                 <>
                   <div className="text-center mb-6">
@@ -1136,7 +1077,6 @@ export default function Dashboard() {
                       {validationResult.ai_analysis || validationResult.message || (hasIssues ? 'Errors detected in the document' : 'Document analyzed successfully')}
                     </div>
                   </div>
-                  
                   {/* ✅ BOTTONI CORRETTI */}
                   {hasIssues ? (
                     /* SE CI SONO ERRORI: Mostra 3 bottoni */
@@ -1183,7 +1123,6 @@ export default function Dashboard() {
               <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Document Details</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 p-2 rounded-xl"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 p-6 rounded-xl border border-indigo-200 dark:border-indigo-700">
@@ -1195,7 +1134,6 @@ export default function Dashboard() {
                   <p className="text-slate-800 dark:text-white font-medium text-lg">{selectedDoc.type}</p>
                 </div>
               </div>
-              
               <div className="space-y-6">
                 <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 p-6 rounded-xl border border-emerald-200 dark:border-emerald-700">
                   <label className="block text-sm font-bold text-emerald-600 dark:text-emerald-400 mb-2 uppercase tracking-wide">Processing Date</label>
@@ -1207,7 +1145,6 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-
             <div className="mt-8">
               <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-4 uppercase tracking-wide">🤖 AI Analysis</label>
               <div className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 border-2 border-emerald-200 dark:border-emerald-700 rounded-xl p-6">
@@ -1221,7 +1158,6 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-
             <div className="flex justify-end space-x-4 mt-8">
               <button onClick={() => setShowModal(false)} className="px-6 py-3 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold">Close</button>
               {selectedDoc.ai_status === 'error' && (
