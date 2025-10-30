@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { db } from '../database/db.js';
+import { db } from '../db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 
@@ -19,6 +19,24 @@ const authMiddleware = async (req, res, next) => {
     // Verifica token JWT
     const decoded = jwt.verify(token, JWT_SECRET);
     
+    // VALIDAZIONE: verifica che decoded.id esista e sia valido
+    if (!decoded || !decoded.id) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'Token non valido: ID utente mancante' 
+      });
+    }
+
+    // Converti in numero se è stringa
+    const userId = typeof decoded.id === 'string' ? parseInt(decoded.id) : decoded.id;
+    
+    if (isNaN(userId)) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'Token non valido: ID utente non numerico' 
+      });
+    }
+    
     // Recupera utente dal database con info piano
     const result = await db.execute({
       sql: `
@@ -31,7 +49,7 @@ const authMiddleware = async (req, res, next) => {
         LEFT JOIN piani p ON u.piano_id = p.id
         WHERE u.id = ?
       `,
-      args: [decoded.id]
+      args: [userId]
     });
 
     const user = result.rows[0];
