@@ -19,14 +19,26 @@ const PORT = process.env.PORT || 8080;
 
 // ====== CORS ======
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'https://taxpilot-en-git-main-franks-projects-c85cd5ad.vercel.app',
-    'https://taxpilot-en.vercel.app',
-    'https://taxpilot-en-franks-projects-c85cd5ad.vercel.app',
-    'https://taxpilot-en-production.up.railway.app'
-  ],
+  origin: function(origin, callback) {
+    // Permetti richieste senza origin (es. Postman, curl)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://taxpilot-en-git-main-franks-projects-c85cd5ad.vercel.app',
+      'https://taxpilot-en.vercel.app',
+      'https://taxpilot-en-franks-projects-c85cd5ad.vercel.app',
+      'https://taxpilot-en-production.up.railway.app'
+    ];
+    
+    // Permetti tutti i domini Vercel
+    if (origin.endsWith('.vercel.app') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
@@ -84,4 +96,3 @@ async function startServer() {
 }
 
 startServer();
-
