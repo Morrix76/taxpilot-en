@@ -37,16 +37,14 @@ const authMiddleware = async (req, res, next) => {
       });
     }
     
-    // Recupera utente dal database con info piano
+    // Recupera utente dal database
     const result = await db.execute({
       sql: `
         SELECT 
           u.id, u.email, u.nome, 
           u.trial_end_date, u.documents_used, u.documents_limit,
-          u.piano_data_fine, u.documenti_utilizzati,
-          p.documenti_mensili
+          u.piano_data_fine
         FROM users u
-        LEFT JOIN piani p ON u.piano_id = p.id
         WHERE u.id = ?
       `,
       args: [userId]
@@ -88,8 +86,8 @@ const authMiddleware = async (req, res, next) => {
     req.userEmail = user.email;
     req.trialActive = trialActive;
     req.daysLeft = Math.max(0, daysLeft);
-    req.documentsUsed = user.documenti_utilizzati || user.documents_used || 0;
-    req.documentsLimit = user.documenti_mensili || user.documents_limit || 20;
+    req.documentsUsed = user.documents_used || 0;
+    req.documentsLimit = user.documents_limit || 20;
 
     next();
 
