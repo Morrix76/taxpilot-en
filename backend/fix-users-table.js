@@ -8,65 +8,46 @@ const db = createClient({
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
-async function checkAndFixUsersTable() {
+async function fixDatabase() {
   try {
-    console.log('🔍 Controllo struttura tabella users...\n');
+    console.log('🔧 Fix database...\n');
 
-    // Mostra struttura attuale
-    const tableInfo = await db.execute(`PRAGMA table_info(users)`);
-    
-    console.log('📋 Colonne attuali nella tabella users:');
-    const existingColumns = [];
-    for (const row of tableInfo.rows) {
-      console.log(`  - ${row.name} (${row.type})`);
-      existingColumns.push(row.name);
-    }
-    console.log('');
-
-    // Colonne richieste
-    const requiredColumns = {
+    // Users
+    const usersColumns = {
       'trial_end_date': 'TEXT',
       'piano_id': 'INTEGER',
       'documents_used': 'INTEGER DEFAULT 0',
       'documents_limit': 'INTEGER DEFAULT 10',
-      'piano_data_fine': 'TEXT'
+      'piano_data_fine': 'TEXT',
+      'name': 'TEXT'
     };
 
-    const columnsToAdd = [];
-    
-    for (const [columnName, columnType] of Object.entries(requiredColumns)) {
-      if (!existingColumns.includes(columnName)) {
-        columnsToAdd.push({ name: columnName, type: columnType });
+    for (const [col, type] of Object.entries(usersColumns)) {
+      try {
+        await db.execute(`ALTER TABLE users ADD COLUMN ${col} ${type}`);
+        console.log(`✅ users.${col} aggiunta`);
+      } catch (e) {
+        if (e.message.includes('duplicate')) {
+          console.log(`⚠️  users.${col} già presente`);
+        } else throw e;
       }
     }
 
-    if (columnsToAdd.length === 0) {
-      console.log('✅ Tutte le colonne necessarie sono già presenti!');
-      return;
+    // Documents
+    try {
+      await db.execute(`ALTER TABLE documents ADD COLUMN created_at TEXT NOT NULL DEFAULT (datetime('now'))`);
+      console.log(`✅ documents.created_at aggiunta`);
+    } catch (e) {
+      if (e.message.includes('duplicate')) {
+        console.log(`⚠️  documents.created_at già presente`);
+      } else throw e;
     }
 
-    console.log('⚠️  Colonne mancanti:', columnsToAdd.map(c => c.name).join(', '));
-    console.log('\n🔧 Aggiungo colonne mancanti...\n');
-
-    for (const column of columnsToAdd) {
-      console.log(`  Aggiungendo ${column.name} (${column.type})...`);
-      await db.execute(`ALTER TABLE users ADD COLUMN ${column.name} ${column.type}`);
-      console.log(`  ✅ ${column.name} aggiunta`);
-    }
-
-    console.log('\n✅ Tabella users aggiornata con successo!');
+    console.log('\n✅ Fix completato');
     
-    // Verifica finale
-    console.log('\n📋 Struttura finale della tabella users:');
-    const finalInfo = await db.execute(`PRAGMA table_info(users)`);
-    for (const row of finalInfo.rows) {
-      console.log(`  - ${row.name} (${row.type})`);
-    }
-
   } catch (error) {
     console.error('❌ Errore:', error.message);
-    process.exit(1);
   }
 }
 
-checkAndFixUsersTable();
+fixDatabase();
