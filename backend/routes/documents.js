@@ -5,6 +5,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
+import fsSync from 'fs'; // *** CONVERTED: Aggiunto import sync per check esistenza file ***
 import { fileURLToPath } from 'url';
 import pdf from 'pdf-parse';
 import iconv from 'iconv-lite';
@@ -504,18 +505,17 @@ router.post(
 
       const analysisOptions = { 
         ...req.body, 
-        filename: req.file.originalname,
+        filename: req.file.originalname, // Usato solo per detection, non per salvataggio
         client_id: clientId,
         category: classificationResult.category
       };
       const analysisResult = await runAnalysis(rawContent, analysisOptions);
       console.log('🤖 Analisi completata:', analysisResult.combined?.overall_status);
 
+      // *** CONVERTED: Rimossi i campi 'name' e 'original_filename' ***
       const documentData = {
-        user_id: userId, // ← AGGIUNGI QUESTA RIGA
-        name: req.file.originalname,
+        user_id: userId,
         type: analysisResult.metadata?.documentTypeDetected || classificationResult.category,
-        original_filename: req.file.originalname,
         file_path: classificationResult.file_path,
         file_size: req.file.size,
         mime_type: req.file.mimetype,
@@ -565,7 +565,8 @@ router.post(
     } catch (error) {
       console.error('❌ Errore durante elaborazione:', error);
       
-      if (req.file?.path) {
+      // *** CONVERTED: Aggiunto check esistenza file prima di unlink ***
+      if (req.file?.path && fsSync.existsSync(req.file.path)) {
         await fs.unlink(req.file.path).catch(e => console.warn('⚠️ Errore cleanup file:', e));
       }
       
@@ -705,7 +706,10 @@ router.put('/:id/fix', authMiddleware, async (req, res) => {
       console.error('❌ Step 2 FALLITO: Documento non trovato');
       return res.status(404).json({ error: 'Documento non trovato' });
     }
-    console.log('✅ Step 2 OK: Documento trovato:', document.original_filename);
+    
+    // *** CONVERTED: Fallback dal file_path ***
+    const baseName = path.basename(document.file_path || 'documento');
+    console.log('✅ Step 2 OK: Documento trovato:', baseName);
 
     console.log('🔧 Step 3: Costruisco percorso file...');
     const filePath = path.join(UPLOADS_DIR, document.file_path);
@@ -747,7 +751,8 @@ router.put('/:id/fix', authMiddleware, async (req, res) => {
     console.log('✅ Step 6 OK: File salvato come:', correctedFileName);
 
     console.log('🔧 Step 7: Ri-analizzo documento...');
-    const analysisResult = await runAnalysis(xmlContent, { filename: document.original_filename });
+    // *** CONVERTED: Usa baseName per runAnalysis ***
+    const analysisResult = await runAnalysis(xmlContent, { filename: baseName });
     console.log('✅ Step 7 OK: Analisi completata');
 
     console.log('🔧 Step 8: Aggiorno database...');
@@ -791,7 +796,10 @@ router.put('/:id/reanalyze', authMiddleware, async (req, res) => {
       console.error('❌ Documento non trovato per ri-analisi');
       return res.status(404).json({ error: 'Documento non trovato' });
     }
-    console.log('📄 Ri-analisi per:', document.original_filename);
+    
+    // *** CONVERTED: Fallback dal file_path ***
+    const baseName = path.basename(document.file_path || 'documento');
+    console.log('📄 Ri-analisi per:', baseName);
 
     const filePath = path.join(UPLOADS_DIR, document.file_path);
     await fs.access(filePath).catch(() => { throw new Error('File fisico non trovato'); });
@@ -800,7 +808,8 @@ router.put('/:id/reanalyze', authMiddleware, async (req, res) => {
     let fileContent = await fs.readFile(filePath, 'utf8');
     console.log('📖 File letto, lunghezza:', fileContent.length);
 
-    const analysisResult = await runAnalysis(fileContent, { filename: document.original_filename, forceReanalysis: true });
+    // *** CONVERTED: Usa baseName per runAnalysis ***
+    const analysisResult = await runAnalysis(fileContent, { filename: baseName, forceReanalysis: true });
     console.log('🤖 Ri-analisi completata, status:', analysisResult.combined?.overall_status);
 
     const updateData = {
@@ -865,7 +874,10 @@ router.get('/:id/download', authMiddleware, async (req, res) => {
 
     await fs.access(filePath).catch(() => { throw new Error('File fisico non trovato'); });
     
-    const actualFileName = document.file_path.includes('corrected-') ? `CORRETTO_${document.original_filename}` : document.original_filename;
+    // *** CONVERTED: Usa path.basename come fallback ***
+    const baseName = path.basename(document.file_path || 'documento');
+    const actualFileName = document.file_path.includes('corrected-') ? `CORRETTO_${baseName}` : baseName;
+    
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(actualFileName)}"`);
     res.setHeader('Content-Type', document.mime_type || 'application/octet-stream');
     console.log(`✅ Invio file: ${actualFileName}`);
@@ -890,12 +902,16 @@ router.get('/:id/report', authMiddleware, async (req, res) => {
     const document = await getDocumentById(id);
     if (!document) return res.status(404).json({ error: 'Documento non trovato' });
     
-    console.log('📄 Generazione report per:', document.original_filename);
+    // *** CONVERTED: Usa path.basename come fallback ***
+    const baseName = path.basename(document.file_path || 'documento');
+    console.log('📄 Generazione report per:', baseName);
+    
     const analysisResult = safeJSONParse(document.analysis_result, {});
     const aiIssues = safeJSONParse(document.ai_issues, []);
     
     const reportData = {
-      documento: { id: document.id, nome: document.original_filename, tipo: document.type, data_upload: document.created_at, dimensione: document.file_size, mime_type: document.mime_type },
+      // *** CONVERTED: Usa baseName ***
+      documento: { id: document.id, nome: baseName, tipo: document.type, data_upload: document.created_at, dimensione: document.file_size, mime_type: document.mime_type },
       analisi_ai: { status: document.ai_status, confidence: document.ai_confidence, messaggio: document.ai_analysis, richiede_revisione: document.flag_manual_review, data_analisi: analysisResult.metadata?.timestamp || document.created_at },
       errori: aiIssues.map((issue, index) => ({ numero: index + 1, codice: issue.code || 'GENERIC_ERROR', messaggio: issue.message || issue, priorita: issue.priority || 'media' })),
       dettagli_tecnici: { parser_version: analysisResult.metadata?.parser_version || 'N/A', ai_model: analysisResult.metadata?.ai_model || 'groq-llama', processing_time: analysisResult.metadata?.processing_time || 'N/A', analysis_mode: analysisResult.metadata?.analysis_mode || 'hybrid' },
@@ -941,7 +957,8 @@ Modalità Analisi: ${reportData.dettagli_tecnici.analysis_mode}
 📅 ${new Date(reportData.timestamp_report).toLocaleString('it-IT')}
 `;
       res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="report_${document.original_filename}_${new Date().toISOString().split('T')[0]}.txt"`);
+      // *** CONVERTED: Usa baseName nel nome file ***
+      res.setHeader('Content-Disposition', `attachment; filename="report_${baseName}_${new Date().toISOString().split('T')[0]}.txt"`);
       res.send(txtReport);
     } else {
       res.json({ success: true, report: reportData });
@@ -995,10 +1012,16 @@ router.post('/batch/delete', authMiddleware, async (req, res) => {
           results.errori.push({ id, errore: 'Documento non trovato nel database' });
           continue;
         }
+        
+        // *** CONVERTED: Usa path.basename come fallback ***
+        const baseName = path.basename(document.file_path || 'documento');
+        
         const filePath = path.join(UPLOADS_DIR, document.file_path);
         await fs.unlink(filePath).catch(err => console.warn(`⚠️ File fisico non trovato: ${document.file_path}`, err.message));
         await deleteDocument(id);
-        results.eliminati.push({ id, nome: document.original_filename, messaggio: 'Eliminato con successo' });
+        
+        // *** CONVERTED: Usa baseName nel risultato ***
+        results.eliminati.push({ id, nome: baseName, messaggio: 'Eliminato con successo' });
         console.log(`✅ Documento ${id} eliminato con successo`);
       } catch (error) {
         console.error(`💥 Errore eliminazione documento ${id}:`, error);
@@ -1037,9 +1060,11 @@ router.get('/export', authMiddleware, async (req, res) => {
       const csvHeaders = ['ID', 'Nome File', 'Tipo', 'Data Upload', 'Status AI', 'Confidence (%)', 'Richiede Revisione', 'Dimensione (KB)', 'Errori', 'Ultima Modifica'].join(',');
       const csvRows = documents.map(doc => {
         const aiIssues = safeJSONParse(doc.ai_issues, []);
+        // *** CONVERTED: Usa path.basename come fallback ***
+        const baseName = path.basename(doc.file_path || 'documento');
         return [
           doc.id,
-          `"${doc.original_filename || doc.name}"`,
+          `"${baseName}"`, // *** CONVERTED: Usa baseName ***
           `"${doc.type || 'N/A'}"`,
           `"${new Date(doc.created_at).toLocaleString('it-IT')}"`,
           `"${doc.ai_status?.toUpperCase() || 'N/A'}"`,
@@ -1101,10 +1126,13 @@ router.get('/:id/content', authMiddleware, async (req, res) => {
     else if (fileExtension === '.pdf') contentType = 'application/pdf';
     else if (fileExtension === '.txt') contentType = 'text/plain';
     else if (fileExtension === '.json') contentType = 'application/json';
-
+    
+    // *** CONVERTED: Usa path.basename come fallback ***
+    const baseName = path.basename(document.file_path || 'documento');
     const fileContent = await fs.readFile(filePath);
+    
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `inline; filename="${document.original_filename || 'documento'}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${baseName}"`);
     res.setHeader('Content-Length', fileContent.length);
     res.send(fileContent);
   } catch (error) {
@@ -1153,9 +1181,11 @@ router.post('/:id/generate-entries', authMiddleware, async (req, res) => {
 
     const filePath = path.join(UPLOADS_DIR, document.file_path);
     await fs.access(filePath).catch(() => { throw new Error('FILE_NOT_FOUND'); });
-
+    
+    // *** CONVERTED: Usa path.basename come fallback ***
+    const baseName = path.basename(document.file_path || 'documento');
     const fileContent = await fs.readFile(filePath, 'utf8');
-    const fileType = detectDocumentType(document.original_filename, fileContent);
+    const fileType = detectDocumentType(baseName, fileContent);
 
     let serviceFileType;
     if (fileType === 'FATTURA_XML') serviceFileType = 'fattura';
@@ -1168,9 +1198,11 @@ router.post('/:id/generate-entries', authMiddleware, async (req, res) => {
     const result = await accountingService.generateEntries({ file_type: serviceFileType, xml_content: fileContent, account_map: finalAccountMap });
     
     if (result.status === 'OK') {
-      res.json({ success: true, message: 'Scritture contabili generate con successo', document: { id: document.id, name: document.original_filename, type: document.type }, accounting: { entries_count: result.entries_json?.length || 0, status: result.status, messages: result.messages, entries_json: result.entries_json, entries_csv: result.entries_csv }, account_map_used: finalAccountMap, generation_timestamp: new Date().toISOString() });
+      // *** CONVERTED: Usa baseName nel response ***
+      res.json({ success: true, message: 'Scritture contabili generate con successo', document: { id: document.id, name: baseName, type: document.type }, accounting: { entries_count: result.entries_json?.length || 0, status: result.status, messages: result.messages, entries_json: result.entries_json, entries_csv: result.entries_csv }, account_map_used: finalAccountMap, generation_timestamp: new Date().toISOString() });
     } else {
-      res.status(400).json({ success: false, error: 'Errore nella generazione delle scritture', details: result.messages, status: result.status, document: { id: document.id, name: document.original_filename } });
+      // *** CONVERTED: Usa baseName nel response ***
+      res.status(400).json({ success: false, error: 'Errore nella generazione delle scritture', details: result.messages, status: result.status, document: { id: document.id, name: baseName } });
     }
   } catch (error) {
     console.error('💥 Errore generazione scritture:', error);
@@ -1193,9 +1225,11 @@ router.get('/:id/entries-csv', authMiddleware, async (req, res) => {
     const document = await getDocumentById(id);
     if (!document) return res.status(404).json({ error: 'Documento non trovato' });
 
+    // *** CONVERTED: Usa path.basename come fallback ***
+    const baseName = path.basename(document.file_path || 'documento');
     const filePath = path.join(UPLOADS_DIR, document.file_path);
     const fileContent = await fs.readFile(filePath, 'utf8');
-    const fileType = detectDocumentType(document.original_filename, fileContent);
+    const fileType = detectDocumentType(baseName, fileContent);
 
     let serviceFileType;
     if (fileType === 'FATTURA_XML') serviceFileType = 'fattura';
@@ -1208,7 +1242,8 @@ router.get('/:id/entries-csv', authMiddleware, async (req, res) => {
     
     if (result.status !== 'OK') return res.status(400).json({ error: 'Impossibile generare scritture', details: result.messages });
     
-    const fileName = `scritture_${document.original_filename}_${new Date().toISOString().split('T')[0]}.csv`;
+    // *** CONVERTED: Usa baseName nel nome file ***
+    const fileName = `scritture_${baseName}_${new Date().toISOString().split('T')[0]}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.send('\ufeff' + result.entries_csv);

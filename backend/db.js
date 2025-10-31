@@ -15,7 +15,6 @@ export const db = createClient({
 
 export async function initializeDatabase() {
   console.log('Inizializzazione database...');
-  
   try {
     // Verifica connessione
     await db.execute({ sql: 'SELECT 1', args: [] });
@@ -34,7 +33,6 @@ export async function saveDocument(documentData) {
     const result = await db.execute({
       sql: `INSERT INTO documents (
         user_id,
-        original_filename,
         type,
         file_path,
         file_size,
@@ -50,10 +48,9 @@ export async function saveDocument(documentData) {
         client_id,
         document_category,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
       args: [
         documentData.user_id,
-        documentData.original_filename || documentData.name,
         documentData.type,
         documentData.file_path,
         documentData.file_size,
@@ -91,14 +88,14 @@ export async function getAllDocuments(userId = null) {
   try {
     let query = 'SELECT * FROM documents';
     let args = [];
-    
+
     if (userId) {
       query += ' WHERE user_id = ?';
       args.push(userId);
     }
-    
+
     query += ' ORDER BY created_at DESC';
-    
+
     const result = await db.execute({ sql: query, args });
     return result.rows;
   } catch (error) {
@@ -116,7 +113,7 @@ export async function getDocumentById(id) {
       sql: 'SELECT * FROM documents WHERE id = ?',
       args: [id]
     });
-    
+
     return result.rows[0] || null;
   } catch (error) {
     console.error('❌ Errore recupero documento:', error);
@@ -132,24 +129,24 @@ export async function updateDocument(id, updateData) {
     // Costruisci la query dinamicamente in base ai campi forniti
     const fields = [];
     const values = [];
-    
+
     for (const [key, value] of Object.entries(updateData)) {
       fields.push(`${key} = ?`);
       values.push(value);
     }
-    
+
     if (fields.length === 0) {
       throw new Error('Nessun campo da aggiornare');
     }
-    
+
     // Aggiungi updated_at
-    fields.push('updated_at = datetime(\'now\')');
+    fields.push("updated_at = datetime('now')");
     values.push(id);
-    
+
     const sql = `UPDATE documents SET ${fields.join(', ')} WHERE id = ?`;
-    
+
     await db.execute({ sql, args: values });
-    
+
     // Recupera il documento aggiornato
     return await getDocumentById(id);
   } catch (error) {
@@ -167,7 +164,7 @@ export async function deleteDocument(id) {
       sql: 'DELETE FROM documents WHERE id = ?',
       args: [id]
     });
-    
+
     return true;
   } catch (error) {
     console.error('❌ Errore eliminazione documento:', error);
@@ -185,7 +182,7 @@ export async function getSystemStats() {
       sql: 'SELECT COUNT(*) as count FROM documents',
       args: []
     });
-    
+
     // Conta documenti per status
     const byStatus = await db.execute({
       sql: `SELECT ai_status, COUNT(*) as count 
@@ -193,7 +190,7 @@ export async function getSystemStats() {
             GROUP BY ai_status`,
       args: []
     });
-    
+
     // Conta documenti per tipo
     const byType = await db.execute({
       sql: `SELECT type, COUNT(*) as count 
@@ -201,13 +198,13 @@ export async function getSystemStats() {
             GROUP BY type`,
       args: []
     });
-    
+
     // Documenti che richiedono revisione
     const needReview = await db.execute({
       sql: 'SELECT COUNT(*) as count FROM documents WHERE flag_manual_review = 1',
       args: []
     });
-    
+
     return {
       total_documents: totalDocs.rows[0].count,
       by_status: byStatus.rows.reduce((acc, row) => {
