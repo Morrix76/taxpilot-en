@@ -28,7 +28,8 @@ async function checkAndFixUsersTable() {
       'trial_end_date': 'TEXT',
       'piano_id': 'INTEGER',
       'documents_used': 'INTEGER DEFAULT 0',
-      'documents_limit': 'INTEGER DEFAULT 10'
+      'documents_limit': 'INTEGER DEFAULT 10',
+      'piano_data_fine': 'TEXT'
     };
 
     const columnsToAdd = [];
