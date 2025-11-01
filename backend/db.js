@@ -15,8 +15,8 @@ export const db = createClient({
 
 export async function initializeDatabase() {
   console.log('Inizializzazione database...');
+  
   try {
-    // Verifica connessione
     await db.execute({ sql: 'SELECT 1', args: [] });
     console.log('✅ Database inizializzato');
   } catch (error) {
@@ -26,55 +26,68 @@ export async function initializeDatabase() {
 }
 
 /**
- * Salva un nuovo documento nel database
+ * Salva un nuovo documento - ADATTATO ALLA STRUTTURA ESISTENTE
  */
 export async function saveDocument(documentData) {
   try {
     const result = await db.execute({
       sql: `INSERT INTO documents (
         user_id,
-        type,
-        file_path,
-        file_size,
-        mime_type,
-        ai_analysis,
-        ai_status,
-        ai_confidence,
-        ai_issues,
-        analysis_result,
-        confidence,
-        flag_manual_review,
-        processing_version,
         client_id,
-        document_category,
+        file_name,
+        file_path,
+        file_type,
+        category,
+        ocr_data,
+        status,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
       args: [
         documentData.user_id,
-        documentData.type,
+        documentData.client_id || null,
+        documentData.original_filename || documentData.name || 'unknown',
         documentData.file_path,
-        documentData.file_size,
-        documentData.mime_type,
-        documentData.ai_analysis,
-        documentData.ai_status,
-        documentData.ai_confidence,
-        documentData.ai_issues,
-        documentData.analysis_result,
-        documentData.confidence,
-        documentData.flag_manual_review ? 1 : 0,
-        documentData.processing_version,
-        documentData.client_id,
-        documentData.document_category
+        documentData.type || documentData.mime_type || 'application/octet-stream',
+        documentData.document_category || 'general',
+        JSON.stringify({
+          ai_analysis: documentData.ai_analysis,
+          ai_status: documentData.ai_status,
+          ai_confidence: documentData.ai_confidence,
+          ai_issues: documentData.ai_issues,
+          analysis_result: documentData.analysis_result,
+          file_size: documentData.file_size,
+          mime_type: documentData.mime_type,
+          processing_version: documentData.processing_version
+        }),
+        documentData.ai_status || 'completed'
       ]
     });
 
-    // Recupera il documento appena inserito
+    // Recupera documento inserito
     const insertedDoc = await db.execute({
       sql: 'SELECT * FROM documents WHERE id = last_insert_rowid()',
       args: []
     });
 
-    return insertedDoc.rows[0];
+    // Mappa a formato atteso dal frontend
+    const doc = insertedDoc.rows[0];
+    return {
+      id: doc.id,
+      user_id: doc.user_id,
+      client_id: doc.client_id,
+      original_filename: doc.file_name,
+      file_path: doc.file_path,
+      type: doc.file_type,
+      document_category: doc.category,
+      created_at: doc.created_at,
+      ai_status: JSON.parse(doc.ocr_data || '{}').ai_status || doc.status,
+      ai_analysis: JSON.parse(doc.ocr_data || '{}').ai_analysis || '',
+      ai_confidence: JSON.parse(doc.ocr_data || '{}').ai_confidence || 0,
+      ai_issues: JSON.parse(doc.ocr_data || '{}').ai_issues || '[]',
+      analysis_result: JSON.parse(doc.ocr_data || '{}').analysis_result || '{}',
+      file_size: JSON.parse(doc.ocr_data || '{}').file_size || 0,
+      flag_manual_review: false
+    };
   } catch (error) {
     console.error('❌ Errore salvataggio documento:', error);
     throw error;
@@ -82,22 +95,40 @@ export async function saveDocument(documentData) {
 }
 
 /**
- * Recupera tutti i documenti di un utente
+ * Recupera tutti i documenti
  */
 export async function getAllDocuments(userId = null) {
   try {
     let query = 'SELECT * FROM documents';
     let args = [];
-
+    
     if (userId) {
       query += ' WHERE user_id = ?';
       args.push(userId);
     }
-
+    
     query += ' ORDER BY created_at DESC';
-
+    
     const result = await db.execute({ sql: query, args });
-    return result.rows;
+    
+    // Mappa a formato atteso
+    return result.rows.map(doc => ({
+      id: doc.id,
+      user_id: doc.user_id,
+      client_id: doc.client_id,
+      original_filename: doc.file_name,
+      file_path: doc.file_path,
+      type: doc.file_type,
+      document_category: doc.category,
+      created_at: doc.created_at,
+      ai_status: JSON.parse(doc.ocr_data || '{}').ai_status || doc.status,
+      ai_analysis: JSON.parse(doc.ocr_data || '{}').ai_analysis || '',
+      ai_confidence: JSON.parse(doc.ocr_data || '{}').ai_confidence || 0,
+      ai_issues: JSON.parse(doc.ocr_data || '{}').ai_issues || '[]',
+      analysis_result: JSON.parse(doc.ocr_data || '{}').analysis_result || '{}',
+      file_size: JSON.parse(doc.ocr_data || '{}').file_size || 0,
+      flag_manual_review: false
+    }));
   } catch (error) {
     console.error('❌ Errore recupero documenti:', error);
     throw error;
@@ -105,7 +136,7 @@ export async function getAllDocuments(userId = null) {
 }
 
 /**
- * Recupera un documento per ID
+ * Recupera documento per ID
  */
 export async function getDocumentById(id) {
   try {
@@ -113,8 +144,28 @@ export async function getDocumentById(id) {
       sql: 'SELECT * FROM documents WHERE id = ?',
       args: [id]
     });
-
-    return result.rows[0] || null;
+    
+    if (!result.rows[0]) return null;
+    
+    const doc = result.rows[0];
+    return {
+      id: doc.id,
+      user_id: doc.user_id,
+      client_id: doc.client_id,
+      original_filename: doc.file_name,
+      file_path: doc.file_path,
+      type: doc.file_type,
+      document_category: doc.category,
+      created_at: doc.created_at,
+      ai_status: JSON.parse(doc.ocr_data || '{}').ai_status || doc.status,
+      ai_analysis: JSON.parse(doc.ocr_data || '{}').ai_analysis || '',
+      ai_confidence: JSON.parse(doc.ocr_data || '{}').ai_confidence || 0,
+      ai_issues: JSON.parse(doc.ocr_data || '{}').ai_issues || '[]',
+      analysis_result: JSON.parse(doc.ocr_data || '{}').analysis_result || '{}',
+      file_size: JSON.parse(doc.ocr_data || '{}').file_size || 0,
+      mime_type: JSON.parse(doc.ocr_data || '{}').mime_type || 'application/octet-stream',
+      flag_manual_review: false
+    };
   } catch (error) {
     console.error('❌ Errore recupero documento:', error);
     throw error;
@@ -122,32 +173,46 @@ export async function getDocumentById(id) {
 }
 
 /**
- * Aggiorna un documento
+ * Aggiorna documento
  */
 export async function updateDocument(id, updateData) {
   try {
-    // Costruisci la query dinamicamente in base ai campi forniti
-    const fields = [];
-    const values = [];
-
-    for (const [key, value] of Object.entries(updateData)) {
-      fields.push(`${key} = ?`);
-      values.push(value);
-    }
-
-    if (fields.length === 0) {
-      throw new Error('Nessun campo da aggiornare');
-    }
-
-    // Aggiungi updated_at
-    fields.push("updated_at = datetime('now')");
-    values.push(id);
-
-    const sql = `UPDATE documents SET ${fields.join(', ')} WHERE id = ?`;
-
-    await db.execute({ sql, args: values });
-
-    // Recupera il documento aggiornato
+    // Recupera documento corrente per merge
+    const current = await getDocumentById(id);
+    if (!current) throw new Error('Documento non trovato');
+    
+    const currentOcrData = JSON.parse(current.ocr_data || '{}');
+    
+    // Mappa campi a struttura tabella
+    const updates = {};
+    
+    if (updateData.client_id !== undefined) updates.client_id = updateData.client_id;
+    if (updateData.document_category !== undefined) updates.category = updateData.document_category;
+    if (updateData.file_path !== undefined) updates.file_path = updateData.file_path;
+    if (updateData.ai_status !== undefined) updates.status = updateData.ai_status;
+    
+    // Aggiorna ocr_data con nuovi campi AI
+    const newOcrData = {
+      ...currentOcrData,
+      ai_analysis: updateData.ai_analysis || currentOcrData.ai_analysis,
+      ai_status: updateData.ai_status || currentOcrData.ai_status,
+      ai_confidence: updateData.ai_confidence !== undefined ? updateData.ai_confidence : currentOcrData.ai_confidence,
+      ai_issues: updateData.ai_issues || currentOcrData.ai_issues,
+      analysis_result: updateData.analysis_result || currentOcrData.analysis_result
+    };
+    
+    updates.ocr_data = JSON.stringify(newOcrData);
+    updates.last_modified = new Date().toISOString();
+    
+    // Costruisci query
+    const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    const values = Object.values(updates);
+    
+    await db.execute({
+      sql: `UPDATE documents SET ${fields} WHERE id = ?`,
+      args: [...values, id]
+    });
+    
     return await getDocumentById(id);
   } catch (error) {
     console.error('❌ Errore aggiornamento documento:', error);
@@ -156,7 +221,7 @@ export async function updateDocument(id, updateData) {
 }
 
 /**
- * Elimina un documento
+ * Elimina documento
  */
 export async function deleteDocument(id) {
   try {
@@ -164,7 +229,6 @@ export async function deleteDocument(id) {
       sql: 'DELETE FROM documents WHERE id = ?',
       args: [id]
     });
-
     return true;
   } catch (error) {
     console.error('❌ Errore eliminazione documento:', error);
@@ -173,52 +237,38 @@ export async function deleteDocument(id) {
 }
 
 /**
- * Recupera statistiche di sistema
+ * Statistiche sistema
  */
 export async function getSystemStats() {
   try {
-    // Conta totale documenti
     const totalDocs = await db.execute({
       sql: 'SELECT COUNT(*) as count FROM documents',
       args: []
     });
-
-    // Conta documenti per status
-    const byStatus = await db.execute({
-      sql: `SELECT ai_status, COUNT(*) as count 
-            FROM documents 
-            GROUP BY ai_status`,
-      args: []
-    });
-
-    // Conta documenti per tipo
+    
     const byType = await db.execute({
-      sql: `SELECT type, COUNT(*) as count 
-            FROM documents 
-            GROUP BY type`,
+      sql: 'SELECT file_type, COUNT(*) as count FROM documents GROUP BY file_type',
       args: []
     });
-
-    // Documenti che richiedono revisione
-    const needReview = await db.execute({
-      sql: 'SELECT COUNT(*) as count FROM documents WHERE flag_manual_review = 1',
+    
+    const byCategory = await db.execute({
+      sql: 'SELECT category, COUNT(*) as count FROM documents GROUP BY category',
       args: []
     });
-
+    
     return {
       total_documents: totalDocs.rows[0].count,
-      by_status: byStatus.rows.reduce((acc, row) => {
-        acc[row.ai_status] = row.count;
-        return acc;
-      }, {}),
       by_type: byType.rows.reduce((acc, row) => {
-        acc[row.type] = row.count;
+        acc[row.file_type] = row.count;
         return acc;
       }, {}),
-      need_review: needReview.rows[0].count
+      by_category: byCategory.rows.reduce((acc, row) => {
+        acc[row.category || 'general'] = row.count;
+        return acc;
+      }, {})
     };
   } catch (error) {
-    console.error('❌ Errore recupero statistiche:', error);
+    console.error('❌ Errore statistiche:', error);
     throw error;
   }
 }
