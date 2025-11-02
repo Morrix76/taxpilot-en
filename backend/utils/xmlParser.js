@@ -1,24 +1,24 @@
-// File: backend/services/xml-parser.js
-// Parser per fatture elettroniche italiane (Standard SDI)
+// File: backend/utils/xmlParser.js
+// Parser for Italian electronic invoices (SDI Standard)
 
-const xml2js = require('xml2js');
+import { Parser } from 'xml2js';
 
-class XmlParser {
+export class FatturaElettronicaValidator {
   
   /**
-   * Parsing principale fattura elettronica
-   * @param {Buffer} buffer - Buffer del file XML
-   * @returns {Object} Dati parseati compatibili con fiscalValidator
+   * Main parsing for electronic invoice
+   * @param {Buffer} buffer - Buffer of the XML file
+   * @returns {Object} Parsed data compatible with fiscalValidator
    */
   async parseInvoice(buffer) {
     try {
-      console.log('📄 Iniziando parsing fattura elettronica XML...');
+      console.log('📄 Starting XML electronic invoice parsing...');
       
-      // Converti buffer in stringa
+      // Convert buffer to string
       const xmlString = buffer.toString('utf8');
       
-      // Parse XML in modo sicuro
-      const parser = new xml2js.Parser({
+      // Securely parse XML
+      const parser = new Parser({
         explicitArray: false,
         ignoreAttrs: false,
         mergeAttrs: true,
@@ -30,69 +30,69 @@ class XmlParser {
       
       const xmlData = await parser.parseStringPromise(xmlString);
       
-      // Estrai dati seguendo lo standard SDI
+      // Extract data following the SDI standard
       const parsedData = this.extractStandardFields(xmlData);
       
-      console.log('✅ Parsing XML completato:', Object.keys(parsedData));
+      console.log('✅ XML Parsing complete:', Object.keys(parsedData));
       return parsedData;
       
     } catch (error) {
-      console.error('❌ XML parsing error:', error.message); // <-- TRADOTTO
+      console.error('❌ XML Parsing Error:', error.message);
       return this.createFallbackData(error);
     }
   }
   
   /**
-   * Estrazione campi standard da fattura elettronica SDI
-   * @param {Object} xmlData - Dati XML parseati
-   * @returns {Object} Dati estratti
+   * Extraction of standard fields from SDI electronic invoice
+   * @param {Object} xmlData - Parsed XML data
+   * @returns {Object} Extracted data
    */
   extractStandardFields(xmlData) {
     const result = {
-      // Campi obbligatori per validazione fiscale
-      imponibile: 0,
-      aliquotaIva: 22, // Default IVA ordinaria
-      importoIva: 0,
-      totale: 0,
+      // Required fields for fiscal validation
+      taxableAmount: 0,
+      vatRate: 22, // Default standard VAT
+      vatAmount: 0,
+      total: 0,
       
-      // Campi aggiuntivi
-      dataEmissione: null,
-      dataScadenza: null,
-      numeroFattura: null,
-      fornitore: null,
-      cliente: null,
+      // Additional fields
+      issueDate: null,
+      dueDate: null,
+      invoiceNumber: null,
+      supplier: null,
+      customer: null,
       
-      // Metadati parsing
+      // Parsing metadata
       parseSuccess: true,
       warnings: []
     };
     
     try {
-      // Trova la root della fattura (standard SDI)
-      const fattura = this.findFatturaRoot(xmlData);
+      // Find the invoice root (SDI standard)
+      const invoice = this.findFatturaRoot(xmlData);
       
-      if (!fattura) {
-        result.warnings.push('Struttura XML non standard - usando fallback');
+      if (!invoice) {
+        result.warnings.push('Non-standard XML structure - using fallback');
         return this.extractWithFallback(xmlData, result);
       }
       
-      // Estrai header fattura
-      this.extractHeaderData(fattura, result);
+      // Extract invoice header
+      this.extractHeaderData(invoice, result);
       
-      // Estrai dati fiscali dalle righe
-      this.extractFiscalData(fattura, result);
+      // Extract fiscal data from lines
+      this.extractFiscalData(invoice, result);
       
-      // Estrai riepiloghi IVA
-      this.extractIvaSummary(fattura, result);
+      // Extract VAT summaries
+      this.extractIvaSummary(invoice, result);
       
-      // Validation e normalizzazione
+      // Validation and normalization
       this.normalizeData(result);
       
-      console.log(`💰 Dati estratti: Imponibile=${result.imponibile}€, IVA=${result.aliquotaIva}%, Totale=${result.totale}€`);
+      console.log(`💰 Data extracted: Taxable=${result.taxableAmount}€, VAT=${result.vatRate}%, Total=${result.total}€`);
       
     } catch (error) {
-      console.error('⚠️ Errore estrazione campi:', error.message);
-      result.warnings.push(`Errore estrazione: ${error.message}`);
+      console.error('⚠️ Error extracting fields:', error.message);
+      result.warnings.push(`Extraction error: ${error.message}`);
       return this.extractWithFallback(xmlData, result);
     }
     
@@ -100,12 +100,12 @@ class XmlParser {
   }
   
   /**
-   * Trova la root della fattura nel XML
-   * @param {Object} xmlData - Dati XML
-   * @returns {Object|null} Oggetto fattura
+   * Find the invoice root in the XML
+   * @param {Object} xmlData - XML data
+   * @returns {Object|null} Invoice object
    */
   findFatturaRoot(xmlData) {
-    // Possibili percorsi standard SDI
+    // Possible standard SDI paths
     const possiblePaths = [
       xmlData.fatturaelettronica,
       xmlData.FatturaElettronica,
@@ -117,7 +117,7 @@ class XmlParser {
     
     for (const path of possiblePaths) {
       if (path && typeof path === 'object') {
-        // Controlla se ha struttura compatibile SDI
+        // Check if it has an SDI-compatible structure
         if (this.isValidSdiStructure(path)) {
           return path;
         }
@@ -128,9 +128,9 @@ class XmlParser {
   }
   
   /**
-   * Verifica se la struttura è compatibile SDI
-   * @param {Object} obj - Oggetto da verificare
-   * @returns {boolean} True se compatibile
+   * Check if the structure is SDI-compatible
+   * @param {Object} obj - Object to check
+   * @returns {boolean} True if compatible
    */
   isValidSdiStructure(obj) {
     const indicators = [
@@ -151,234 +151,234 @@ class XmlParser {
   }
   
   /**
-   * Estrae dati header (date, numeri, anagrafica)
-   * @param {Object} fattura - Oggetto fattura
-   * @param {Object} result - Oggetto risultato da popolare
+   * Extract header data (dates, numbers, demographics)
+   * @param {Object} invoice - Invoice object
+   * @param {Object} result - Result object to populate
    */
-  extractHeaderData(fattura, result) {
-    // Cerca header in possibili percorsi
+  extractHeaderData(invoice, result) {
+    // Search for header in possible paths
     const headers = [
-      fattura.FatturaElettronicaHeader,
-      fattura.fatturaelettronicaheader,
-      fattura.Header,
-      fattura.header
+      invoice.FatturaElettronicaHeader,
+      invoice.fatturaelettronicaheader,
+      invoice.Header,
+      invoice.header
     ];
     
     for (const header of headers) {
       if (!header) continue;
       
-      // Dati generali
-      const datiGenerali = header.DatiGenerali || header.datigenerali || header.GeneralData;
-      if (datiGenerali) {
-        const datiDoc = datiGenerali.DatiGeneraliDocumento || datiGenerali.datigeneralidocumento;
-        if (datiDoc) {
-          result.numeroFattura = this.safeExtract(datiDoc, ['Numero', 'numero', 'Number']);
-          result.dataEmissione = this.safeExtract(datiDoc, ['Data', 'data', 'Date']);
+      // General data
+      const generalData = header.DatiGenerali || header.datigenerali || header.GeneralData;
+      if (generalData) {
+        const docData = generalData.DatiGeneraliDocumento || generalData.datigeneralidocumento;
+        if (docData) {
+          result.invoiceNumber = this.safeExtract(docData, ['Numero', 'numero', 'Number']);
+          result.issueDate = this.safeExtract(docData, ['Data', 'data', 'Date']);
         }
       }
       
-      // Dati trasmissione (se presente)
-      const datiTrasmissione = header.DatiTrasmissione || header.datitrasmissione;
-      if (datiTrasmissione) {
-        // Estrai eventuali dati aggiuntivi se necessario
+      // Transmission data (if present)
+      const transmissionData = header.DatiTrasmissione || header.datitrasmissione;
+      if (transmissionData) {
+        // Extract any additional data if needed
       }
       
-      break; // Esci al primo header valido trovato
+      break; // Exit on the first valid header found
     }
   }
   
   /**
-   * Estrae dati fiscali dal body della fattura
-   * @param {Object} fattura - Oggetto fattura
-   * @param {Object} result - Oggetto risultato da popolare
+   * Extract fiscal data from the invoice body
+   * @param {Object} invoice - Invoice object
+   * @param {Object} result - Result object to populate
    */
-  extractFiscalData(fattura, result) {
-    // Cerca body in possibili percorsi
+  extractFiscalData(invoice, result) {
+    // Search for body in possible paths
     const bodies = [
-      fattura.FatturaElettronicaBody,
-      fattura.fatturaelettronicabody,
-      fattura.Body,
-      fattura.body,
-      fattura
+      invoice.FatturaElettronicaBody,
+      invoice.fatturaelettronicabody,
+      invoice.Body,
+      invoice.body,
+      invoice
     ];
     
-    let totalImponibile = 0;
-    let totalIva = 0;
+    let totalTaxable = 0;
+    let totalVat = 0;
     let totalGeneral = 0;
     
     for (const body of bodies) {
       if (!body) continue;
       
-      // Cerca dati beni/servizi (righe fattura)
-      const datiBeni = body.DatiBeniServizi || body.databeniservizi || body.LineItems;
-      if (datiBeni) {
+      // Search for goods/services data (invoice lines)
+      const goodsServicesData = body.DatiBeniServizi || body.databeniservizi || body.LineItems;
+      if (goodsServicesData) {
         
-        // Estrai da dettaglio righe
-        const dettaglioLinee = this.ensureArray(
-          datiBeni.DettaglioLinee || 
-          datiBeni.dettagliolinee || 
-          datiBeni.LineItem || 
-          datiBeni.lineitem ||
-          datiBeni
+        // Extract from line details
+        const lineDetails = this.ensureArray(
+          goodsServicesData.DettaglioLinee || 
+          goodsServicesData.dettagliolinee || 
+          goodsServicesData.LineItem || 
+          goodsServicesData.lineitem ||
+          goodsServicesData
         );
         
-        for (const linea of dettaglioLinee) {
-          if (!linea) continue;
+        for (const line of lineDetails) {
+          if (!line) continue;
           
-          const prezzoTotale = this.parseAmount(
-            linea.PrezzoTotale || 
-            linea.prezzototale || 
-            linea.TotalPrice ||
-            linea.ImportoTotale ||
-            linea.importototale
+          const totalPrice = this.parseAmount(
+            line.PrezzoTotale || 
+            line.prezzototale || 
+            line.TotalPrice ||
+            line.ImportoTotale ||
+            line.importototale
           );
           
-          const aliquotaLinea = this.parseAmount(
-            linea.AliquotaIVA || 
-            linea.aliquotaiva || 
-            linea.VatRate
+          const lineVatRate = this.parseAmount(
+            line.AliquotaIVA || 
+            line.aliquotaiva || 
+            line.VatRate
           );
           
-          if (prezzoTotale > 0) {
-            totalImponibile += prezzoTotale;
-            if (aliquotaLinea > 0 && result.aliquotaIva === 22) {
-              result.aliquotaIva = aliquotaLinea; // Usa la prima aliquota trovata
+          if (totalPrice > 0) {
+            totalTaxable += totalPrice;
+            if (lineVatRate > 0 && result.vatRate === 22) {
+              result.vatRate = lineVatRate; // Use the first VAT rate found
             }
           }
         }
         
-        // Estrai da riepiloghi IVA se disponibile
-        const datiRiepilogo = this.ensureArray(
-          datiBeni.DatiRiepilogo || 
-          datiBeni.datiriepilogo || 
-          datiBeni.VatSummary
+        // Extract from VAT summaries if available
+        const summaryData = this.ensureArray(
+          goodsServicesData.DatiRiepilogo || 
+          goodsServicesData.datiriepilogo || 
+          goodsServicesData.VatSummary
         );
         
-        for (const riepilogo of datiRiepilogo) {
-          if (!riepilogo) continue;
+        for (const summary of summaryData) {
+          if (!summary) continue;
           
-          const imponibileRiepilogo = this.parseAmount(
-            riepilogo.ImponibileImporto || 
-            riepilogo.imponibileimporto ||
-            riepilogo.TaxableAmount
+          const summaryTaxable = this.parseAmount(
+            summary.ImponibileImporto || 
+            summary.imponibileimporto ||
+            summary.TaxableAmount
           );
           
-          const ivaRiepilogo = this.parseAmount(
-            riepilogo.Imposta || 
-            riepilogo.imposta ||
-            riepilogo.TaxAmount
+          const summaryVat = this.parseAmount(
+            summary.Imposta || 
+            summary.imposta ||
+            summary.TaxAmount
           );
           
-          const aliquotaRiepilogo = this.parseAmount(
-            riepilogo.AliquotaIVA || 
-            riepilogo.aliquotaiva ||
-            riepilogo.VatRate
+          const summaryVatRate = this.parseAmount(
+            summary.AliquotaIVA || 
+            summary.aliquotaiva ||
+            summary.VatRate
           );
           
-          if (imponibileRiepilogo > 0) totalImponibile = Math.max(totalImponibile, imponibileRiepilogo);
-          if (ivaRiepilogo > 0) totalIva += ivaRiepilogo;
-          if (aliquotaRiepilogo > 0) result.aliquotaIva = aliquotaRiepilogo;
+          if (summaryTaxable > 0) totalTaxable = Math.max(totalTaxable, summaryTaxable);
+          if (summaryVat > 0) totalVat += summaryVat;
+          if (summaryVatRate > 0) result.vatRate = summaryVatRate;
         }
       }
       
-      // Cerca dati pagamento per totale
-      const datiPagamento = body.DatiPagamento || body.datipagamento || body.PaymentData;
-      if (datiPagamento) {
-        const dettaglioPagamento = this.ensureArray(
-          datiPagamento.DettaglioPagamento || 
-          datiPagamento.dettagliopagamento ||
-          datiPagamento.PaymentDetails
+      // Search payment data for total
+      const paymentData = body.DatiPagamento || body.datipagamento || body.PaymentData;
+      if (paymentData) {
+        const paymentDetails = this.ensureArray(
+          paymentData.DettaglioPagamento || 
+          paymentData.dettagliopagamento ||
+          paymentData.PaymentDetails
         );
         
-        for (const dettaglio of dettaglioPagamento) {
-          const importoPagamento = this.parseAmount(
-            dettaglio.ImportoPagamento || 
-            dettaglio.importopagamento ||
-            dettaglio.PaymentAmount
+        for (const detail of paymentDetails) {
+          const paymentAmount = this.parseAmount(
+            detail.ImportoPagamento || 
+            detail.importopagamento ||
+            detail.PaymentAmount
           );
           
-          if (importoPagamento > 0) {
-            totalGeneral = Math.max(totalGeneral, importoPagamento);
+          if (paymentAmount > 0) {
+            totalGeneral = Math.max(totalGeneral, paymentAmount);
           }
         }
       }
       
-      break; // Esci al primo body valido
+      break; // Exit on the first valid body
     }
     
-    // Assegna i valori estratti
-    if (totalImponibile > 0) result.imponibile = totalImponibile;
-    if (totalIva > 0) result.importoIva = totalIva;
-    if (totalGeneral > 0) result.totale = totalGeneral;
+    // Assign extracted values
+    if (totalTaxable > 0) result.taxableAmount = totalTaxable;
+    if (totalVat > 0) result.vatAmount = totalVat;
+    if (totalGeneral > 0) result.total = totalGeneral;
   }
   
   /**
-   * Estrae riepiloghi IVA
-   * @param {Object} fattura - Oggetto fattura
-   * @param {Object} result - Oggetto risultato
+   * Extract VAT summaries
+   * @param {Object} invoice - Invoice object
+   * @param {Object} result - Result object
    */
-  extractIvaSummary(fattura, result) {
-    // Se non abbiamo ancora trovato l'IVA, calcoliamola
-    if (result.importoIva === 0 && result.imponibile > 0 && result.aliquotaIva > 0) {
-      result.importoIva = Math.round((result.imponibile * result.aliquotaIva / 100) * 100) / 100;
+  extractIvaSummary(invoice, result) {
+    // If we haven't found the VAT yet, calculate it
+    if (result.vatAmount === 0 && result.taxableAmount > 0 && result.vatRate > 0) {
+      result.vatAmount = Math.round((result.taxableAmount * result.vatRate / 100) * 100) / 100;
     }
     
-    // Se non abbiamo il totale, calcoliamolo
-    if (result.totale === 0 && result.imponibile > 0) {
-      result.totale = result.imponibile + result.importoIva;
+    // If we don't have the total, calculate it
+    if (result.total === 0 && result.taxableAmount > 0) {
+      result.total = result.taxableAmount + result.vatAmount;
     }
   }
   
   /**
-   * Parsing con fallback per XML non standard
-   * @param {Object} xmlData - Dati XML
-   * @param {Object} result - Oggetto risultato
-   * @returns {Object} Dati estratti con fallback
+   * Parsing with fallback for non-standard XML
+   * @param {Object} xmlData - XML data
+   * @param {Object} result - Result object
+   * @returns {Object} Extracted data with fallback
    */
   extractWithFallback(xmlData, result) {
-    console.log('🔍 Usando metodo fallback per XML non standard...');
+    console.log('🔍 Using fallback method for non-standard XML...');
     
-    // Cerca tutti i possibili campi numerici nel XML
+    // Find all possible numeric values in the XML
     const allValues = this.extractAllNumericValues(xmlData);
     
-    // Cerca pattern comuni nei nomi dei campi
+    // Search for common patterns in field names
     const patterns = {
-      imponibile: ['imponibile', 'subtotal', 'netamount', 'baseamount', 'taxable'],
-      iva: ['iva', 'imposta', 'tax', 'vat'],
-      totale: ['totale', 'total', 'amount', 'importo'],
-      aliquota: ['aliquota', 'rate', 'percent', '%']
+      taxableAmount: ['imponibile', 'subtotal', 'netamount', 'baseamount', 'taxable'],
+      vatAmount: ['iva', 'imposta', 'tax', 'vat'],
+      total: ['totale', 'total', 'amount', 'importo'],
+      vatRate: ['aliquota', 'rate', 'percent', '%']
     };
     
-    // Applica pattern matching
+    // Apply pattern matching
     for (const [key, value] of Object.entries(allValues)) {
       const keyLower = key.toLowerCase();
       
-      if (patterns.imponibile.some(p => keyLower.includes(p)) && value > result.imponibile) {
-        result.imponibile = value;
+      if (patterns.taxableAmount.some(p => keyLower.includes(p)) && value > result.taxableAmount) {
+        result.taxableAmount = value;
       }
       
-      if (patterns.iva.some(p => keyLower.includes(p)) && value > result.importoIva && value < 1000) {
-        result.importoIva = value;
+      if (patterns.vatAmount.some(p => keyLower.includes(p)) && value > result.vatAmount && value < 1000) {
+        result.vatAmount = value;
       }
       
-      if (patterns.totale.some(p => keyLower.includes(p)) && value > result.totale) {
-        result.totale = value;
+      if (patterns.total.some(p => keyLower.includes(p)) && value > result.total) {
+        result.total = value;
       }
       
-      if (patterns.aliquota.some(p => keyLower.includes(p)) && value > 0 && value <= 30) {
-        result.aliquotaIva = value;
+      if (patterns.vatRate.some(p => keyLower.includes(p)) && value > 0 && value <= 30) {
+        result.vatRate = value;
       }
     }
     
-    result.warnings.push('Utilizzato parsing fallback - verificare dati estratti');
+    result.warnings.push('Used fallback parsing - verify extracted data');
     return result;
   }
   
   /**
-   * Estrae tutti i valori numerici dall'XML per fallback
-   * @param {Object} obj - Oggetto da analizzare
-   * @param {string} prefix - Prefisso per il percorso
-   * @returns {Object} Mappa chiave-valore di tutti i numeri
+   * Extract all numeric values from XML for fallback
+   * @param {Object} obj - Object to analyze
+   * @param {string} prefix - Prefix for the path
+   * @returns {Object} Key-value map of all numbers
    */
   extractAllNumericValues(obj, prefix = '') {
     const values = {};
@@ -402,42 +402,42 @@ class XmlParser {
   }
   
   /**
-   * Normalizza e valida i dati estratti
-   * @param {Object} result - Oggetto risultato da normalizzare
+   * Normalize and validate extracted data
+   * @param {Object} result - Result object to normalize
    */
   normalizeData(result) {
-    // Assicura che i valori siano numeri validi
-    result.imponibile = this.parseAmount(result.imponibile);
-    result.aliquotaIva = this.parseAmount(result.aliquotaIva);
-    result.importoIva = this.parseAmount(result.importoIva);
-    result.totale = this.parseAmount(result.totale);
+    // Ensure values are valid numbers
+    result.taxableAmount = this.parseAmount(result.taxableAmount);
+    result.vatRate = this.parseAmount(result.vatRate);
+    result.vatAmount = this.parseAmount(result.vatAmount);
+    result.total = this.parseAmount(result.total);
     
-    // Validazioni di coerenza
-    if (result.imponibile > 0 && result.importoIva === 0 && result.aliquotaIva > 0) {
-      result.importoIva = Math.round((result.imponibile * result.aliquotaIva / 100) * 100) / 100;
-      result.warnings.push('IVA calcolata automaticamente');
+    // Consistency checks
+    if (result.taxableAmount > 0 && result.vatAmount === 0 && result.vatRate > 0) {
+      result.vatAmount = Math.round((result.taxableAmount * result.vatRate / 100) * 100) / 100;
+      result.warnings.push('VAT calculated automatically');
     }
     
-    if (result.imponibile > 0 && result.totale === 0) {
-      result.totale = result.imponibile + result.importoIva;
-      result.warnings.push('Totale calcolato automaticamente');
+    if (result.taxableAmount > 0 && result.total === 0) {
+      result.total = result.taxableAmount + result.vatAmount;
+      result.warnings.push('Total calculated automatically');
     }
     
-    // Normalizza date
-    if (result.dataEmissione) {
-      result.dataEmissione = this.normalizeDate(result.dataEmissione);
+    // Normalize dates
+    if (result.issueDate) {
+      result.issueDate = this.normalizeDate(result.issueDate);
     }
     
-    if (result.dataScadenza) {
-      result.dataScadenza = this.normalizeDate(result.dataScadenza);
+    if (result.dueDate) {
+      result.dueDate = this.normalizeDate(result.dueDate);
     }
   }
   
   /**
-   * Estrazione sicura di valori da oggetto
-   * @param {Object} obj - Oggetto sorgente
-   * @param {Array} keys - Possibili chiavi
-   * @returns {any} Valore trovato o null
+   * Safe extraction of values from object
+   * @param {Object} obj - Source object
+   * @param {Array} keys - Possible keys
+   * @returns {any} Found value or null
    */
   safeExtract(obj, keys) {
     if (!obj) return null;
@@ -452,9 +452,9 @@ class XmlParser {
   }
   
   /**
-   * Assicura che il valore sia un array
-   * @param {any} value - Valore da convertire
-   * @returns {Array} Array sicuro
+   * Ensure the value is an array
+   * @param {any} value - Value to convert
+   * @returns {Array} Safe array
    */
   ensureArray(value) {
     if (!value) return [];
@@ -462,9 +462,9 @@ class XmlParser {
   }
   
   /**
-   * Parsing sicuro di importi
-   * @param {any} value - Valore da convertire
-   * @returns {number} Numero parseato
+   * Safe parsing of amounts
+   * @param {any} value - Value to convert
+   * @returns {number} Parsed number
    */
   parseAmount(value) {
     if (typeof value === 'number') return Math.round(value * 100) / 100;
@@ -477,18 +477,18 @@ class XmlParser {
   }
   
   /**
-   * Normalizza date in formato ISO
-   * @param {string} dateStr - Stringa data
-   * @returns {string|null} Data normalizzata
+   * Normalize dates to ISO format
+   * @param {string} dateStr - Date string
+   * @returns {string|null} Normalized date
    */
   normalizeDate(dateStr) {
     if (!dateStr) return null;
     
     try {
-      // Gestisce formati comuni italiani: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY
+      // Handles common Italian formats: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY
       let cleanDate = dateStr.toString().trim();
       
-      // Formato italiano DD/MM/YYYY o DD-MM-YYYY
+      // Italian format DD/MM/YYYY or DD-MM-YYYY
       if (cleanDate.match(/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/)) {
         const parts = cleanDate.split(/[\/\-]/);
         cleanDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
@@ -497,41 +497,41 @@ class XmlParser {
       const date = new Date(cleanDate);
       return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
     } catch (error) {
-      console.warn('⚠️ Errore normalizzazione data:', dateStr);
+      console.warn('⚠️ Error normalizing date:', dateStr);
       return null;
     }
   }
   
   /**
-   * Crea dati di fallback in caso di errore
-   * @param {Error} error - Errore originale
-   * @returns {Object} Dati di fallback
+   * Create fallback data in case of error
+   * @param {Error} error - Original error
+   * @returns {Object} Fallback data
    */
   createFallbackData(error) {
     return {
-      imponibile: 0,
-      aliquotaIva: 22,
-      importoIva: 0,
-      totale: 0,
-      dataEmissione: null,
-      dataScadenza: null,
-      numeroFattura: null,
-      fornitore: null,
-      cliente: null,
+      taxableAmount: 0,
+      vatRate: 22,
+      vatAmount: 0,
+      total: 0,
+      issueDate: null,
+      dueDate: null,
+      invoiceNumber: null,
+      supplier: null,
+      customer: null,
       parseSuccess: false,
-      warnings: [`XML parsing error: ${error.message}`], // <-- TRADOTTO
+      warnings: [`XML Parsing Error: ${error.message}`],
       error: error.message
     };
   }
   
   /**
-   * Test del parser con XML di esempio
-   * @returns {Object} Risultati test
+   * Test the parser with sample XML
+   * @returns {Object} Test results
    */
   async testParser() {
     console.log('🧪 Test XML Parser...');
     
-    // XML di test semplificato
+    // Simplified test XML
     const testXml = `<?xml version="1.0" encoding="UTF-8"?>
     <FatturaElettronica>
       <FatturaElettronicaHeader>
@@ -567,11 +567,11 @@ class XmlParser {
       const result = await this.parseInvoice(buffer);
       
       const tests = [
-        { name: 'Imponibile estratto', passed: result.imponibile === 1000 },
-        { name: 'Aliquota IVA estratta', passed: result.aliquotaIva === 22 },
-        { name: 'Importo IVA estratto', passed: result.importoIva === 220 },
-        { name: 'Totale estratto', passed: result.totale === 1220 },
-        { name: 'Data emissione estratta', passed: result.dataEmissione === '2025-06-04' },
+        { name: 'Taxable amount extracted', passed: result.taxableAmount === 1000 },
+        { name: 'VAT rate extracted', passed: result.vatRate === 22 },
+        { name: 'VAT amount extracted', passed: result.vatAmount === 220 },
+        { name: 'Total extracted', passed: result.total === 1220 },
+        { name: 'Issue date extracted', passed: result.issueDate === '2025-06-04' },
         { name: 'Parsing success', passed: result.parseSuccess === true }
       ];
       
@@ -593,14 +593,12 @@ class XmlParser {
   }
 }
 
-// Esporta istanza singleton
-const xmlParser = new XmlParser();
-
-module.exports = xmlParser;
-
-// Test standalone se chiamato direttamente
-if (require.main === module) {
-  xmlParser.testParser().then(result => {
-    console.log('📊 Test Results:', result);
-  });
-}
+// NOTE: The CommonJS singleton export and test runner (if require.main === module)
+// have been removed to comply with the ES Module 'export class' syntax.
+// If you were relying on the singleton, you should now import the class
+// and instantiate it where needed, or create a new file to export a singleton instance:
+//
+// e.g., in a new file 'xmlValidatorSingleton.js':
+// import { FatturaElettronicaValidator } from './xmlParser.js';
+// const validatorInstance = new FatturaElettronicaValidator();
+// export default validatorInstance;
