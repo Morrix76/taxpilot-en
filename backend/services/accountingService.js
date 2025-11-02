@@ -85,10 +85,10 @@ class AccountingService {
       };
 
     } catch (error) {
-      console.error('❌ Errore generazione scritture:', error);
+      console.error('❌ Error generating entries:', error);
       return {
         status: 'ERROR',
-        messages: [`Errore interno: ${error.message}`],
+        messages: [`Internal error: ${error.message}`],
         entries_json: null,
         entries_csv: null
       };
@@ -217,7 +217,7 @@ class AccountingService {
       };
 
     } catch (error) {
-      console.error('❌ Errore parsing XML:', error.message);
+      console.error('❌ XML parsing error:', error.message);
       throw error;
     }
   }
@@ -251,7 +251,7 @@ class AccountingService {
       };
 
     } catch (error) {
-      console.error('❌ Errore parsing busta paga:', error.message);
+      console.error('❌ Payroll parsing error:', error.message);
       throw error;
     }
   }
@@ -487,7 +487,7 @@ class AccountingService {
     if (difference > 0.01) {
       return {
         isValid: false,
-        error: `Sbilanciamento: Dare ${totalDebit.toFixed(2)}€, Avere ${totalCredit.toFixed(2)}€, Differenza ${difference.toFixed(2)}€`
+        error: `Imbalance: Debit ${totalDebit.toFixed(2)}€, Credit ${totalCredit.toFixed(2)}€, Difference ${difference.toFixed(2)}€`
       };
     }
 
