@@ -634,9 +634,9 @@ export default function DocumentsPage() {
                             ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
                             : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                         }`}>
-                          {doc.ai_status === 'error' ? '❌ Errori rilevati' : 
-                           doc.ai_status === 'processing' ? '⏳ In Corso' : 
-                           '✅ Elaborato'}
+                          {doc.ai_status === 'error' ? '❌ Errors detected' : 
+                           doc.ai_status === 'processing' ? '⏳ Processing' : 
+                           '✅ Processed'}
                         </span>
                       </td>
                       <td className="px-4 py-6 text-sm font-medium">
@@ -645,7 +645,7 @@ export default function DocumentsPage() {
                             onClick={() => handleViewDetail(doc)}
                             className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
                           >
-                            📝 Dettaglio
+                            📝 Details
                           </button>
 
                           <button 
@@ -891,9 +891,9 @@ export default function DocumentsPage() {
                       selectedDocument.ai_status === 'processing' ? 'text-yellow-700 dark:text-yellow-300' :
                       'text-green-700 dark:text-green-300'
                     }`}>
-                      {selectedDocument.ai_status === 'error' ? 'Errori Rilevati' : 
-                       selectedDocument.ai_status === 'processing' ? 'Elaborazione in Corso' : 
-                       'Documento Conforme'}
+                      {selectedDocument.ai_status === 'error' ? 'Errors Detected' : 
+                       selectedDocument.ai_status === 'processing' ? 'Processing' : 
+                       'Compliant Document'}
                     </h5>
                   </div>
                   <p className={`${
@@ -902,9 +902,9 @@ export default function DocumentsPage() {
                     'text-green-700 dark:text-green-300'
                   }`}>
                     {selectedDocument.ai_analysis || 
-                     (selectedDocument.ai_status === 'error' ? 'Il documento presenta errori che richiedono correzione' :
-                      selectedDocument.ai_status === 'processing' ? 'Il documento è in fase di elaborazione' :
-                      'Il documento è conforme alle normative fiscali')}
+                     (selectedDocument.ai_status === 'error' ? 'The document has errors that require correction' :
+                      selectedDocument.ai_status === 'processing' ? 'The document is being processed' :
+                      'The document complies with tax regulations')}
                   </p>
                 </div>
               </div>
@@ -975,18 +975,18 @@ export default function DocumentsPage() {
 
               {/* Risultato Finale */}
               <div className="mt-8 p-6 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600">
-                <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">📋 Esito Complessivo</h4>
+                <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">📋 Overall Result</h4>
                 {selectedDocument.ai_status === 'error' ? (
                   <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-400 p-4 rounded-r-lg">
-                    <p className="text-red-800 dark:text-red-300 font-medium">❌ Documento presenta errori da correggere</p>
+                    <p className="text-red-800 dark:text-red-300 font-medium">❌ Document has errors to correct</p>
                     <p className="text-sm text-red-700 dark:text-red-300 mt-2">
-                      L'analisi AI ha rilevato problemi nel documento che richiedono attenzione. 
-                      Utilizzare l'editor manuale o la correzione automatica AI.
+                      AI analysis detected issues in the document that require attention. 
+                      Use the manual editor or AI automatic correction.
                     </p>
                   </div>
                 ) : (
                   <div className="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-400 p-4 rounded-r-lg">
-                    <p className="text-green-800 dark:text-green-300 font-medium">✅ Documento pienamente conforme alla normativa</p>
+                    <p className="text-green-800 dark:text-green-300 font-medium">✅ Document fully compliant with regulations</p>
                     <p className="text-sm text-green-700 dark:text-green-300 mt-2">
                       Tutti i controlli automatici sono stati superati con successo. Il documento è conforme a DM 55/2013.
                     </p>
