@@ -1,12 +1,12 @@
-// File: backend/utils/xmlParser.js
+// File: backend/services/xml-parser.js
 // Parser for Italian electronic invoices (SDI Standard)
 
-import { Parser } from 'xml2js';
+import * as xml2js from 'xml2js';
 
-export class FatturaElettronicaValidator {
+class FatturaElettronicaValidator {
   
   /**
-   * Main parsing for electronic invoice
+   * Main electronic invoice parsing
    * @param {Buffer} buffer - Buffer of the XML file
    * @returns {Object} Parsed data compatible with fiscalValidator
    */
@@ -17,8 +17,8 @@ export class FatturaElettronicaValidator {
       // Convert buffer to string
       const xmlString = buffer.toString('utf8');
       
-      // Securely parse XML
-      const parser = new Parser({
+      // Parse XML safely
+      const parser = new xml2js.Parser({
         explicitArray: false,
         ignoreAttrs: false,
         mergeAttrs: true,
@@ -33,11 +33,11 @@ export class FatturaElettronicaValidator {
       // Extract data following the SDI standard
       const parsedData = this.extractStandardFields(xmlData);
       
-      console.log('✅ XML Parsing complete:', Object.keys(parsedData));
+      console.log('✅ XML parsing completed:', Object.keys(parsedData));
       return parsedData;
       
     } catch (error) {
-      console.error('❌ XML Parsing Error:', error.message);
+      console.error('❌ XML parsing error:', error.message);
       return this.createFallbackData(error);
     }
   }
@@ -49,7 +49,7 @@ export class FatturaElettronicaValidator {
    */
   extractStandardFields(xmlData) {
     const result = {
-      // Required fields for fiscal validation
+      // Mandatory fields for fiscal validation
       taxableAmount: 0,
       vatRate: 22, // Default standard VAT
       vatAmount: 0,
@@ -69,21 +69,21 @@ export class FatturaElettronicaValidator {
     
     try {
       // Find the invoice root (SDI standard)
-      const invoice = this.findFatturaRoot(xmlData);
+      const invoiceRoot = this.findInvoiceRoot(xmlData);
       
-      if (!invoice) {
+      if (!invoiceRoot) {
         result.warnings.push('Non-standard XML structure - using fallback');
         return this.extractWithFallback(xmlData, result);
       }
       
       // Extract invoice header
-      this.extractHeaderData(invoice, result);
+      this.extractHeaderData(invoiceRoot, result);
       
       // Extract fiscal data from lines
-      this.extractFiscalData(invoice, result);
+      this.extractFiscalData(invoiceRoot, result);
       
       // Extract VAT summaries
-      this.extractIvaSummary(invoice, result);
+      this.extractIvaSummary(invoiceRoot, result);
       
       // Validation and normalization
       this.normalizeData(result);
@@ -104,7 +104,7 @@ export class FatturaElettronicaValidator {
    * @param {Object} xmlData - XML data
    * @returns {Object|null} Invoice object
    */
-  findFatturaRoot(xmlData) {
+  findInvoiceRoot(xmlData) {
     // Possible standard SDI paths
     const possiblePaths = [
       xmlData.fatturaelettronica,
@@ -152,16 +152,16 @@ export class FatturaElettronicaValidator {
   
   /**
    * Extract header data (dates, numbers, demographics)
-   * @param {Object} invoice - Invoice object
+   * @param {Object} invoiceRoot - Invoice object
    * @param {Object} result - Result object to populate
    */
-  extractHeaderData(invoice, result) {
+  extractHeaderData(invoiceRoot, result) {
     // Search for header in possible paths
     const headers = [
-      invoice.FatturaElettronicaHeader,
-      invoice.fatturaelettronicaheader,
-      invoice.Header,
-      invoice.header
+      invoiceRoot.FatturaElettronicaHeader,
+      invoiceRoot.fatturaelettronicaheader,
+      invoiceRoot.Header,
+      invoiceRoot.header
     ];
     
     for (const header of headers) {
@@ -180,7 +180,7 @@ export class FatturaElettronicaValidator {
       // Transmission data (if present)
       const transmissionData = header.DatiTrasmissione || header.datitrasmissione;
       if (transmissionData) {
-        // Extract any additional data if needed
+        // Extract additional data if needed
       }
       
       break; // Exit on the first valid header found
@@ -189,22 +189,22 @@ export class FatturaElettronicaValidator {
   
   /**
    * Extract fiscal data from the invoice body
-   * @param {Object} invoice - Invoice object
+   * @param {Object} invoiceRoot - Invoice object
    * @param {Object} result - Result object to populate
    */
-  extractFiscalData(invoice, result) {
+  extractFiscalData(invoiceRoot, result) {
     // Search for body in possible paths
     const bodies = [
-      invoice.FatturaElettronicaBody,
-      invoice.fatturaelettronicabody,
-      invoice.Body,
-      invoice.body,
-      invoice
+      invoiceRoot.FatturaElettronicaBody,
+      invoiceRoot.fatturaelettronicabody,
+      invoiceRoot.Body,
+      invoiceRoot.body,
+      invoiceRoot
     ];
     
     let totalTaxable = 0;
     let totalVat = 0;
-    let totalGeneral = 0;
+    let totalOverall = 0;
     
     for (const body of bodies) {
       if (!body) continue;
@@ -225,7 +225,7 @@ export class FatturaElettronicaValidator {
         for (const line of lineDetails) {
           if (!line) continue;
           
-          const totalPrice = this.parseAmount(
+          const lineTotalPrice = this.parseAmount(
             line.PrezzoTotale || 
             line.prezzototale || 
             line.TotalPrice ||
@@ -239,10 +239,10 @@ export class FatturaElettronicaValidator {
             line.VatRate
           );
           
-          if (totalPrice > 0) {
-            totalTaxable += totalPrice;
+          if (lineTotalPrice > 0) {
+            totalTaxable += lineTotalPrice;
             if (lineVatRate > 0 && result.vatRate === 22) {
-              result.vatRate = lineVatRate; // Use the first VAT rate found
+              result.vatRate = lineVatRate; // Use the first rate found
             }
           }
         }
@@ -298,7 +298,7 @@ export class FatturaElettronicaValidator {
           );
           
           if (paymentAmount > 0) {
-            totalGeneral = Math.max(totalGeneral, paymentAmount);
+            totalOverall = Math.max(totalOverall, paymentAmount);
           }
         }
       }
@@ -309,15 +309,15 @@ export class FatturaElettronicaValidator {
     // Assign extracted values
     if (totalTaxable > 0) result.taxableAmount = totalTaxable;
     if (totalVat > 0) result.vatAmount = totalVat;
-    if (totalGeneral > 0) result.total = totalGeneral;
+    if (totalOverall > 0) result.total = totalOverall;
   }
   
   /**
    * Extract VAT summaries
-   * @param {Object} invoice - Invoice object
+   * @param {Object} invoiceRoot - Invoice object
    * @param {Object} result - Result object
    */
-  extractIvaSummary(invoice, result) {
+  extractIvaSummary(invoiceRoot, result) {
     // If we haven't found the VAT yet, calculate it
     if (result.vatAmount === 0 && result.taxableAmount > 0 && result.vatRate > 0) {
       result.vatAmount = Math.round((result.taxableAmount * result.vatRate / 100) * 100) / 100;
@@ -333,31 +333,31 @@ export class FatturaElettronicaValidator {
    * Parsing with fallback for non-standard XML
    * @param {Object} xmlData - XML data
    * @param {Object} result - Result object
-   * @returns {Object} Extracted data with fallback
+   * @returns {Object} Data extracted with fallback
    */
   extractWithFallback(xmlData, result) {
     console.log('🔍 Using fallback method for non-standard XML...');
     
-    // Find all possible numeric values in the XML
+    // Find all possible numeric fields in the XML
     const allValues = this.extractAllNumericValues(xmlData);
     
     // Search for common patterns in field names
     const patterns = {
-      taxableAmount: ['imponibile', 'subtotal', 'netamount', 'baseamount', 'taxable'],
-      vatAmount: ['iva', 'imposta', 'tax', 'vat'],
+      taxable: ['imponibile', 'subtotal', 'netamount', 'baseamount', 'taxable'],
+      vat: ['iva', 'imposta', 'tax', 'vat'],
       total: ['totale', 'total', 'amount', 'importo'],
-      vatRate: ['aliquota', 'rate', 'percent', '%']
+      rate: ['aliquota', 'rate', 'percent', '%']
     };
     
     // Apply pattern matching
     for (const [key, value] of Object.entries(allValues)) {
       const keyLower = key.toLowerCase();
       
-      if (patterns.taxableAmount.some(p => keyLower.includes(p)) && value > result.taxableAmount) {
+      if (patterns.taxable.some(p => keyLower.includes(p)) && value > result.taxableAmount) {
         result.taxableAmount = value;
       }
       
-      if (patterns.vatAmount.some(p => keyLower.includes(p)) && value > result.vatAmount && value < 1000) {
+      if (patterns.vat.some(p => keyLower.includes(p)) && value > result.vatAmount && value < 1000) {
         result.vatAmount = value;
       }
       
@@ -365,7 +365,7 @@ export class FatturaElettronicaValidator {
         result.total = value;
       }
       
-      if (patterns.vatRate.some(p => keyLower.includes(p)) && value > 0 && value <= 30) {
+      if (patterns.rate.some(p => keyLower.includes(p)) && value > 0 && value <= 30) {
         result.vatRate = value;
       }
     }
@@ -412,7 +412,7 @@ export class FatturaElettronicaValidator {
     result.vatAmount = this.parseAmount(result.vatAmount);
     result.total = this.parseAmount(result.total);
     
-    // Consistency checks
+    // Consistency validations
     if (result.taxableAmount > 0 && result.vatAmount === 0 && result.vatRate > 0) {
       result.vatAmount = Math.round((result.taxableAmount * result.vatRate / 100) * 100) / 100;
       result.warnings.push('VAT calculated automatically');
@@ -434,7 +434,7 @@ export class FatturaElettronicaValidator {
   }
   
   /**
-   * Safe extraction of values from object
+   * Safe extraction of values from an object
    * @param {Object} obj - Source object
    * @param {Array} keys - Possible keys
    * @returns {any} Found value or null
@@ -519,7 +519,7 @@ export class FatturaElettronicaValidator {
       supplier: null,
       customer: null,
       parseSuccess: false,
-      warnings: [`XML Parsing Error: ${error.message}`],
+      warnings: [`XML parsing error: ${error.message}`],
       error: error.message
     };
   }
@@ -529,7 +529,7 @@ export class FatturaElettronicaValidator {
    * @returns {Object} Test results
    */
   async testParser() {
-    console.log('🧪 Test XML Parser...');
+    console.log('🧪 Testing XML Parser...');
     
     // Simplified test XML
     const testXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -593,12 +593,17 @@ export class FatturaElettronicaValidator {
   }
 }
 
-// NOTE: The CommonJS singleton export and test runner (if require.main === module)
-// have been removed to comply with the ES Module 'export class' syntax.
-// If you were relying on the singleton, you should now import the class
-// and instantiate it where needed, or create a new file to export a singleton instance:
-//
-// e.g., in a new file 'xmlValidatorSingleton.js':
-// import { FatturaElettronicaValidator } from './xmlParser.js';
-// const validatorInstance = new FatturaElettronicaValidator();
-// export default validatorInstance;
+/**
+ * Standalone validation function as requested.
+ * Creates a new validator instance and parses the invoice.
+ * @param {Buffer} buffer - Buffer of the XML file
+ * @returns {Object} Parsed data
+ */
+async function validateFatturaElettronica(buffer) {
+  console.log('🚀 Executing standalone validateFatturaElettronica function...');
+  const validator = new FatturaElettronicaValidator();
+  return await validator.parseInvoice(buffer);
+}
+
+// Export both the class and the function as requested by the user
+export { FatturaElettronicaValidator, validateFatturaElettronica };
