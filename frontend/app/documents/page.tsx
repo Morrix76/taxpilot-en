@@ -624,7 +624,7 @@ export default function DocumentsPage() {
                         </span>
                       </td>
                       <td className="px-3 py-6 text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {new Date(doc.created_at || doc.upload_date || Date.now()).toLocaleDateString('it-IT')}
+                        {new Date(doc.created_at || doc.upload_date || Date.now()).toLocaleDateString('en-US')}
                       </td>
                       <td className="px-3 py-6">
                         <span className={`inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl ${
