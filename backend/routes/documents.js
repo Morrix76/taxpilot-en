@@ -594,26 +594,10 @@ router.post(
 router.get('/', authMiddleware, async (req, res) => {
   try {
     console.log('📋 GET /api/documents chiamato');
-    
-    // ======================================================================
-    // ✅ MODIFICA: Sostituito SELECT * con elenco esplicito di colonne
-    // ======================================================================
     const { rows } = await db.execute({
-      sql: `
-        SELECT 
-          id, user_id, type, file_path, file_size, mime_type, 
-          ai_analysis, ai_status, ai_confidence, ai_issues, 
-          analysis_result, confidence, flag_manual_review, 
-          processing_version, client_id, document_category, 
-          created_at, updated_at
-        FROM documents 
-        WHERE user_id = ? 
-        ORDER BY created_at DESC
-      `,
+      sql: 'SELECT * FROM documents WHERE user_id = ? ORDER BY created_at DESC',
       args: [req.user.id]
     });
-    // ======================================================================
-    
     const documents = rows;
     console.log(`📋 Trovati ${documents.length} documenti`);
     const processedDocuments = documents.map(doc => ({
@@ -1127,7 +1111,7 @@ router.get('/:id/content', authMiddleware, async (req, res) => {
     const { id } = req.params;
     console.log(`📄 Richiesta contenuto documento ID: ${id}`);
     const document = await getDocumentById(id);
-    if (!document) return res.status(44).json({ error: 'Documento non trovato' });
+    if (!document) return res.status(404).json({ error: 'Documento non trovato' });
     if (!document.file_path) return res.status(404).json({ error: 'Percorso file non disponibile' });
 
     const filePath = path.join(UPLOADS_DIR, document.file_path);
