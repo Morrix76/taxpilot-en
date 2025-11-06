@@ -301,7 +301,7 @@ async function analyzeGenericDocument(content, options = {}) {
   return {
     technical: { status: hasText ? 'ok' : 'error', isValid: hasText, errors, warnings: [], details: { hasContent: hasText, contentLength: content.length }, summary: { totalErrors: errors.length, totalWarnings: 0, criticalIssues: errors.length } },
     expert: { note_commercialista: "Documento generico analizzato. Classificazione manuale consigliata." },
-    combined: { overall_status: hasText ? 'ok' : 'error', confidence: hasText ? 0.7 : 0.1, flag_manual_review: true, final_message: hasText ? "✅ Documento leggibile. Classificazione manuale richiesta." : "❌ Documento non leggibile o vuoto." },
+    combined: { overall_status: hasText ? 'ok' : 'error', confidence: hasText ? 0.7 : 0.1, flag_manual_review: true, final_message: hasText ? "✅ Readable document. Manual classification required." : "❌ Unreadable or empty document." },
     metadata: { analysis_timestamp: new Date().toISOString(), documentTypeDetected: "Documento Generico", ai_used: false }
   };
 }
