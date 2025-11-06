@@ -1,6 +1,5 @@
 // frontend/app/documents/page.tsx
 'use client';
-
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EditableDocumentForm from '@/components/EditableDocumentForm';
@@ -11,8 +10,10 @@ type Doc = {
   original_filename?: string;
   name?: string;
   type?: string;
+  document_category?: string; // Nuovo campo
   created_at?: string;
   upload_date?: string;
+  updated_at?: string; // Nuovo campo
   ai_status?: 'ok' | 'processing' | 'error';
   ai_analysis?: string;
   ai_confidence?: number;
@@ -57,24 +58,18 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'elaborato' | 'elaborazione' | 'errore'>('all');
   const [search, setSearch] = useState('');
-
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Doc | null>(null);
-
   const [showReportModal, setShowReportModal] = useState(false);
-
   // Editor
   const [showEditorModal, setShowEditorModal] = useState(false);
   const [documentForEdit, setDocumentForEdit] = useState<EditPacket | null>(null);
-
   // Accounting
   const [accountingData, setAccountingData] = useState<AccountingResponse | null>(null);
   const [accountingLoading, setAccountingLoading] = useState(false);
   const [showAccountingModal, setShowAccountingModal] = useState(false);
   const [accountingDocument, setAccountingDocument] = useState<Doc | null>(null);
-
   const { isOpen: isViewerOpen, openViewer, closeViewer, FileViewerComponent } = useFileViewer();
-
   const router = useRouter();
 
   useEffect(() => {
@@ -105,6 +100,62 @@ export default function DocumentsPage() {
     }
   };
 
+  const getStatusFromAnalysis = (doc: Doc): 'ok' | 'warning' | 'error' | 'processing' => {
+    if (doc.analysis_result) {
+      try {
+        const analysis = typeof doc.analysis_result === 'string' ? JSON.parse(doc.analysis_result) : doc.analysis_result;
+        return analysis?.combined?.overall_status || 'processing';
+      } catch {
+        return 'processing';
+      }
+    }
+    return doc.ai_status || 'processing';
+  };
+
+  const getStatusBadge = (doc: Doc) => {
+    const status = getStatusFromAnalysis(doc);
+    switch (status) {
+      case 'ok':
+        return (
+          <span className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+            ✅ Processed
+          </span>
+        );
+      case 'warning':
+        return (
+          <span className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
+            ⚠️ Valid with warnings
+          </span>
+        );
+      case 'error':
+        return (
+          <span className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+            ❌ Errors detected
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
+            ⏳ Processing
+          </span>
+        );
+    }
+  };
+
+  const getDocumentDate = (doc: Doc) => {
+    const dateStr = doc.created_at || doc.upload_date || doc.updated_at || '';
+    if (!dateStr) return 'N/A';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-GB');
+    } catch {
+      return 'Invalid Date';
+    }
+  };
+
+  const getDocumentType = (doc: Doc) => {
+    return doc.type || doc.document_category || 'Fiscal Document';
+  };
+
   const handleDelete = async (docId: Doc['id']) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
     try {
@@ -127,12 +178,10 @@ export default function DocumentsPage() {
       return;
     }
     if (!confirm(`Do you want to generate accounting entries for ${doc.original_filename || doc.name}?`)) return;
-
     setAccountingLoading(true);
     setAccountingData(null);
     setAccountingDocument(doc);
     setShowAccountingModal(true);
-
     try {
       const token = localStorage.getItem('taxpilot_token');
       const payload: AccountingPayload = {
@@ -154,7 +203,6 @@ export default function DocumentsPage() {
           debiti_erario: '2320',
         },
       };
-
       const res = await fetch(`${API}/api/documents/${doc.id}/generate-entries`, {
         method: 'POST',
         headers: {
@@ -163,7 +211,6 @@ export default function DocumentsPage() {
         },
         body: JSON.stringify(payload),
       });
-
       const data: AccountingResponse = await res.json();
       if (!res.ok) {
         setAccountingData({
@@ -201,7 +248,6 @@ export default function DocumentsPage() {
     const fileName = (doc.original_filename || doc.name || '').toLowerCase();
     const docType = (doc.type || '').toLowerCase();
     const ext = fileName.split('.').pop();
-
     // Invoice: XML or explicit keywords
     if (ext === 'xml' || /fattura|invoice/.test(fileName) || /fattura/.test(docType)) {
       return 'fattura';
@@ -210,23 +256,19 @@ export default function DocumentsPage() {
     if (ext === 'pdf' && (/busta|paga|payslip/.test(fileName) || /busta/.test(docType))) {
       return 'busta_paga';
     }
-
     const content = (doc.ai_analysis || doc.content || '').toLowerCase();
     if (/iva|partita\s*iva|p\.iva/.test(content)) return 'fattura';
     if (/stipendio|inps/.test(content)) return 'busta_paga';
-
     console.warn('⚠️ Document type not recognized:', { fileName, docType, ext });
     return null;
   };
 
   const extractDataFromDocument = (doc: Doc, type: NonNullable<EditPacket['type']>) => {
     let extracted: any = {};
-
     try {
       if (doc.analysis_result) {
         const analysis =
           typeof doc.analysis_result === 'string' ? JSON.parse(doc.analysis_result) : doc.analysis_result;
-
         if (type === 'fattura') {
           extracted = {
             numero: analysis?.numero || (doc as any)?.numero || '',
@@ -266,7 +308,6 @@ export default function DocumentsPage() {
     } catch (e) {
       console.warn('⚠️ Error parsing analysis_result:', e);
     }
-
     if (!extracted || Object.keys(extracted).length === 0) {
       if (type === 'fattura') {
         extracted = {
@@ -298,7 +339,6 @@ export default function DocumentsPage() {
         };
       }
     }
-
     return extracted;
   };
 
@@ -391,7 +431,6 @@ export default function DocumentsPage() {
         body: JSON.stringify(formData),
       });
       if (!res.ok) return alert('⚠️ Error during XML generation');
-
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -436,9 +475,10 @@ export default function DocumentsPage() {
 
   const filteredDocuments = useMemo(() => {
     const base = documents.filter((d) => {
-      if (filter === 'elaborato') return d.ai_status === 'ok';
-      if (filter === 'elaborazione') return d.ai_status === 'processing';
-      if (filter === 'errore') return d.ai_status === 'error';
+      const status = getStatusFromAnalysis(d);
+      if (filter === 'elaborato') return status === 'ok';
+      if (filter === 'elaborazione') return status === 'processing';
+      if (filter === 'errore') return status === 'error';
       return true;
     });
     if (!search) return base;
@@ -470,7 +510,6 @@ export default function DocumentsPage() {
             </p>
           </div>
         </div>
-
         {/* Search & Filters */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
@@ -510,7 +549,6 @@ export default function DocumentsPage() {
             </div>
           </div>
         </div>
-
         {/* Table */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 px-8 py-6 border-b border-slate-200 dark:border-slate-600">
@@ -527,7 +565,6 @@ export default function DocumentsPage() {
               </button>
             </div>
           </div>
-
           {filteredDocuments.length === 0 ? (
             <div className="p-12 text-center">
               <div className="text-6xl mb-4">📄</div>
@@ -572,24 +609,14 @@ export default function DocumentsPage() {
                       </td>
                       <td className="px-3 py-6">
                         <span className="inline-flex px-4 py-2 text-sm font-bold rounded-xl bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 text-indigo-700 dark:text-indigo-300">
-                          {doc.type || 'Fiscal Document'}
+                          {getDocumentType(doc)}
                         </span>
                       </td>
                       <td className="px-3 py-6 text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {new Date(doc.created_at || doc.upload_date || Date.now()).toLocaleDateString('en-GB')}
+                        {getDocumentDate(doc)}
                       </td>
                       <td className="px-3 py-6">
-                        <span
-                          className={`inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl ${
-                            doc.ai_status === 'error'
-                              ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                              : doc.ai_status === 'processing'
-                              ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-                              : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                          }`}
-                        >
-                          {doc.ai_status === 'error' ? '❌ Errors detected' : doc.ai_status === 'processing' ? '⏳ Processing' : '✅ Processed'}
-                        </span>
+                        {getStatusBadge(doc)}
                       </td>
                       <td className="px-4 py-6 text-sm font-medium">
                         <div className="flex space-x-1">
@@ -613,7 +640,7 @@ export default function DocumentsPage() {
                               📊 Entries
                             </button>
                           )}
-                          {doc.ai_status === 'error' && (
+                          {getStatusFromAnalysis(doc) === 'error' && (
                             <button
                               onClick={() => handleManualCorrect(doc)}
                               className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
@@ -643,7 +670,6 @@ export default function DocumentsPage() {
           )}
         </div>
       </div>
-
       {/* Editor modal */}
       {showEditorModal && documentForEdit && (
         <EditableDocumentForm
@@ -653,7 +679,6 @@ export default function DocumentsPage() {
           onGenerateXML={handleEditorGenerateXML}
         />
       )}
-
       {/* Accounting modal */}
       {showAccountingModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -667,7 +692,6 @@ export default function DocumentsPage() {
                 ×
               </button>
             </div>
-
             <div className="p-6 overflow-y-auto flex-grow">
               {accountingLoading ? (
                 <div className="text-center py-12">
@@ -704,7 +728,6 @@ export default function DocumentsPage() {
                       <strong>{accountingData.accounting?.entries_count}</strong>
                     </p>
                   </div>
-
                   <div className="mb-6">
                     <button
                       onClick={handleDownloadAccountingCSV}
@@ -713,7 +736,6 @@ export default function DocumentsPage() {
                       💾 Download CSV for ERP
                     </button>
                   </div>
-
                   <div className="overflow-x-auto border border-slate-200 dark:border-slate-600 rounded-lg">
                     <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-600">
                       <thead className="bg-slate-50 dark:bg-slate-700">
@@ -754,7 +776,6 @@ export default function DocumentsPage() {
                       </tbody>
                     </table>
                   </div>
-
                   <div className="mt-6 bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
                     <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-3">📈 Balance Check</h4>
                     <div className="grid grid-cols-2 gap-4">
@@ -786,7 +807,6 @@ export default function DocumentsPage() {
                 </div>
               ) : null}
             </div>
-
             <div className="p-4 bg-slate-50 dark:bg-slate-700 border-t border-slate-200 dark:border-slate-600 text-right">
               <button
                 onClick={() => setShowAccountingModal(false)}
@@ -798,7 +818,6 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
-
       {/* Detail modal */}
       {showDetailModal && selectedDocument && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -816,74 +835,77 @@ export default function DocumentsPage() {
                 </svg>
               </button>
             </div>
-
             <div className="overflow-y-auto flex-grow">
               {/* Header Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <InfoCard title="📁 File Name" value={selectedDocument.original_filename || selectedDocument.name || ''} color="indigo" />
-                <InfoCard title="📋 Type" value={selectedDocument.type || 'Fiscal Document'} color="blue" />
-                <InfoCard
-                  title="📅 Date"
-                  value={new Date(selectedDocument.created_at || selectedDocument.upload_date || Date.now()).toLocaleDateString('en-GB')}
-                  color="emerald"
-                />
+                <InfoCard title="📋 Type" value={getDocumentType(selectedDocument)} color="blue" />
+                <InfoCard title="📅 Date" value={getDocumentDate(selectedDocument)} color="emerald" />
               </div>
-
               {/* Status and AI Analysis */}
               <div className="mb-8">
                 <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">🤖 AI Analysis</h4>
                 <div
                   className={`p-6 rounded-xl border-2 ${
-                    selectedDocument.ai_status === 'error'
+                    getStatusFromAnalysis(selectedDocument) === 'error'
                       ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700'
-                      : selectedDocument.ai_status === 'processing'
+                      : getStatusFromAnalysis(selectedDocument) === 'warning'
                       ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700'
-                      : 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700'
+                      : getStatusFromAnalysis(selectedDocument) === 'ok'
+                      ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700'
+                      : 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700'
                   }`}
                 >
                   <div className="flex items-center mb-4">
                     <span className="text-2xl mr-3">
-                      {selectedDocument.ai_status === 'error' ? '❌' : selectedDocument.ai_status === 'processing' ? '⏳' : '✅'}
+                      {getStatusFromAnalysis(selectedDocument) === 'error' ? '❌' : getStatusFromAnalysis(selectedDocument) === 'warning' ? '⚠️' : getStatusFromAnalysis(selectedDocument) === 'ok' ? '✅' : '⏳'}
                     </span>
                     <h5
                       className={`text-xl font-bold ${
-                        selectedDocument.ai_status === 'error'
+                        getStatusFromAnalysis(selectedDocument) === 'error'
                           ? 'text-red-700 dark:text-red-300'
-                          : selectedDocument.ai_status === 'processing'
+                          : getStatusFromAnalysis(selectedDocument) === 'warning'
                           ? 'text-yellow-700 dark:text-yellow-300'
-                          : 'text-green-700 dark:text-green-300'
+                          : getStatusFromAnalysis(selectedDocument) === 'ok'
+                          ? 'text-green-700 dark:text-green-300'
+                          : 'text-yellow-700 dark:text-yellow-300'
                       }`}
                     >
-                      {selectedDocument.ai_status === 'error'
+                      {getStatusFromAnalysis(selectedDocument) === 'error'
                         ? 'Errors Detected'
-                        : selectedDocument.ai_status === 'processing'
-                        ? 'Processing in Progress'
-                        : 'Document Compliant'}
+                        : getStatusFromAnalysis(selectedDocument) === 'warning'
+                        ? 'Valid with warnings'
+                        : getStatusFromAnalysis(selectedDocument) === 'ok'
+                        ? 'Document Compliant'
+                        : 'Processing in Progress'}
                     </h5>
                   </div>
                   <p
                     className={`${
-                      selectedDocument.ai_status === 'error'
+                      getStatusFromAnalysis(selectedDocument) === 'error'
                         ? 'text-red-700 dark:text-red-300'
-                        : selectedDocument.ai_status === 'processing'
+                        : getStatusFromAnalysis(selectedDocument) === 'warning'
                         ? 'text-yellow-700 dark:text-yellow-300'
-                        : 'text-green-700 dark:text-green-300'
+                        : getStatusFromAnalysis(selectedDocument) === 'ok'
+                        ? 'text-green-700 dark:text-green-300'
+                        : 'text-yellow-700 dark:text-yellow-300'
                     }`}
                   >
-                    {selectedDocument.ai_analysis ||
-                      (selectedDocument.ai_status === 'error'
-                        ? 'The document contains errors that require correction'
-                        : selectedDocument.ai_status === 'processing'
-                        ? 'The document is being processed'
-                        : 'The document complies with fiscal regulations')}
+                    {(() => {
+                      try {
+                        const analysis = typeof selectedDocument.analysis_result === 'string' ? JSON.parse(selectedDocument.analysis_result) : selectedDocument.analysis_result;
+                        return analysis?.combined?.final_message || 'Analysis result not available.';
+                      } catch {
+                        return 'Analysis result not available.';
+                      }
+                    })()}
                   </p>
                 </div>
               </div>
             </div>
-
             {/* Action Footer */}
             <div className="flex justify-end space-x-4 mt-6 pt-4 border-t border-slate-200 dark:border-slate-600">
-              {selectedDocument.ai_status === 'error' && (
+              {getStatusFromAnalysis(selectedDocument) === 'error' && (
                 <button
                   onClick={() => {
                     setShowDetailModal(false);
@@ -916,7 +938,6 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
-
       {/* Report modal */}
       {showReportModal && selectedDocument && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -934,7 +955,6 @@ export default function DocumentsPage() {
                 </svg>
               </button>
             </div>
-
             <div className="overflow-y-auto flex-grow">
               <div className="border-b-2 border-slate-200 dark:border-slate-600 pb-4 mb-6">
                 <h2 className="text-xl font-bold text-slate-800 dark:text-white">
@@ -945,17 +965,23 @@ export default function DocumentsPage() {
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Engine: TaxPilot Assistant v2.1</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  AI Status: {selectedDocument.ai_status} | Confidence: {Math.round((selectedDocument.ai_confidence || 0.85) * 100)}%
+                  AI Status: {getStatusFromAnalysis(selectedDocument)} | Confidence: {Math.round((selectedDocument.ai_confidence || 0.85) * 100)}%
                 </p>
               </div>
-
               <div className="mt-8 p-6 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600">
                 <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">📋 Overall Outcome</h4>
-                {selectedDocument.ai_status === 'error' ? (
+                {getStatusFromAnalysis(selectedDocument) === 'error' ? (
                   <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-400 p-4 rounded-r-lg">
                     <p className="text-red-800 dark:text-red-300 font-medium">❌ Document contains errors to correct</p>
                     <p className="text-sm text-red-700 dark:text-red-300 mt-2">
                       AI analysis detected issues in the document requiring attention. Use manual editor or AI automatic correction.
+                    </p>
+                  </div>
+                ) : getStatusFromAnalysis(selectedDocument) === 'warning' ? (
+                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                    <p className="text-yellow-800 dark:text-yellow-300 font-medium">⚠️ Document valid with warnings</p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
+                      The document is compliant but contains minor warnings that can be reviewed.
                     </p>
                   </div>
                 ) : (
@@ -968,7 +994,6 @@ export default function DocumentsPage() {
                 )}
               </div>
             </div>
-
             <div className="flex justify-end space-x-4 mt-6 pt-4 border-t border-slate-200 dark:border-slate-600">
               <button
                 onClick={() => {
@@ -995,7 +1020,6 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
-
       {/* FileViewer Modal */}
       <FileViewerComponent onSave={handleSaveFromViewer} />
     </div>
@@ -1024,9 +1048,9 @@ function handleExport() {
   const docs: Doc[] = (window as any).__docs || [];
   const rows = docs.map((d) => [
     d.original_filename || d.name,
-    d.type || 'Fiscal Document',
-    new Date(d.created_at || d.upload_date || Date.now()).toLocaleDateString('en-GB'),
-    d.ai_status === 'error' ? 'Error' : d.ai_status === 'processing' ? 'Processing' : 'Processed',
+    getDocumentType(d),
+    getDocumentDate(d),
+    getStatusFromAnalysis(d) === 'error' ? 'Error' : getStatusFromAnalysis(d) === 'warning' ? 'Warning' : getStatusFromAnalysis(d) === 'ok' ? 'Processed' : 'Processing',
     d.id,
   ]);
   const csv = [csvHeaders, ...rows].map((r) => r.map((c) => `"${c ?? ''}"`).join(',')).join('\n');
