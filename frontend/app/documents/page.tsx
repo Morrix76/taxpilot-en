@@ -229,37 +229,37 @@ export default function DocumentsPage() {
 
         if (type === 'fattura') {
           extracted = {
-            numero: analysis.numero || (doc as any).numero || '',
-            data: analysis.data || (doc as any).data || new Date().toISOString().split('T')[0],
-            cedenteDenominazione: analysis.cedente?.denominazione || '',
-            cedentePartitaIva: analysis.cedente?.partitaIva || '',
-            cessionarioNome: analysis.cessionario?.nome || '',
-            cessionarioCognome: analysis.cessionario?.cognome || '',
-            cessionarioCodiceFiscale: analysis.cessionario?.codiceFiscale || '',
-            imponibile: analysis.imponibile ?? 0,
-            aliquotaIva: analysis.aliquotaIva ?? 22,
-            importoIva: analysis.importoIva ?? 0,
-            totale: analysis.totale ?? 0,
+            numero: analysis?.numero || (doc as any)?.numero || '',
+            data: analysis?.data || (doc as any)?.data || new Date().toISOString().split('T')[0],
+            cedenteDenominazione: analysis?.cedente?.denominazione || '',
+            cedentePartitaIva: analysis?.cedente?.partitaIva || '',
+            cessionarioNome: analysis?.cessionario?.nome || '',
+            cessionarioCognome: analysis?.cessionario?.cognome || '',
+            cessionarioCodiceFiscale: analysis?.cessionario?.codiceFiscale || '',
+            imponibile: analysis?.imponibile ?? 0,
+            aliquotaIva: analysis?.aliquotaIva ?? 22,
+            importoIva: analysis?.importoIva ?? 0,
+            totale: analysis?.totale ?? 0,
             confidence: doc.ai_confidence ?? 0.5,
-            needsReview: doc.ai_status === 'error' || (doc as any).flag_manual_review,
+            needsReview: doc.ai_status === 'error' || (doc as any)?.flag_manual_review,
           };
         } else if (type === 'busta_paga') {
           extracted = {
-            nome: analysis.nome || analysis.dipendente || '',
-            codiceFiscale: analysis.codiceFiscale || '',
-            matricola: analysis.matricola || '',
-            stipendioBase: analysis.stipendioBase ?? 0,
-            superMinimo: analysis.superMinimo ?? 0,
-            straordinari: analysis.straordinari ?? 0,
-            stipendioLordo: analysis.stipendioLordo ?? 0,
-            inps: analysis.inps ?? 0,
-            inail: analysis.inail ?? 0,
-            irpef: analysis.irpef ?? 0,
-            addizionali: analysis.addizionali ?? 0,
-            netto: analysis.netto ?? 0,
-            periodo: analysis.periodo || '',
+            nome: analysis?.nome || analysis?.dipendente || '',
+            codiceFiscale: analysis?.codiceFiscale || '',
+            matricola: analysis?.matricola || '',
+            stipendioBase: analysis?.stipendioBase ?? 0,
+            superMinimo: analysis?.superMinimo ?? 0,
+            straordinari: analysis?.straordinari ?? 0,
+            stipendioLordo: analysis?.stipendioLordo ?? 0,
+            inps: analysis?.inps ?? 0,
+            inail: analysis?.inail ?? 0,
+            irpef: analysis?.irpef ?? 0,
+            addizionali: analysis?.addizionali ?? 0,
+            netto: analysis?.netto ?? 0,
+            periodo: analysis?.periodo || '',
             confidence: doc.ai_confidence ?? 0.5,
-            needsReview: doc.ai_status === 'error' || (doc as any).flag_manual_review,
+            needsReview: doc.ai_status === 'error' || (doc as any)?.flag_manual_review,
           };
         }
       }
@@ -270,8 +270,8 @@ export default function DocumentsPage() {
     if (!extracted || Object.keys(extracted).length === 0) {
       if (type === 'fattura') {
         extracted = {
-          numero: (doc as any).numero || '001',
-          data: (doc as any).data || new Date().toISOString().split('T')[0],
+          numero: (doc as any)?.numero || '001',
+          data: (doc as any)?.data || new Date().toISOString().split('T')[0],
           cedenteDenominazione: '',
           cedentePartitaIva: '',
           cessionarioNome: '',
@@ -339,7 +339,7 @@ export default function DocumentsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          viewedAt: metadata.viewedAt,
+          viewedAt: metadata?.viewedAt,
           lastInteraction: 'file_viewed',
           interactionMetadata: metadata,
         }),
@@ -396,7 +396,7 @@ export default function DocumentsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `fattura_${formData.numero}_${formData.data}.xml`;
+      a.download = `fattura_${formData?.numero}_${formData?.data}.xml`;
       a.click();
       URL.revokeObjectURL(url);
       alert('✅ FatturaPA XML generated and downloaded!');
@@ -736,7 +736,7 @@ export default function DocumentsPage() {
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-600">
-                        {accountingData.accounting?.entries_json?.map((entry, i) => (
+                        {(accountingData.accounting?.entries_json || []).map((entry, i) => (
                           <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700">
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">{entry.date}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-white">
@@ -762,8 +762,8 @@ export default function DocumentsPage() {
                         <p className="text-sm text-slate-600 dark:text-slate-300">Total Debit</p>
                         <p className="text-2xl font-bold text-green-600">
                           €
-                          {accountingData.accounting?.entries_json
-                            ?.reduce((sum, e) => sum + (e.debit || 0), 0)
+                          {(accountingData.accounting?.entries_json || [])
+                            .reduce((sum, e) => sum + (e.debit || 0), 0)
                             .toFixed(2)}
                         </p>
                       </div>
@@ -771,8 +771,8 @@ export default function DocumentsPage() {
                         <p className="text-sm text-slate-600 dark:text-slate-300">Total Credit</p>
                         <p className="text-2xl font-bold text-blue-600">
                           €
-                          {accountingData.accounting?.entries_json
-                            ?.reduce((sum, e) => sum + (e.credit || 0), 0)
+                          {(accountingData.accounting?.entries_json || [])
+                            .reduce((sum, e) => sum + (e.credit || 0), 0)
                             .toFixed(2)}
                         </p>
                       </div>
