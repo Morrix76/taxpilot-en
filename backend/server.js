@@ -21,6 +21,7 @@ const PORT = process.env.PORT || 8080;
 // ====== CORS ======
 app.use(cors({
   origin: function(origin, callback) {
+    // Permetti richieste senza origin (es. Postman, curl)
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
@@ -32,6 +33,7 @@ app.use(cors({
       'https://taxpilot-en-production.up.railway.app'
     ];
     
+    // Permetti tutti i domini Vercel
     if (origin.endsWith('.vercel.app') || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -54,6 +56,7 @@ app.get('/api/files/:filePath(*)', (req, res) => {
     const filePath = decodeURIComponent(req.params.filePath);
     const fullPath = path.join(__dirname, 'uploads', filePath);
     
+    // Security check: file must be in uploads folder
     if (!fullPath.startsWith(path.join(__dirname, 'uploads'))) {
       return res.status(403).json({ error: 'Access denied' });
     }
@@ -67,21 +70,21 @@ app.get('/api/files/:filePath(*)', (req, res) => {
 
 // ====== API Routes ======
 app.use('/api/auth', authRoutes);
-console.log('✅ Routes /api/auth mounted');
+console.log('✅ Rotte /api/auth montate');
 
 // ====== PROTECTED ROUTES (with trial check) ======
 app.use('/api/clients', checkTrialStatus, clientsRoutes);
-console.log('✅ Routes /api/clients mounted (protected)');
+console.log('✅ Rotte /api/clients montate (protected)');
 
 app.use('/api/documents', checkTrialStatus, documentsRoutes);
-console.log('✅ Routes /api/documents mounted (protected)');
+console.log('✅ Rotte /api/documents montate (protected)');
 
 app.use('/api/billing', checkTrialStatus, billingRoutes);
-console.log('✅ Routes /api/billing mounted (protected)');
+console.log('✅ Rotte /api/billing montate (protected)');
 
 // ====== Test interno ======
 app.get('/api/auth/test-inline', (req, res) => {
-  res.json({ message: 'Inline route working!' });
+  res.json({ message: 'Rotta inline funzionante!' });
 });
 
 // ====== Health Check ======
