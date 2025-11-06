@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.js';
 import clientsRoutes from './routes/clients.js';
 import documentsRoutes from './routes/documents.js';
 import billingRoutes from './routes/billing.js';
+import checkTrialStatus from './middleware/trialMiddleware.js';
 
 dotenv.config();
 
@@ -20,7 +21,6 @@ const PORT = process.env.PORT || 8080;
 // ====== CORS ======
 app.use(cors({
   origin: function(origin, callback) {
-    // Permetti richieste senza origin (es. Postman, curl)
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
@@ -32,7 +32,6 @@ app.use(cors({
       'https://taxpilot-en-production.up.railway.app'
     ];
     
-    // Permetti tutti i domini Vercel
     if (origin.endsWith('.vercel.app') || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -49,22 +48,40 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // ====== Static files ======
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ====== File Serving Route ======
+app.get('/api/files/:filePath(*)', (req, res) => {
+  try {
+    const filePath = decodeURIComponent(req.params.filePath);
+    const fullPath = path.join(__dirname, 'uploads', filePath);
+    
+    if (!fullPath.startsWith(path.join(__dirname, 'uploads'))) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    res.sendFile(fullPath);
+  } catch (error) {
+    console.error('File serve error:', error);
+    res.status(404).json({ error: 'File not found' });
+  }
+});
+
 // ====== API Routes ======
 app.use('/api/auth', authRoutes);
-console.log('✅ Rotte /api/auth montate');
+console.log('✅ Routes /api/auth mounted');
 
-app.use('/api/clients', clientsRoutes);
-console.log('✅ Rotte /api/clients montate');
+// ====== PROTECTED ROUTES (with trial check) ======
+app.use('/api/clients', checkTrialStatus, clientsRoutes);
+console.log('✅ Routes /api/clients mounted (protected)');
 
-app.use('/api/documents', documentsRoutes);
-console.log('✅ Rotte /api/documents montate');
+app.use('/api/documents', checkTrialStatus, documentsRoutes);
+console.log('✅ Routes /api/documents mounted (protected)');
 
-app.use('/api/billing', billingRoutes);
-console.log('✅ Rotte /api/billing montate');
+app.use('/api/billing', checkTrialStatus, billingRoutes);
+console.log('✅ Routes /api/billing mounted (protected)');
 
 // ====== Test interno ======
 app.get('/api/auth/test-inline', (req, res) => {
-  res.json({ message: 'Rotta inline funzionante!' });
+  res.json({ message: 'Inline route working!' });
 });
 
 // ====== Health Check ======
