@@ -519,8 +519,15 @@ class FatturaElettronicaValidator {
   validateInvoiceData(parsedData, invoiceRoot) {
     const errors = [];
     
+    console.log('🔍 validateInvoiceData - invoiceRoot keys:', Object.keys(invoiceRoot));
+    
     const header = invoiceRoot.fatturaelettronicaheader || invoiceRoot.FatturaElettronicaHeader;
-    if (!header) return errors;
+    console.log('🔍 header found:', !!header);
+    
+    if (!header) {
+      console.log('❌ Header non trovato, keys disponibili:', Object.keys(invoiceRoot));
+      return errors;
+    }
     
     // Validate transmission data (codice destinatario)
     const trasmissione = header.datitrasmissione || header.DatiTrasmissione;
