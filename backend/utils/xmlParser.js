@@ -1,806 +1,574 @@
-// File: backend/services/xml-parser.js
-// Parser for Italian electronic invoices (SDI Standard)
+/**
+ * 🔧 PARSER TECNICO FATTURA ELETTRONICA
+ * 
+ * Controlli precisi e deterministici per documenti FatturaPA
+ * Basato su specifiche tecniche v1.7.1 e normativa italiana
+ */
 
-import * as xml2js from 'xml2js';
+import { parseStringPromise } from 'xml2js';
 
-class FatturaElettronicaValidator {
-  
+export class FatturaElettronicaValidator {
+  constructor() {
+    this.errors = [];
+    this.warnings = [];
+    this.details = {};
+  }
+
   /**
-   * Main electronic invoice parsing
-   * @param {Buffer} buffer - Buffer of the XML file
-   * @returns {Object} Parsed data compatible with fiscalValidator
+   * Validazione completa documento FatturaPA
    */
-  async parseInvoice(buffer) {
+  async validate(xmlContent) {
+    this.reset();
+    
     try {
-      console.log('📄 Starting XML electronic invoice parsing...');
+      // 1. Parsing XML
+      const xmlDoc = await this.parseXML(xmlContent);
+      if (!xmlDoc) return this.getResult();
+
+      // 2. Controlli strutturali
+      this.validateStructure(xmlDoc);
       
-      // Convert buffer to string
-      const xmlString = buffer.toString('utf8');
+      // 3. Controlli campi obbligatori
+      this.validateMandatoryFields(xmlDoc);
       
-      // Parse XML safely
-      const parser = new xml2js.Parser({
+      // 4. Validazione Partita IVA
+      this.validateVATNumbers(xmlDoc);
+      
+      // 5. Validazione Codice Fiscale
+      this.validateTaxCodes(xmlDoc);
+      
+      // 6. Validazione Codice Destinatario
+      this.validateDestinationCode(xmlDoc);
+      
+      // 7. Controlli matematici
+      this.validateCalculations(xmlDoc);
+      
+      // 8. Validazione date
+      this.validateDates(xmlDoc);
+      
+      // 9. Controlli formati
+      this.validateFormats(xmlDoc);
+
+      return this.getResult();
+      
+    } catch (error) {
+      this.addError('PARSING_ERROR', `Errore parsing XML: ${error.message}`);
+      return this.getResult();
+    }
+  }
+
+  /**
+   * Reset stato validatore
+   */
+  reset() {
+    this.errors = [];
+    this.warnings = [];
+    this.details = {};
+  }
+
+  /**
+   * Parsing XML con gestione errori
+   */
+  async parseXML(xmlContent) {
+    try {
+      const result = await parseStringPromise(xmlContent, {
         explicitArray: false,
         ignoreAttrs: false,
-        mergeAttrs: true,
-        trim: true,
-        normalize: true,
-        normalizeTags: true,
-        explicitRoot: false
+        mergeAttrs: true
       });
       
-      const xmlData = await parser.parseStringPromise(xmlString);
-      
-      // Extract data following the SDI standard
-      const parsedData = this.extractStandardFields(xmlData);
-      
-      console.log('✅ XML parsing completed:', Object.keys(parsedData));
-      return parsedData;
-      
+      return result;
     } catch (error) {
-      console.error('❌ XML parsing error:', error.message);
-      return this.createFallbackData(error);
-    }
-  }
-  
-  /**
-   * Extraction of standard fields from SDI electronic invoice
-   * @param {Object} xmlData - Parsed XML data
-   * @returns {Object} Extracted data
-   */
-  extractStandardFields(xmlData) {
-    const result = {
-      // Mandatory fields for fiscal validation
-      taxableAmount: 0,
-      vatRate: 22, // Default standard VAT
-      vatAmount: 0,
-      total: 0,
-      
-      // Additional fields
-      issueDate: null,
-      dueDate: null,
-      invoiceNumber: null,
-      supplier: null,
-      customer: null,
-      
-      // Parsing metadata
-      parseSuccess: true,
-      warnings: [],
-      validationErrors: [],
-      technicalIssues: 0
-    };
-    
-    try {
-      // Find the invoice root (SDI standard)
-      const invoiceRoot = this.findInvoiceRoot(xmlData);
-      
-      if (!invoiceRoot) {
-        result.warnings.push('Non-standard XML structure - using fallback');
-        return this.extractWithFallback(xmlData, result);
-      }
-      
-      // Extract invoice header
-      this.extractHeaderData(invoiceRoot, result);
-      
-      // Extract fiscal data from lines
-      this.extractFiscalData(invoiceRoot, result);
-      
-      // Extract VAT summaries
-      this.extractIvaSummary(invoiceRoot, result);
-      
-      // Validation and normalization
-      this.normalizeData(result);
-      
-      // Run validations
-      if (invoiceRoot) {
-        result.validationErrors = this.validateInvoiceData(result, invoiceRoot);
-        result.technicalIssues = result.validationErrors.length;
-      }
-      
-      console.log(`💰 Data extracted: Taxable=${result.taxableAmount}€, VAT=${result.vatRate}%, Total=${result.total}€`);
-      
-    } catch (error) {
-      console.error('⚠️ Error extracting fields:', error.message);
-      result.warnings.push(`Extraction error: ${error.message}`);
-      return this.extractWithFallback(xmlData, result);
-    }
-    
-    return result;
-  }
-  
-  /**
-   * Find the invoice root in the XML
-   * @param {Object} xmlData - XML data
-   * @returns {Object|null} Invoice object
-   */
-  findInvoiceRoot(xmlData) {
-    // Possible standard SDI paths
-    const possiblePaths = [
-      xmlData.fatturaelettronica,
-      xmlData.FatturaElettronica,
-      xmlData['p:FatturaElettronica'],
-      xmlData.Invoice,
-      xmlData.invoice,
-      xmlData
-    ];
-    
-    for (const path of possiblePaths) {
-      if (path && typeof path === 'object') {
-        // Check if it has an SDI-compatible structure
-        if (this.isValidSdiStructure(path)) {
-          return path;
-        }
-      }
-    }
-    
-    return null;
-  }
-  
-  /**
-   * Check if the structure is SDI-compatible
-   * @param {Object} obj - Object to check
-   * @returns {boolean} True if compatible
-   */
-  isValidSdiStructure(obj) {
-    const indicators = [
-      'FatturaElettronicaHeader',
-      'fatturaelettronicaheader',
-      'DatiFattura',
-      'datifattura',
-      'DatiGenerali',
-      'datigenerali',
-      'FatturaElettronicaBody',
-      'fatturaelettronicabody'
-    ];
-    
-    const objKeys = Object.keys(obj).map(k => k.toLowerCase());
-    return indicators.some(indicator => 
-      objKeys.some(key => key.includes(indicator.toLowerCase()))
-    );
-  }
-  
-  /**
-   * Extract header data (dates, numbers, demographics)
-   * @param {Object} invoiceRoot - Invoice object
-   * @param {Object} result - Result object to populate
-   */
-  extractHeaderData(invoiceRoot, result) {
-    // Search for header in possible paths
-    const headers = [
-      invoiceRoot.FatturaElettronicaHeader,
-      invoiceRoot.fatturaelettronicaheader,
-      invoiceRoot.Header,
-      invoiceRoot.header
-    ];
-    
-    for (const header of headers) {
-      if (!header) continue;
-      
-      // General data
-      const generalData = header.DatiGenerali || header.datigenerali || header.GeneralData;
-      if (generalData) {
-        const docData = generalData.DatiGeneraliDocumento || generalData.datigeneralidocumento;
-        if (docData) {
-          result.invoiceNumber = this.safeExtract(docData, ['Numero', 'numero', 'Number']);
-          result.issueDate = this.safeExtract(docData, ['Data', 'data', 'Date']);
-        }
-      }
-      
-      // Transmission data (if present)
-      const transmissionData = header.DatiTrasmissione || header.datitrasmissione;
-      if (transmissionData) {
-        // Extract additional data if needed
-      }
-      
-      break; // Exit on the first valid header found
-    }
-  }
-  
-  /**
-   * Extract fiscal data from the invoice body
-   * @param {Object} invoiceRoot - Invoice object
-   * @param {Object} result - Result object to populate
-   */
-  extractFiscalData(invoiceRoot, result) {
-    // Search for body in possible paths
-    const bodies = [
-      invoiceRoot.FatturaElettronicaBody,
-      invoiceRoot.fatturaelettronicabody,
-      invoiceRoot.Body,
-      invoiceRoot.body,
-      invoiceRoot
-    ];
-    
-    let totalTaxable = 0;
-    let totalVat = 0;
-    let totalOverall = 0;
-    
-    for (const body of bodies) {
-      if (!body) continue;
-      
-      // Search for goods/services data (invoice lines)
-      const goodsServicesData = body.DatiBeniServizi || body.databeniservizi || body.LineItems;
-      if (goodsServicesData) {
-        
-        // Extract from line details
-        const lineDetails = this.ensureArray(
-          goodsServicesData.DettaglioLinee || 
-          goodsServicesData.dettagliolinee || 
-          goodsServicesData.LineItem || 
-          goodsServicesData.lineitem ||
-          goodsServicesData
-        );
-        
-        for (const line of lineDetails) {
-          if (!line) continue;
-          
-          const lineTotalPrice = this.parseAmount(
-            line.PrezzoTotale || 
-            line.prezzototale || 
-            line.TotalPrice ||
-            line.ImportoTotale ||
-            line.importototale
-          );
-          
-          const lineVatRate = this.parseAmount(
-            line.AliquotaIVA || 
-            line.aliquotaiva || 
-            line.VatRate
-          );
-          
-          if (lineTotalPrice > 0) {
-            totalTaxable += lineTotalPrice;
-            if (lineVatRate > 0 && result.vatRate === 22) {
-              result.vatRate = lineVatRate; // Use the first rate found
-            }
-          }
-        }
-        
-        // Extract from VAT summaries if available
-        const summaryData = this.ensureArray(
-          goodsServicesData.DatiRiepilogo || 
-          goodsServicesData.datiriepilogo || 
-          goodsServicesData.VatSummary
-        );
-        
-        for (const summary of summaryData) {
-          if (!summary) continue;
-          
-          const summaryTaxable = this.parseAmount(
-            summary.ImponibileImporto || 
-            summary.imponibileimporto ||
-            summary.TaxableAmount
-          );
-          
-          const summaryVat = this.parseAmount(
-            summary.Imposta || 
-            summary.imposta ||
-            summary.TaxAmount
-          );
-          
-          const summaryVatRate = this.parseAmount(
-            summary.AliquotaIVA || 
-            summary.aliquotaiva ||
-            summary.VatRate
-          );
-          
-          if (summaryTaxable > 0) totalTaxable = Math.max(totalTaxable, summaryTaxable);
-          if (summaryVat > 0) totalVat += summaryVat;
-          if (summaryVatRate > 0) result.vatRate = summaryVatRate;
-        }
-      }
-      
-      // Search payment data for total
-      const paymentData = body.DatiPagamento || body.datipagamento || body.PaymentData;
-      if (paymentData) {
-        const paymentDetails = this.ensureArray(
-          paymentData.DettaglioPagamento || 
-          paymentData.dettagliopagamento ||
-          paymentData.PaymentDetails
-        );
-        
-        for (const detail of paymentDetails) {
-          const paymentAmount = this.parseAmount(
-            detail.ImportoPagamento || 
-            detail.importopagamento ||
-            detail.PaymentAmount
-          );
-          
-          if (paymentAmount > 0) {
-            totalOverall = Math.max(totalOverall, paymentAmount);
-          }
-        }
-      }
-      
-      break; // Exit on the first valid body
-    }
-    
-    // Assign extracted values
-    if (totalTaxable > 0) result.taxableAmount = totalTaxable;
-    if (totalVat > 0) result.vatAmount = totalVat;
-    if (totalOverall > 0) result.total = totalOverall;
-  }
-  
-  /**
-   * Extract VAT summaries
-   * @param {Object} invoiceRoot - Invoice object
-   * @param {Object} result - Result object
-   */
-  extractIvaSummary(invoiceRoot, result) {
-    // If we haven't found the VAT yet, calculate it
-    if (result.vatAmount === 0 && result.taxableAmount > 0 && result.vatRate > 0) {
-      result.vatAmount = Math.round((result.taxableAmount * result.vatRate / 100) * 100) / 100;
-    }
-    
-    // If we don't have the total, calculate it
-    if (result.total === 0 && result.taxableAmount > 0) {
-      result.total = result.taxableAmount + result.vatAmount;
-    }
-  }
-  
-  /**
-   * Parsing with fallback for non-standard XML
-   * @param {Object} xmlData - XML data
-   * @param {Object} result - Result object
-   * @returns {Object} Data extracted with fallback
-   */
-  extractWithFallback(xmlData, result) {
-    console.log('🔍 Using fallback method for non-standard XML...');
-    
-    // Find all possible numeric fields in the XML
-    const allValues = this.extractAllNumericValues(xmlData);
-    
-    // Search for common patterns in field names
-    const patterns = {
-      taxable: ['imponibile', 'subtotal', 'netamount', 'baseamount', 'taxable'],
-      vat: ['iva', 'imposta', 'tax', 'vat'],
-      total: ['totale', 'total', 'amount', 'importo'],
-      rate: ['aliquota', 'rate', 'percent', '%']
-    };
-    
-    // Apply pattern matching
-    for (const [key, value] of Object.entries(allValues)) {
-      const keyLower = key.toLowerCase();
-      
-      if (patterns.taxable.some(p => keyLower.includes(p)) && value > result.taxableAmount) {
-        result.taxableAmount = value;
-      }
-      
-      if (patterns.vat.some(p => keyLower.includes(p)) && value > result.vatAmount && value < 1000) {
-        result.vatAmount = value;
-      }
-      
-      if (patterns.total.some(p => keyLower.includes(p)) && value > result.total) {
-        result.total = value;
-      }
-      
-      if (patterns.rate.some(p => keyLower.includes(p)) && value > 0 && value <= 30) {
-        result.vatRate = value;
-      }
-    }
-    
-    result.warnings.push('Used fallback parsing - verify extracted data');
-    return result;
-  }
-  
-  /**
-   * Extract all numeric values from XML for fallback
-   * @param {Object} obj - Object to analyze
-   * @param {string} prefix - Prefix for the path
-   * @returns {Object} Key-value map of all numbers
-   */
-  extractAllNumericValues(obj, prefix = '') {
-    const values = {};
-    
-    if (!obj || typeof obj !== 'object') return values;
-    
-    for (const [key, value] of Object.entries(obj)) {
-      const fullKey = prefix ? `${prefix}.${key}` : key;
-      
-      if (typeof value === 'object' && value !== null) {
-        Object.assign(values, this.extractAllNumericValues(value, fullKey));
-      } else {
-        const numValue = this.parseAmount(value);
-        if (numValue > 0) {
-          values[fullKey] = numValue;
-        }
-      }
-    }
-    
-    return values;
-  }
-  
-  /**
-   * Normalize and validate extracted data
-   * @param {Object} result - Result object to normalize
-   */
-  normalizeData(result) {
-    // Ensure values are valid numbers
-    result.taxableAmount = this.parseAmount(result.taxableAmount);
-    result.vatRate = this.parseAmount(result.vatRate);
-    result.vatAmount = this.parseAmount(result.vatAmount);
-    result.total = this.parseAmount(result.total);
-    
-    // Consistency validations
-    if (result.taxableAmount > 0 && result.vatAmount === 0 && result.vatRate > 0) {
-      result.vatAmount = Math.round((result.taxableAmount * result.vatRate / 100) * 100) / 100;
-      result.warnings.push('VAT calculated automatically');
-    }
-    
-    if (result.taxableAmount > 0 && result.total === 0) {
-      result.total = result.taxableAmount + result.vatAmount;
-      result.warnings.push('Total calculated automatically');
-    }
-    
-    // Normalize dates
-    if (result.issueDate) {
-      result.issueDate = this.normalizeDate(result.issueDate);
-    }
-    
-    if (result.dueDate) {
-      result.dueDate = this.normalizeDate(result.dueDate);
-    }
-  }
-  
-  /**
-   * Safe extraction of values from an object
-   * @param {Object} obj - Source object
-   * @param {Array} keys - Possible keys
-   * @returns {any} Found value or null
-   */
-  safeExtract(obj, keys) {
-    if (!obj) return null;
-    
-    for (const key of keys) {
-      if (obj[key] !== undefined && obj[key] !== null) {
-        return obj[key];
-      }
-    }
-    
-    return null;
-  }
-  
-  /**
-   * Ensure the value is an array
-   * @param {any} value - Value to convert
-   * @returns {Array} Safe array
-   */
-  ensureArray(value) {
-    if (!value) return [];
-    return Array.isArray(value) ? value : [value];
-  }
-  
-  /**
-   * Safe parsing of amounts
-   * @param {any} value - Value to convert
-   * @returns {number} Parsed number
-   */
-  parseAmount(value) {
-    if (typeof value === 'number') return Math.round(value * 100) / 100;
-    if (typeof value === 'string') {
-      const cleaned = value.replace(/[^\d.,\-]/g, '').replace(',', '.');
-      const parsed = parseFloat(cleaned);
-      return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100;
-    }
-    return 0;
-  }
-  
-  /**
-   * Normalize dates to ISO format
-   * @param {string} dateStr - Date string
-   * @returns {string|null} Normalized date
-   */
-  normalizeDate(dateStr) {
-    if (!dateStr) return null;
-    
-    try {
-      // Handles common Italian formats: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY
-      let cleanDate = dateStr.toString().trim();
-      
-      // Italian format DD/MM/YYYY or DD-MM-YYYY
-      if (cleanDate.match(/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/)) {
-        const parts = cleanDate.split(/[\/\-]/);
-        cleanDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-      }
-      
-      const date = new Date(cleanDate);
-      return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
-    } catch (error) {
-      console.warn('⚠️ Error normalizing date:', dateStr);
+      this.addError('XML_MALFORMED', 'Il file XML non è ben formato');
       return null;
     }
   }
-  
+
   /**
-   * Validate all invoice data
-   * @param {Object} parsedData - Parsed invoice data
-   * @param {Object} invoiceRoot - Invoice root object
-   * @returns {Array} List of validation errors
+   * Validazione struttura base FatturaPA
    */
-  validateInvoiceData(parsedData, invoiceRoot) {
-    const errors = [];
-    
-    console.log('🔍 validateInvoiceData - invoiceRoot keys:', Object.keys(invoiceRoot));
-    
-    const header = invoiceRoot.fatturaelettronicaheader || invoiceRoot.FatturaElettronicaHeader;
-    console.log('🔍 header found:', !!header);
-    
-    if (!header) {
-      console.log('❌ Header non trovato, keys disponibili:', Object.keys(invoiceRoot));
-      return errors;
+  validateStructure(xmlDoc) {
+    // Controllo root element
+    if (!xmlDoc['p:FatturaElettronica'] && !xmlDoc['FatturaElettronica']) {
+      this.addError('STRUCTURE_ROOT', 'Root element FatturaElettronica mancante');
+      return;
     }
+
+    const fattura = xmlDoc['p:FatturaElettronica'] || xmlDoc['FatturaElettronica'];
     
-    // Validate transmission data (codice destinatario)
-    const trasmissione = header.datitrasmissione || header.DatiTrasmissione;
-    if (trasmissione) {
-      const codiceDestinatario = trasmissione.codicedestinatario || trasmissione.CodiceDestinatario;
-      if (codiceDestinatario) {
-        const cleaned = String(codiceDestinatario).trim();
-        if (cleaned.length !== 7) {
-          errors.push({
-            field: 'CodiceDestinatario',
-            message: `Invalid recipient code: "${cleaned}" (must be 7 characters)`,
-            severity: 'critical'
-          });
+    // Controllo versione
+    if (!fattura.versione && !fattura.Versione) {
+      this.addWarning('STRUCTURE_VERSION', 'Versione documento non specificata');
+    }
+
+    // Controllo FatturaElettronicaHeader
+    if (!fattura.FatturaElettronicaHeader) {
+      this.addError('STRUCTURE_HEADER', 'FatturaElettronicaHeader mancante');
+    }
+
+    // Controllo FatturaElettronicaBody
+    if (!fattura.FatturaElettronicaBody) {
+      this.addError('STRUCTURE_BODY', 'FatturaElettronicaBody mancante');
+    }
+
+    this.details.structure = 'valid';
+  }
+
+  /**
+   * Controllo campi obbligatori
+   */
+  validateMandatoryFields(xmlDoc) {
+    const fattura = xmlDoc['p:FatturaElettronica'] || xmlDoc['FatturaElettronica'];
+    if (!fattura) return;
+
+    const header = fattura.FatturaElettronicaHeader;
+    const body = fattura.FatturaElettronicaBody;
+
+    if (header) {
+      // Dati trasmissione
+      const datiTrasmissione = header.DatiTrasmissione;
+      if (!datiTrasmissione) {
+        this.addError('MANDATORY_TRASMISSIONE', 'DatiTrasmissione mancanti');
+      } else {
+        if (!datiTrasmissione.IdTrasmittente) {
+          this.addError('MANDATORY_ID_TRASMITTENTE', 'IdTrasmittente mancante');
+        }
+        if (!datiTrasmissione.ProgressivoInvio) {
+          this.addError('MANDATORY_PROGRESSIVO', 'ProgressivoInvio mancante');
+        }
+        if (!datiTrasmissione.FormatoTrasmissione) {
+          this.addError('MANDATORY_FORMATO', 'FormatoTrasmissione mancante');
+        }
+        if (!datiTrasmissione.CodiceDestinatario) {
+          this.addError('MANDATORY_DESTINATARIO', 'CodiceDestinatario mancante');
         }
       }
-    }
-    
-    // Validate supplier (cedente prestatore)
-    const cedente = header.cedenteprestatore || header.CedentePrestatore;
-    if (cedente) {
-      const datiAnagrafici = cedente.datianagrafici || cedente.DatiAnagrafici;
-      if (datiAnagrafici) {
-        const idFiscale = datiAnagrafici.idfiscaleiva || datiAnagrafici.IdFiscaleIVA;
-        if (idFiscale) {
-          const idCodice = idFiscale.idcodice || idFiscale.IdCodice;
-          if (idCodice) {
-            this.validatePartitaIVA(String(idCodice), 'supplier', errors);
-          }
+
+      // Cedente prestatore
+      const cedente = header.CedentePrestatore;
+      if (!cedente) {
+        this.addError('MANDATORY_CEDENTE', 'CedentePrestatore mancante');
+      } else {
+        if (!cedente.DatiAnagrafici) {
+          this.addError('MANDATORY_CEDENTE_ANAGRAFICA', 'DatiAnagrafici cedente mancanti');
         }
+        if (!cedente.Sede) {
+          this.addError('MANDATORY_CEDENTE_SEDE', 'Sede cedente mancante');
+        }
+      }
+
+      // Cessionario committente
+      const cessionario = header.CessionarioCommittente;
+      if (!cessionario) {
+        this.addError('MANDATORY_CESSIONARIO', 'CessionarioCommittente mancante');
+      }
+    }
+
+    if (body) {
+      // Dati generali
+      const datiGenerali = body.DatiGenerali;
+      if (!datiGenerali || !datiGenerali.DatiGeneraliDocumento) {
+        this.addError('MANDATORY_DATI_GENERALI', 'DatiGeneraliDocumento mancanti');
+      }
+
+      // Linee dettaglio
+      const dettaglioLinee = body.DatiBeniServizi?.DettaglioLinee;
+      if (!dettaglioLinee) {
+        this.addError('MANDATORY_DETTAGLIO_LINEE', 'DettaglioLinee mancante');
+      }
+    }
+
+    this.details.mandatoryFields = this.errors.length === 0 ? 'complete' : 'incomplete';
+  }
+
+  /**
+   * Validazione Partite IVA
+   */
+  validateVATNumbers(xmlDoc) {
+    const fattura = xmlDoc['p:FatturaElettronica'] || xmlDoc['FatturaElettronica'];
+    if (!fattura?.FatturaElettronicaHeader) return;
+
+    const header = fattura.FatturaElettronicaHeader;
+    
+    // P.IVA Cedente
+    const cedenteVAT = header.CedentePrestatore?.DatiAnagrafici?.IdFiscaleIVA?.IdCodice;
+    if (cedenteVAT) {
+      if (!this.isValidVATNumber(cedenteVAT)) {
+        this.addError('VAT_CEDENTE_INVALID', `Partita IVA cedente non valida: ${cedenteVAT}`);
+      }
+    }
+
+    // P.IVA Cessionario (se presente)
+    const cessionarioVAT = header.CessionarioCommittente?.DatiAnagrafici?.IdFiscaleIVA?.IdCodice;
+    if (cessionarioVAT) {
+      if (!this.isValidVATNumber(cessionarioVAT)) {
+        this.addError('VAT_CESSIONARIO_INVALID', `Partita IVA cessionario non valida: ${cessionarioVAT}`);
+      }
+    }
+
+    this.details.vatValidation = this.errors.filter(e => e.code.includes('VAT')).length === 0 ? 'valid' : 'invalid';
+  }
+
+  /**
+   * Validazione Codici Fiscali
+   */
+  validateTaxCodes(xmlDoc) {
+    const fattura = xmlDoc['p:FatturaElettronica'] || xmlDoc['FatturaElettronica'];
+    if (!fattura?.FatturaElettronicaHeader) return;
+
+    const header = fattura.FatturaElettronicaHeader;
+    
+    // CF Cedente
+    const cedenteCF = header.CedentePrestatore?.DatiAnagrafici?.CodiceFiscale;
+    if (cedenteCF) {
+      if (!this.isValidTaxCode(cedenteCF)) {
+        this.addError('CF_CEDENTE_INVALID', `Codice Fiscale cedente non valido: ${cedenteCF}`);
+      }
+    }
+
+    // CF Cessionario
+    const cessionarioCF = header.CessionarioCommittente?.DatiAnagrafici?.CodiceFiscale;
+    if (cessionarioCF) {
+      if (!this.isValidTaxCode(cessionarioCF)) {
+        this.addError('CF_CESSIONARIO_INVALID', `Codice Fiscale cessionario non valido: ${cessionarioCF}`);
+      }
+    }
+
+    this.details.taxCodeValidation = this.errors.filter(e => e.code.includes('CF')).length === 0 ? 'valid' : 'invalid';
+  }
+
+  /**
+   * Validazione Codice Destinatario
+   */
+  validateDestinationCode(xmlDoc) {
+    const fattura = xmlDoc['p:FatturaElettronica'] || xmlDoc['FatturaElettronica'];
+    const codiceDestinatario = fattura?.FatturaElettronicaHeader?.DatiTrasmissione?.CodiceDestinatario;
+    
+    if (!codiceDestinatario) {
+      this.addError('DEST_CODE_MISSING', 'Codice Destinatario mancante');
+      return;
+    }
+
+    // Controllo formato (7 caratteri alfanumerici)
+    if (!/^[A-Z0-9]{7}$/.test(codiceDestinatario)) {
+      this.addError('DEST_CODE_FORMAT', `Codice Destinatario formato non valido: ${codiceDestinatario} (deve essere 7 caratteri alfanumerici)`);
+    }
+
+    // Controllo codici speciali
+    const codiciSpeciali = ['0000000', 'XXXXXXX'];
+    if (codiciSpeciali.includes(codiceDestinatario)) {
+      const pec = fattura?.FatturaElettronicaHeader?.DatiTrasmissione?.PECDestinatario;
+      if (!pec) {
+        this.addError('DEST_CODE_SPECIAL', `Codice Destinatario ${codiceDestinatario} richiede PEC Destinatario`);
+      }
+    }
+
+    this.details.destinationCode = codiceDestinatario;
+  }
+
+  /**
+   * Controlli matematici su totali e IVA
+   */
+  validateCalculations(xmlDoc) {
+    const fattura = xmlDoc['p:FatturaElettronica'] || xmlDoc['FatturaElettronica'];
+    const body = fattura?.FatturaElettronicaBody;
+    if (!body) return;
+
+    // Calcolo totale linee
+    const dettaglioLinee = body.DatiBeniServizi?.DettaglioLinee;
+    if (!dettaglioLinee) return;
+
+    const linee = Array.isArray(dettaglioLinee) ? dettaglioLinee : [dettaglioLinee];
+    let totaleLineeCalcolato = 0;
+
+    linee.forEach((linea, index) => {
+      const quantita = parseFloat(linea.Quantita || 1);
+      const prezzoUnitario = parseFloat(linea.PrezzoUnitario || 0);
+      const scontoMaggiorazione = parseFloat(linea.ScontoMaggiorazione?.Percentuale || 0);
+      
+      let importoLinea = quantita * prezzoUnitario;
+      
+      // Applica sconto/maggiorazione
+      if (scontoMaggiorazione !== 0) {
+        if (linea.ScontoMaggiorazione?.Tipo === 'SC') {
+          importoLinea = importoLinea * (1 - scontoMaggiorazione / 100);
+        } else {
+          importoLinea = importoLinea * (1 + scontoMaggiorazione / 100);
+        }
+      }
+
+      // Confronta con PrezzoTotale dichiarato
+      const prezzoTotaleDichiarato = parseFloat(linea.PrezzoTotale || 0);
+      if (Math.abs(importoLinea - prezzoTotaleDichiarato) > 0.01) {
+        this.addError('CALC_LINEA_TOTALE', `Linea ${index + 1}: PrezzoTotale non corretto (calcolato: ${importoLinea.toFixed(2)}, dichiarato: ${prezzoTotaleDichiarato.toFixed(2)})`);
+      }
+
+      totaleLineeCalcolato += prezzoTotaleDichiarato;
+    });
+
+    // Controllo riepilogo IVA
+    const datiRiepilogo = body.DatiBeniServizi?.DatiRiepilogo;
+    if (datiRiepilogo) {
+      const riepiloghi = Array.isArray(datiRiepilogo) ? datiRiepilogo : [datiRiepilogo];
+      let totaleImponibile = 0;
+      let totaleIVA = 0;
+
+      riepiloghi.forEach((riepilogo, index) => {
+        const imponibile = parseFloat(riepilogo.ImponibileImporto || 0);
+        const aliquota = parseFloat(riepilogo.AliquotaIVA || 0);
+        const imposta = parseFloat(riepilogo.Imposta || 0);
+
+        // Verifica calcolo IVA
+        const impostaCalcolata = Math.round((imponibile * aliquota / 100) * 100) / 100;
+        if (Math.abs(imposta - impostaCalcolata) > 0.01) {
+          this.addError('CALC_IVA_RIEPILOGO', `Riepilogo ${index + 1}: IVA non corretta (calcolata: ${impostaCalcolata.toFixed(2)}, dichiarata: ${imposta.toFixed(2)})`);
+        }
+
+        totaleImponibile += imponibile;
+        totaleIVA += imposta;
+      });
+
+      // Controllo con totale documento
+      const datiGenerali = body.DatiGenerali?.DatiGeneraliDocumento;
+      if (datiGenerali) {
+        const importoTotaleDocumento = parseFloat(datiGenerali.ImportoTotaleDocumento || 0);
+        const totaleCalcolato = totaleImponibile + totaleIVA;
         
-        const codiceFiscale = datiAnagrafici.codicefiscale || datiAnagrafici.CodiceFiscale;
-        if (codiceFiscale) {
-          this.validateCodiceFiscale(String(codiceFiscale), 'supplier', errors);
+        if (Math.abs(importoTotaleDocumento - totaleCalcolato) > 0.01) {
+          this.addError('CALC_TOTALE_DOCUMENTO', `ImportoTotaleDocumento non corretto (calcolato: ${totaleCalcolato.toFixed(2)}, dichiarato: ${importoTotaleDocumento.toFixed(2)})`);
         }
       }
     }
-    
-    // Validate customer (cessionario committente)
-    const cessionario = header.cessionariocommittente || header.CessionarioCommittente;
-    if (cessionario) {
-      const datiAnagrafici = cessionario.datianagrafici || cessionario.DatiAnagrafici;
-      if (datiAnagrafici) {
-        const idFiscale = datiAnagrafici.idfiscaleiva || datiAnagrafici.IdFiscaleIVA;
-        if (idFiscale) {
-          const idCodice = idFiscale.idcodice || idFiscale.IdCodice;
-          if (idCodice) {
-            this.validatePartitaIVA(String(idCodice), 'customer', errors);
-          }
-        }
-        
-        const codiceFiscale = datiAnagrafici.codicefiscale || datiAnagrafici.CodiceFiscale;
-        if (codiceFiscale) {
-          this.validateCodiceFiscale(String(codiceFiscale), 'customer', errors);
-        }
-      }
-    }
-    
-    // Validate dates
-    if (parsedData.issueDate) {
-      this.validateDate(parsedData.issueDate, 'issueDate', errors);
-    }
-    
-    return errors;
+
+    this.details.calculations = this.errors.filter(e => e.code.includes('CALC')).length === 0 ? 'correct' : 'incorrect';
   }
-  
+
   /**
-   * Validate Italian VAT number (P.IVA)
-   * @param {string} piva - VAT number to validate
-   * @param {string} entity - Entity name (supplier/customer)
-   * @param {Array} errors - Error array to populate
+   * Validazione date
    */
-  validatePartitaIVA(piva, entity, errors) {
-    const cleaned = piva.replace(/[^0-9]/g, '');
-    
-    if (cleaned.length !== 11) {
-      errors.push({
-        field: `${entity}.PartitaIVA`,
-        message: `Invalid VAT number for ${entity}: "${piva}" (must be 11 digits)`,
-        severity: 'critical'
-      });
+  validateDates(xmlDoc) {
+    const fattura = xmlDoc['p:FatturaElettronica'] || xmlDoc['FatturaElettronica'];
+    const datiGenerali = fattura?.FatturaElettronicaBody?.DatiGenerali?.DatiGeneraliDocumento;
+    if (!datiGenerali) return;
+
+    const dataDocumento = datiGenerali.Data;
+    if (!dataDocumento) {
+      this.addError('DATE_MISSING', 'Data documento mancante');
       return;
     }
-    
-    if (cleaned === '00000000000') {
-      errors.push({
-        field: `${entity}.PartitaIVA`,
-        message: `Invalid VAT number for ${entity}: all zeros`,
-        severity: 'critical'
-      });
+
+    // Controllo formato data (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dataDocumento)) {
+      this.addError('DATE_FORMAT', `Formato data documento non valido: ${dataDocumento} (richiesto YYYY-MM-DD)`);
       return;
     }
-  }
-  
-  /**
-   * Validate Italian fiscal code (Codice Fiscale)
-   * @param {string} cf - Fiscal code to validate
-   * @param {string} entity - Entity name (supplier/customer)
-   * @param {Array} errors - Error array to populate
-   */
-  validateCodiceFiscale(cf, entity, errors) {
-    const cleaned = cf.toUpperCase().trim();
-    
-    if (cleaned.length !== 16 && cleaned.length !== 11) {
-      errors.push({
-        field: `${entity}.CodiceFiscale`,
-        message: `Invalid fiscal code for ${entity}: "${cf}" (must be 16 or 11 characters)`,
-        severity: 'critical'
-      });
+
+    // Controllo validità data
+    const parsedDate = new Date(dataDocumento);
+    if (isNaN(parsedDate.getTime())) {
+      this.addError('DATE_INVALID', `Data documento non valida: ${dataDocumento}`);
       return;
     }
+
+    // Controllo data non futura
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    if (parsedDate > oggi) {
+      this.addError('DATE_FUTURE', `Data documento futura non ammessa: ${dataDocumento}`);
+    }
+
+    // Controllo data non troppo vecchia (più di 5 anni)
+    const cinqueAnniFA = new Date();
+    cinqueAnniFA.setFullYear(cinqueAnniFA.getFullYear() - 5);
+    if (parsedDate < cinqueAnniFA) {
+      this.addWarning('DATE_OLD', `Data documento molto vecchia: ${dataDocumento}`);
+    }
+
+    this.details.dateValidation = 'valid';
+  }
+
+  /**
+   * Controllo formati vari
+   */
+  validateFormats(xmlDoc) {
+    const fattura = xmlDoc['p:FatturaElettronica'] || xmlDoc['FatturaElettronica'];
+    const datiGenerali = fattura?.FatturaElettronicaBody?.DatiGenerali?.DatiGeneraliDocumento;
     
-    if (cleaned.length === 16) {
-      const cfRegex = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
-      if (!cfRegex.test(cleaned)) {
-        errors.push({
-          field: `${entity}.CodiceFiscale`,
-          message: `Invalid fiscal code format for ${entity}: "${cf}"`,
-          severity: 'error'
-        });
+    if (datiGenerali) {
+      // Controllo numero documento
+      const numero = datiGenerali.Numero;
+      if (!numero) {
+        this.addError('FORMAT_NUMERO_MISSING', 'Numero documento mancante');
+      } else if (numero.length > 20) {
+        this.addWarning('FORMAT_NUMERO_LONG', `Numero documento molto lungo: ${numero}`);
       }
-      
-      if (/XXX/.test(cleaned) || cleaned.includes('INVALID')) {
-        errors.push({
-          field: `${entity}.CodiceFiscale`,
-          message: `Invalid fiscal code for ${entity}: "${cf}" (contains invalid pattern)`,
-          severity: 'critical'
-        });
+
+      // Controllo tipo documento
+      const tipoDocumento = datiGenerali.TipoDocumento;
+      const tipiValidi = ['TD01', 'TD02', 'TD03', 'TD04', 'TD05', 'TD06', 'TD16', 'TD17', 'TD18', 'TD19', 'TD20', 'TD21', 'TD22', 'TD23', 'TD24', 'TD25', 'TD26', 'TD27'];
+      if (!tipoDocumento) {
+        this.addError('FORMAT_TIPO_MISSING', 'TipoDocumento mancante');
+      } else if (!tipiValidi.includes(tipoDocumento)) {
+        this.addError('FORMAT_TIPO_INVALID', `TipoDocumento non valido: ${tipoDocumento}`);
       }
+
+      // Controllo divisa
+      const divisa = datiGenerali.Divisa;
+      if (!divisa) {
+        this.addError('FORMAT_DIVISA_MISSING', 'Divisa mancante');
+      } else if (!/^[A-Z]{3}$/.test(divisa)) {
+        this.addError('FORMAT_DIVISA_INVALID', `Formato divisa non valido: ${divisa} (richiesto ISO 4217)`);
+      }
+    }
+
+    this.details.formatValidation = this.errors.filter(e => e.code.includes('FORMAT')).length === 0 ? 'valid' : 'invalid';
+  }
+
+  /**
+   * Validazione Partita IVA italiana/europea
+   */
+  isValidVATNumber(vatNumber) {
+    if (!vatNumber || typeof vatNumber !== 'string') return false;
+
+    // P.IVA italiana (11 cifre)
+    if (/^\d{11}$/.test(vatNumber)) {
+      return this.checkItalianVAT(vatNumber);
+    }
+
+    // P.IVA europea (formato CC123456789)
+    if (/^[A-Z]{2}\d{8,12}$/.test(vatNumber)) {
+      return true; // Controllo base formato
+    }
+
+    return false;
+  }
+
+  /**
+   * Controllo checksum P.IVA italiana + sequenze non valide
+ */
+checkItalianVAT(vatNumber) {
+  // ✅ CONTROLLO SEQUENZE NON VALIDE
+  const invalidSequences = [
+    '00000000000', '11111111111', '22222222222', '33333333333',
+    '44444444444', '55555555555', '66666666666', '77777777777',
+    '88888888888', '99999999999'
+  ];
+  
+  if (invalidSequences.includes(vatNumber)) {
+    return false; // ← BLOCCA 00000000000!
+  }
+  
+  // ✅ CONTROLLO CHECKSUM MATEMATICO (come prima)
+  const digits = vatNumber.split('').map(d => parseInt(d));
+  let sum = 0;
+  
+  for (let i = 0; i < 10; i++) {
+    if (i % 2 === 0) {
+      sum += digits[i];
+    } else {
+      let doubled = digits[i] * 2;
+      sum += doubled > 9 ? doubled - 9 : doubled;
     }
   }
   
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return checkDigit === digits[10];
+}
+
   /**
-   * Validate dates
-   * @param {string} dateStr - Date string to validate
-   * @param {string} field - Field name
-   * @param {Array} errors - Error array to populate
+   * Validazione Codice Fiscale italiano
    */
-  validateDate(dateStr, field, errors) {
-    if (!dateStr) return;
-    
-    try {
-      const date = new Date(dateStr);
-      const now = new Date();
-      
-      if (isNaN(date.getTime())) {
-        errors.push({
-          field: field,
-          message: `Invalid date format: "${dateStr}"`,
-          severity: 'error'
-        });
-        return;
-      }
-      
-      if (field === 'issueDate' && date > now) {
-        errors.push({
-          field: field,
-          message: `Future date not allowed: "${dateStr}"`,
-          severity: 'critical'
-        });
-      }
-    } catch (error) {
-      errors.push({
-        field: field,
-        message: `Error validating date: "${dateStr}"`,
-        severity: 'error'
-      });
+  isValidTaxCode(taxCode) {
+    if (!taxCode || typeof taxCode !== 'string') return false;
+
+    // CF persona fisica (16 caratteri)
+    if (/^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/.test(taxCode)) {
+      return this.checkTaxCodeChecksum(taxCode);
     }
+
+    // CF persona giuridica (11 cifre, come P.IVA)
+    if (/^\d{11}$/.test(taxCode)) {
+      return this.checkItalianVAT(taxCode);
+    }
+
+    return false;
   }
-  
+
   /**
-   * Create fallback data in case of error
-   * @param {Error} error - Original error
-   * @returns {Object} Fallback data
+   * Controllo checksum Codice Fiscale
    */
-  createFallbackData(error) {
+  checkTaxCodeChecksum(taxCode) {
+    const oddValues = {
+      '0': 1, '1': 0, '2': 5, '3': 7, '4': 9, '5': 13, '6': 15, '7': 17, '8': 19, '9': 21,
+      'A': 1, 'B': 0, 'C': 5, 'D': 7, 'E': 9, 'F': 13, 'G': 15, 'H': 17, 'I': 19, 'J': 21,
+      'K': 2, 'L': 4, 'M': 18, 'N': 20, 'O': 11, 'P': 3, 'Q': 6, 'R': 8, 'S': 12, 'T': 14,
+      'U': 16, 'V': 10, 'W': 22, 'X': 25, 'Y': 24, 'Z': 23
+    };
+
+    const evenValues = {
+      '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+      'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'J': 9,
+      'K': 10, 'L': 11, 'M': 12, 'N': 13, 'O': 14, 'P': 15, 'Q': 16, 'R': 17, 'S': 18, 'T': 19,
+      'U': 20, 'V': 21, 'W': 22, 'X': 23, 'Y': 24, 'Z': 25
+    };
+
+    const remainderToLetter = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+    let sum = 0;
+    for (let i = 0; i < 15; i++) {
+      const char = taxCode[i];
+      if (i % 2 === 0) {
+        sum += oddValues[char] || 0;
+      } else {
+        sum += evenValues[char] || 0;
+      }
+    }
+
+    const expectedCheckChar = remainderToLetter[sum % 26];
+    return expectedCheckChar === taxCode[15];
+  }
+
+  /**
+   * Aggiunge errore critico
+   */
+  addError(code, message) {
+    this.errors.push({ code, message, level: 'error' });
+  }
+
+  /**
+   * Aggiunge avvertenza
+   */
+  addWarning(code, message) {
+    this.warnings.push({ code, message, level: 'warning' });
+  }
+
+  /**
+   * Restituisce risultato finale
+   */
+  getResult() {
+    const hasErrors = this.errors.length > 0;
+    const hasWarnings = this.warnings.length > 0;
+
     return {
-      taxableAmount: 0,
-      vatRate: 22,
-      vatAmount: 0,
-      total: 0,
-      issueDate: null,
-      dueDate: null,
-      invoiceNumber: null,
-      supplier: null,
-      customer: null,
-      parseSuccess: false,
-      warnings: [`XML parsing error: ${error.message}`],
-      validationErrors: [],
-      technicalIssues: 0,
-      error: error.message
+      isValid: !hasErrors,
+      status: hasErrors ? 'error' : (hasWarnings ? 'warning' : 'ok'),
+      errors: this.errors,
+      warnings: this.warnings,
+      details: this.details,
+      summary: {
+        totalErrors: this.errors.length,
+        totalWarnings: this.warnings.length,
+        criticalIssues: this.errors.filter(e => 
+          ['STRUCTURE_', 'MANDATORY_', 'VAT_', 'CALC_'].some(prefix => e.code.startsWith(prefix))
+        ).length
+      }
     };
   }
-  
-  /**
-   * Test the parser with sample XML
-   * @returns {Object} Test results
-   */
-  async testParser() {
-    console.log('🧪 Testing XML Parser...');
-    
-    // Simplified test XML
-    const testXml = `<?xml version="1.0" encoding="UTF-8"?>
-    <FatturaElettronica>
-      <FatturaElettronicaHeader>
-        <DatiGenerali>
-          <DatiGeneraliDocumento>
-            <Numero>001</Numero>
-            <Data>2025-06-04</Data>
-          </DatiGeneraliDocumento>
-        </DatiGenerali>
-      </FatturaElettronicaHeader>
-      <FatturaElettronicaBody>
-        <DatiBeniServizi>
-          <DettaglioLinee>
-            <PrezzoTotale>1000.00</PrezzoTotale>
-            <AliquotaIVA>22.00</AliquotaIVA>
-          </DettaglioLinee>
-          <DatiRiepilogo>
-            <ImponibileImporto>1000.00</ImponibileImporto>
-            <Imposta>220.00</Imposta>
-            <AliquotaIVA>22.00</AliquotaIVA>
-          </DatiRiepilogo>
-        </DatiBeniServizi>
-        <DatiPagamento>
-          <DettaglioPagamento>
-            <ImportoPagamento>1220.00</ImportoPagamento>
-          </DettaglioPagamento>
-        </DatiPagamento>
-      </FatturaElettronicaBody>
-    </FatturaElettronica>`;
-    
-    try {
-      const buffer = Buffer.from(testXml, 'utf8');
-      const result = await this.parseInvoice(buffer);
-      
-      const tests = [
-        { name: 'Taxable amount extracted', passed: result.taxableAmount === 1000 },
-        { name: 'VAT rate extracted', passed: result.vatRate === 22 },
-        { name: 'VAT amount extracted', passed: result.vatAmount === 220 },
-        { name: 'Total extracted', passed: result.total === 1220 },
-        { name: 'Issue date extracted', passed: result.issueDate === '2025-06-04' },
-        { name: 'Parsing success', passed: result.parseSuccess === true }
-      ];
-      
-      const passedTests = tests.filter(t => t.passed).length;
-      
-      return {
-        success: passedTests === tests.length,
-        passedTests,
-        totalTests: tests.length,
-        details: tests,
-        parsedData: result
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
 }
 
-/**
- * Standalone validation function as requested.
- * Creates a new validator instance and parses the invoice.
- * @param {Buffer} buffer - Buffer of the XML file
- * @returns {Object} Parsed data
- */
-async function validateFatturaElettronica(buffer) {
-  console.log('🚀 Executing standalone validateFatturaElettronica function...');
+// Export per uso diretto
+export const validateFatturaElettronica = async (xmlContent) => {
   const validator = new FatturaElettronicaValidator();
-  return await validator.parseInvoice(buffer);
-}
-
-// Export both the class and the function as requested by the user
-export { FatturaElettronicaValidator, validateFatturaElettronica };
+  return await validator.validate(xmlContent);
+};
