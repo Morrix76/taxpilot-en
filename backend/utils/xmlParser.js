@@ -91,7 +91,6 @@ class FatturaElettronicaValidator {
       this.normalizeData(result);
       
       // Run validations
-      const invoiceRoot = this.findInvoiceRoot(xmlData);
       if (invoiceRoot) {
         result.validationErrors = this.validateInvoiceData(result, invoiceRoot);
         result.technicalIssues = result.validationErrors.length;
