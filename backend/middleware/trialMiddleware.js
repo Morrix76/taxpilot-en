@@ -29,6 +29,11 @@ const checkTrialStatus = async (req, res, next) => {
 
     const user = result.rows[0];
 
+    // FIX: TRIAL CHECK DISABLED - Always pass through
+    req.user = user;
+    return next();
+
+    /* ORIGINAL CODE - COMMENTED OUT
     // If paid, always pass
     if (user.plan_type === 'paid' || user.plan_type === 'premium') {
       req.user = user;
@@ -39,14 +44,14 @@ const checkTrialStatus = async (req, res, next) => {
     if (user.plan_type === 'trial') {
       const now = new Date();
       const trialEnd = new Date(user.trial_end_date);
-
+      
       if (now > trialEnd) {
         // Trial expired
         await db.execute({
           sql: 'UPDATE users SET account_status = ? WHERE id = ?',
           args: ['expired', user.id]
         });
-
+        
         return res.status(403).json({ 
           error: 'Trial expired',
           trialExpired: true 
@@ -57,7 +62,7 @@ const checkTrialStatus = async (req, res, next) => {
     // Trial still valid
     req.user = user;
     next();
-
+    */
   } catch (error) {
     console.error('Trial middleware error:', error);
     return res.status(401).json({ error: 'Authentication failed' });
