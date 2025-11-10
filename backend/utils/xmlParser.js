@@ -523,6 +523,7 @@ class FatturaElettronicaValidator {
     
     const header = invoiceRoot.fatturaelettronicaheader || invoiceRoot.FatturaElettronicaHeader;
     console.log('🔍 header found:', !!header);
+    console.log('🔍 header keys:', header ? Object.keys(header) : 'N/A');
     
     if (!header) {
       console.log('❌ Header non trovato, keys disponibili:', Object.keys(invoiceRoot));
@@ -531,8 +532,13 @@ class FatturaElettronicaValidator {
     
     // Validate transmission data (codice destinatario)
     const trasmissione = header.datitrasmissione || header.DatiTrasmissione;
+    console.log('🔍 trasmissione found:', !!trasmissione);
+    console.log('🔍 trasmissione keys:', trasmissione ? Object.keys(trasmissione) : 'N/A');
+    
     if (trasmissione) {
       const codiceDestinatario = trasmissione.codicedestinatario || trasmissione.CodiceDestinatario;
+      console.log('🔍 codiceDestinatario:', codiceDestinatario);
+      
       if (codiceDestinatario) {
         const cleaned = String(codiceDestinatario).trim();
         if (cleaned.length !== 7) {
@@ -547,6 +553,8 @@ class FatturaElettronicaValidator {
     
     // Validate supplier (cedente prestatore)
     const cedente = header.cedenteprestatore || header.CedentePrestatore;
+    console.log('🔍 cedente found:', !!cedente);
+    
     if (cedente) {
       const datiAnagrafici = cedente.datianagrafici || cedente.DatiAnagrafici;
       if (datiAnagrafici) {
