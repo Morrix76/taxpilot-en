@@ -32,6 +32,8 @@ export default function Upload() {
 
     try {
       const token = localStorage.getItem('ai_tax_token');
+      // ===== CORREZIONE QUI =====
+      // Sostituito '${...}' con `${...}`
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents`, {
         method: 'POST',
         headers: {
@@ -131,41 +133,19 @@ export default function Upload() {
 
           {result && (
             <div className="mt-6">
-              <div className={`border rounded-lg p-4 ${
-                result.documento?.technicalIssues > 0 
-                  ? 'bg-red-50 border-red-200' 
-                  : 'bg-green-50 border-green-200'
-              }`}>
-                <h3 className={`text-lg font-medium mb-2 ${
-                  result.documento?.technicalIssues > 0 
-                    ? 'text-red-800' 
-                    : 'text-green-800'
-                }`}>
-                  {result.documento?.technicalIssues > 0 ? '❌ Validation Failed' : '✅ Validation Completed'}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-green-800 mb-2">
+                  Validation Completed
                 </h3>
-                <p className={`text-sm ${
-                  result.documento?.technicalIssues > 0 
-                    ? 'text-red-700' 
-                    : 'text-green-700'
-                }`}>
-                  Technical Issues: {result.documento?.technicalIssues || 0}
+                <p className="text-sm text-green-700">
+                  Status: {result.analysis?.combined?.overall_status}
                 </p>
-                {result.documento?.validationErrors && result.documento.validationErrors.length > 0 && (
-                  <div className="mt-3 space-y-1">
-                    {result.documento.validationErrors.slice(0, 3).map((error, idx) => (
-                      <p key={idx} className="text-sm text-red-600">
-                        • {error.message}
-                      </p>
-                    ))}
-                  </div>
-                )}
+                <p className="text-sm text-green-700">
+                  Confidence: {Math.round((result.analysis?.combined?.confidence || 0) * 100)}%
+                </p>
                 <button
-                  onClick={() => router.push(`/documents/${result.documento.id}`)}
-                  className={`mt-3 px-4 py-2 rounded-md text-sm text-white ${
-                    result.documento?.technicalIssues > 0 
-                      ? 'bg-red-600 hover:bg-red-700' 
-                      : 'bg-green-600 hover:bg-green-700'
-                  }`}
+                  onClick={() => router.push(`/documents/${result.document.id}`)}
+                  className="mt-3 bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700"
                 >
                   View Details
                 </button>
