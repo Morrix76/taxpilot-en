@@ -1,5 +1,6 @@
 // frontend/app/documents/page.tsx
 'use client';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EditableDocumentForm from '@/components/EditableDocumentForm';
@@ -10,11 +11,11 @@ type Doc = {
   original_filename?: string;
   name?: string;
   type?: string;
-  document_category?: string; // Nuovo campo
+  document_category?: string;
   created_at?: string;
   upload_date?: string;
-  updated_at?: string; // Nuovo campo
-  ai_status?: 'ok' | 'processing' | 'error';
+  updated_at?: string;
+  ai_status?: 'ok' | 'processing' | 'error' | 'warning';
   ai_analysis?: string;
   ai_confidence?: number;
   analysis_result?: any;
@@ -53,6 +54,71 @@ type EditPacket = {
 
 const API = process.env.NEXT_PUBLIC_API_URL!;
 
+/* ---------- Helpers fuori dal componente ---------- */
+function detectDocKind(doc: Doc) {
+  const name = (doc.original_filename || doc.name || '').toLowerCase();
+  const ext = name.split('.').pop() || '';
+  const t = (doc.type || doc.document_category || '').toLowerCase();
+
+  const isXML =
+    ext === 'xml' ||
+    /fattura|invoice|\.xml$/.test(name) ||
+    /fattura|invoice/.test(t);
+
+  const isPDF =
+    ext === 'pdf' ||
+    /busta|paga|payslip|\.pdf$/.test(name) ||
+    /busta|paga|payslip/.test(t);
+
+  if (isXML) return { key: 'invoice_xml' as const, label: 'Invoice (XML)' };
+  if (isPDF) return { key: 'payslip_pdf' as const, label: 'Payslip (PDF)' };
+  return { key: 'other' as const, label: 'Fiscal Document' };
+}
+
+function handleExport() {
+  const csvHeaders = ['File Name', 'Type', 'Date', 'Status', 'ID'];
+  // @ts-ignore
+  const docs: Doc[] = (typeof window !== 'undefined' && (window as any).__docs) ? (window as any).__docs : [];
+  const rows = docs.map((d) => {
+    // Type
+    const typeLabel = detectDocKind(d).label;
+    // Date
+    const dateStr = d.created_at || d.upload_date || d.updated_at || '';
+    const niceDate = (() => {
+      try { return dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A'; } catch { return 'Invalid Date'; }
+    })();
+    // Status
+    const status = (() => {
+      try {
+        const a = typeof d.analysis_result === 'string' ? JSON.parse(d.analysis_result) : d.analysis_result;
+        const s = a?.combined?.overall_status || d.ai_status || 'processing';
+        return s === 'error' ? 'Error' : s === 'warning' ? 'Warning' : s === 'ok' ? 'Processed' : 'Processing';
+      } catch {
+        const s = d.ai_status || 'processing';
+        return s === 'error' ? 'Error' : s === 'warning' ? 'Warning' : s === 'ok' ? 'Processed' : 'Processing';
+      }
+    })();
+
+    return [
+      d.original_filename || d.name || '',
+      typeLabel,
+      niceDate,
+      status,
+      d.id,
+    ];
+  });
+
+  const csv = [csvHeaders, ...rows].map((r) => r.map((c) => `"${c ?? ''}"`).join(',')).join('\n');
+  const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `documents_export_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- Pagina ---------- */
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,15 +127,18 @@ export default function DocumentsPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Doc | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
+
   // Editor
   const [showEditorModal, setShowEditorModal] = useState(false);
   const [documentForEdit, setDocumentForEdit] = useState<EditPacket | null>(null);
+
   // Accounting
   const [accountingData, setAccountingData] = useState<AccountingResponse | null>(null);
   const [accountingLoading, setAccountingLoading] = useState(false);
   const [showAccountingModal, setShowAccountingModal] = useState(false);
   const [accountingDocument, setAccountingDocument] = useState<Doc | null>(null);
-  const { isOpen: isViewerOpen, openViewer, closeViewer, FileViewerComponent } = useFileViewer();
+
+  const { FileViewerComponent } = useFileViewer();
   const router = useRouter();
 
   useEffect(() => {
@@ -92,7 +161,11 @@ export default function DocumentsPage() {
         return;
       }
       const data = await res.json();
-      setDocuments(Array.isArray(data) ? data : []);
+      const arr = Array.isArray(data) ? data : [];
+      setDocuments(arr);
+      // Per Export CSV globale
+      // @ts-ignore
+      if (typeof window !== 'undefined') (window as any).__docs = arr;
     } catch (err) {
       console.error('Loading error:', err);
     } finally {
@@ -109,7 +182,7 @@ export default function DocumentsPage() {
         return 'processing';
       }
     }
-    return doc.ai_status || 'processing';
+    return (doc.ai_status as any) || 'processing';
   };
 
   const getStatusBadge = (doc: Doc) => {
@@ -152,9 +225,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const getDocumentType = (doc: Doc) => {
-    return doc.type || doc.document_category || 'Fiscal Document';
-  };
+  const getDocumentType = (doc: Doc) => detectDocKind(doc).label;
 
   const handleDelete = async (docId: Doc['id']) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
@@ -173,7 +244,8 @@ export default function DocumentsPage() {
   };
 
   const handleGenerateAccounting = async (doc: Doc) => {
-    if (!doc.original_filename?.toLowerCase().endsWith('.xml')) {
+    const kind = detectDocKind(doc).key;
+    if (kind !== 'invoice_xml') {
       alert('⚠️ Accounting entries are available only for XML electronic invoices');
       return;
     }
@@ -248,11 +320,9 @@ export default function DocumentsPage() {
     const fileName = (doc.original_filename || doc.name || '').toLowerCase();
     const docType = (doc.type || '').toLowerCase();
     const ext = fileName.split('.').pop();
-    // Invoice: XML or explicit keywords
     if (ext === 'xml' || /fattura|invoice/.test(fileName) || /fattura/.test(docType)) {
       return 'fattura';
     }
-    // Payslip: must be PDF AND have keyword
     if (ext === 'pdf' && (/busta|paga|payslip/.test(fileName) || /busta/.test(docType))) {
       return 'busta_paga';
     }
@@ -267,8 +337,7 @@ export default function DocumentsPage() {
     let extracted: any = {};
     try {
       if (doc.analysis_result) {
-        const analysis =
-          typeof doc.analysis_result === 'string' ? JSON.parse(doc.analysis_result) : doc.analysis_result;
+        const analysis = typeof doc.analysis_result === 'string' ? JSON.parse(doc.analysis_result) : doc.analysis_result;
         if (type === 'fattura') {
           extracted = {
             numero: analysis?.numero || (doc as any)?.numero || '',
@@ -362,11 +431,33 @@ export default function DocumentsPage() {
     }
   };
 
+  // VIEW: usa il backend /api/documents/:id/content (inline)
   const handleViewDocument = (doc: Doc) => {
-    if (!doc.file_path) return alert('File path missing');
-    const fixed = doc.file_path.replace(/\\/g, '/');
-    const encoded = encodeURIComponent(fixed);
-    window.open(`${API}/api/files/${encoded}`);
+    if (!doc.id) return alert('File path missing');
+    window.open(`${API}/api/documents/${doc.id}/content`, '_blank');
+  };
+
+  // DOWNLOAD: usa il backend /api/documents/:id/download (attachment)
+  const handleDownloadDocument = async (doc: Doc) => {
+    try {
+      const token = localStorage.getItem('taxpilot_token');
+      const res = await fetch(`${API}/api/documents/${doc.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return alert('Download error');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.original_filename || doc.name || 'document';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert('Connection error during download');
+    }
   };
 
   const handleSaveFromViewer = async (documentId: Doc['id'], metadata: any) => {
@@ -463,16 +554,6 @@ export default function DocumentsPage() {
     setShowReportModal(true);
   };
 
-  const handleDownloadDocument = (doc: Doc) => {
-    const blob = new Blob([`Document: ${doc.original_filename || doc.name}`], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = doc.original_filename || doc.name || 'document.xml';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const filteredDocuments = useMemo(() => {
     const base = documents.filter((d) => {
       const status = getStatusFromAnalysis(d);
@@ -510,6 +591,7 @@ export default function DocumentsPage() {
             </p>
           </div>
         </div>
+
         {/* Search & Filters */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
@@ -549,6 +631,7 @@ export default function DocumentsPage() {
             </div>
           </div>
         </div>
+
         {/* Table */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 px-8 py-6 border-b border-slate-200 dark:border-slate-600">
@@ -565,6 +648,7 @@ export default function DocumentsPage() {
               </button>
             </div>
           </div>
+
           {filteredDocuments.length === 0 ? (
             <div className="p-12 text-center">
               <div className="text-6xl mb-4">📄</div>
@@ -590,86 +674,98 @@ export default function DocumentsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
-                  {filteredDocuments.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 dark:hover:from-slate-700 dark:hover:to-slate-600 transition-all duration-300">
-                      <td className="px-4 py-6">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-12 w-12">
-                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-lg">
-                              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
+                  {filteredDocuments.map((doc) => {
+                    const kind = detectDocKind(doc).key;
+                    const typeLabel = detectDocKind(doc).label;
+                    const chipClass =
+                      kind === 'invoice_xml'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : kind === 'payslip_pdf'
+                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300';
+
+                    return (
+                      <tr key={doc.id} className="hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 dark:hover:from-slate-700 dark:hover:to-slate-600 transition-all duration-300">
+                        <td className="px-4 py-6">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-12 w-12">
+                              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-lg">
+                                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div className="ml-5">
+                              <div className="text-sm font-bold text-slate-800 dark:text-white">{doc.original_filename || doc.name}</div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400">ID: #{doc.id}</div>
                             </div>
                           </div>
-                          <div className="ml-5">
-                            <div className="text-sm font-bold text-slate-800 dark:text-white">{doc.original_filename || doc.name}</div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400">ID: #{doc.id}</div>
+                        </td>
+                        <td className="px-3 py-6">
+                          <span className={`inline-flex px-4 py-2 text-sm font-bold rounded-xl ${chipClass}`}>
+                            {typeLabel}
+                          </span>
+                        </td>
+                        <td className="px-3 py-6 text-sm font-medium text-slate-700 dark:text-slate-300">
+                          {getDocumentDate(doc)}
+                        </td>
+                        <td className="px-3 py-6">
+                          {getStatusBadge(doc)}
+                        </td>
+                        <td className="px-4 py-6 text-sm font-medium">
+                          <div className="flex flex-wrap gap-1">
+                            <button
+                              onClick={() => handleViewDetail(doc)}
+                              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
+                            >
+                              📝 Detail
+                            </button>
+                            <button
+                              onClick={() => handleViewDocument(doc)}
+                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
+                            >
+                              👁️ View
+                            </button>
+                            {kind === 'invoice_xml' && (
+                              <button
+                                onClick={() => handleGenerateAccounting(doc)}
+                                className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
+                              >
+                                📊 Entries
+                              </button>
+                            )}
+                            {getStatusFromAnalysis(doc) === 'error' && (
+                              <button
+                                onClick={() => handleManualCorrect(doc)}
+                                className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
+                              >
+                                ✏️ Editor
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDownloadDocument(doc)}
+                              className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
+                            >
+                              📥 Download
+                            </button>
+                            <button
+                              onClick={() => handleDelete(doc.id)}
+                              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
+                            >
+                              🗑️ Delete
+                            </button>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-6">
-                        <span className="inline-flex px-4 py-2 text-sm font-bold rounded-xl bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 text-indigo-700 dark:text-indigo-300">
-                          {getDocumentType(doc)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-6 text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {getDocumentDate(doc)}
-                      </td>
-                      <td className="px-3 py-6">
-                        {getStatusBadge(doc)}
-                      </td>
-                      <td className="px-4 py-6 text-sm font-medium">
-                        <div className="flex space-x-1">
-                          <button
-                            onClick={() => handleViewDetail(doc)}
-                            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
-                          >
-                            📝 Detail
-                          </button>
-                          <button
-                            onClick={() => handleViewDocument(doc)}
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
-                          >
-                            👁️ View
-                          </button>
-                          {doc.original_filename?.toLowerCase().endsWith('.xml') && (
-                            <button
-                              onClick={() => handleGenerateAccounting(doc)}
-                              className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
-                            >
-                              📊 Entries
-                            </button>
-                          )}
-                          {getStatusFromAnalysis(doc) === 'error' && (
-                            <button
-                              onClick={() => handleManualCorrect(doc)}
-                              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
-                            >
-                              ✏️ Editor
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDownloadDocument(doc)}
-                            className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
-                          >
-                            📥 Download
-                          </button>
-                          <button
-                            onClick={() => handleDelete(doc.id)}
-                            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
-                          >
-                            🗑️ Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
       </div>
+
       {/* Editor modal */}
       {showEditorModal && documentForEdit && (
         <EditableDocumentForm
@@ -679,6 +775,7 @@ export default function DocumentsPage() {
           onGenerateXML={handleEditorGenerateXML}
         />
       )}
+
       {/* Accounting modal */}
       {showAccountingModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -818,6 +915,7 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
+
       {/* Detail modal */}
       {showDetailModal && selectedDocument && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -842,6 +940,7 @@ export default function DocumentsPage() {
                 <InfoCard title="📋 Type" value={getDocumentType(selectedDocument)} color="blue" />
                 <InfoCard title="📅 Date" value={getDocumentDate(selectedDocument)} color="emerald" />
               </div>
+
               {/* Status and AI Analysis */}
               <div className="mb-8">
                 <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">🤖 AI Analysis</h4>
@@ -903,6 +1002,7 @@ export default function DocumentsPage() {
                 </div>
               </div>
             </div>
+
             {/* Action Footer */}
             <div className="flex justify-end space-x-4 mt-6 pt-4 border-t border-slate-200 dark:border-slate-600">
               {getStatusFromAnalysis(selectedDocument) === 'error' && (
@@ -938,6 +1038,7 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
+
       {/* Report modal */}
       {showReportModal && selectedDocument && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1020,6 +1121,7 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
+
       {/* FileViewer Modal */}
       <FileViewerComponent onSave={handleSaveFromViewer} />
     </div>
@@ -1040,25 +1142,4 @@ function InfoCard({ title, value, color }: { title: string; value: string; color
       <p className="text-slate-800 dark:text-white font-medium">{value}</p>
     </div>
   );
-}
-
-function handleExport() {
-  const csvHeaders = ['File Name', 'Type', 'Date', 'Status', 'ID'];
-  // @ts-ignore: window.__docs is not real; this function is replaced by the button handler above.
-  const docs: Doc[] = (window as any).__docs || [];
-  const rows = docs.map((d) => [
-    d.original_filename || d.name,
-    getDocumentType(d),
-    getDocumentDate(d),
-    getStatusFromAnalysis(d) === 'error' ? 'Error' : getStatusFromAnalysis(d) === 'warning' ? 'Warning' : getStatusFromAnalysis(d) === 'ok' ? 'Processed' : 'Processing',
-    d.id,
-  ]);
-  const csv = [csvHeaders, ...rows].map((r) => r.map((c) => `"${c ?? ''}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `documents_export_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
 }
