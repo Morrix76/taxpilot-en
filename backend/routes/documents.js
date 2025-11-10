@@ -197,16 +197,16 @@ async function analyzeBustaPaga(content, options = {}) {
     // Genera messaggio user-friendly con dati estratti
     let finalMessage = '';
     if (payrollData.anagrafica.cognome_nome && payrollData.totali.lordo > 0) {
-      finalMessage = `✅ Busta paga ${payrollData.anagrafica.cognome_nome} elaborata. ` +
-                   `Lordo: €${payrollData.totali.lordo.toFixed(2)}, ` +
-                   `Netto: €${payrollData.totali.netto.toFixed(2)}, ` +
-                   `Periodo: ${payrollData.periodo.mese_anno || 'N/A'}`;
+      finalMessage = `✅ Payslip ${payrollData.anagrafica.cognome_nome} processed. ` +
+                   `Gross: €${payrollData.totali.lordo.toFixed(2)}, ` +
+                   `Net: €${payrollData.totali.netto.toFixed(2)}, ` +
+                   `Period: ${payrollData.periodo.mese_anno || 'N/A'}`;
     } else {
-      finalMessage = `⚠️ Busta paga elaborata con ${errors.length} avvisi. Verifica consigliata.`;
+      finalMessage = `⚠️ Payslip processed with ${errors.length} warnings. Review recommended.`;
     }
     
-    console.log(`📊 Busta paga: ${foundElements}/7 elementi trovati, confidence: ${confidence}`);
-    console.log(`💰 Dati estratti: Lordo €${payrollData.totali.lordo}, Netto €${payrollData.totali.netto}`);
+    console.log(`📊 Payslip: ${foundElements}/7 elements found, confidence: ${confidence}`);
+    console.log(`💰 Data extracted: Gross €${payrollData.totali.lordo}, Net €${payrollData.totali.netto}`);
     
     return {
       technical: {
@@ -229,9 +229,9 @@ async function analyzeBustaPaga(content, options = {}) {
           conformita_normativa: isValid ? "conforme" : "parzialmente_conforme",
           raccomandazione: errors.length > 0 ? "verifica" : "ok"
         },
-        note_commercialista: `Busta paga elaborata: ${payrollData.anagrafica.cognome_nome || 'Dipendente'} - ${payrollData.periodo.mese_anno || 'Periodo N/A'}. ` +
-                           `Lordo €${payrollData.totali.lordo.toFixed(2)}, contributi €${payrollData.totali.contributi_totali.toFixed(2)}, ` +
-                           `netto €${payrollData.totali.netto.toFixed(2)}. ${errors.length === 0 ? 'Documento conforme.' : 'Verificare eventuali anomalie.'}`
+        note_commercialista: `Payslip processed: ${payrollData.anagrafica.cognome_nome || 'Employee'} - ${payrollData.periodo.mese_anno || 'Period N/A'}. ` +
+                           `Gross €${payrollData.totali.lordo.toFixed(2)}, contributions €${payrollData.totali.contributi_totali.toFixed(2)}, ` +
+                           `net €${payrollData.totali.netto.toFixed(2)}. ${errors.length === 0 ? 'Document compliant.' : 'Check for any anomalies.'}`
       },
       combined: {
         overall_status: overallStatus,
@@ -328,11 +328,9 @@ async function runAnalysis(rawContent, options = {}) {
     console.log('🔧 Esecuzione analisi parser-only...');
     if (documentType === 'FATTURA_XML') {
       const parserResult = await validateFatturaElettronica(rawContent);
-      const errorCount = parserResult.technicalIssues || 0;
-      const hasErrors = errorCount > 0;
       return {
         technical: parserResult, expert: { note_commercialista: "AI unavailable - technical parser only used." },
-        combined: { overall_status: hasErrors ? 'error' : 'ok', confidence: hasErrors ? 0.6 : 0.8, flag_manual_review: hasErrors, final_message: hasErrors ? `Detected ${errorCount} technical issues in the document.` : "Technical validation passed. Document formally correct." },
+        combined: { overall_status: parserResult.isValid ? 'ok' : 'error', confidence: parserResult.isValid ? 0.8 : 0.6, flag_manual_review: parserResult.errors.length > 0, final_message: parserResult.isValid ? "Technical validation passed. Document formally correct." : `Detected ${parserResult.errors.length} technical issues in the document.` },
         metadata: { analysis_mode: 'parser_only', ai_used: false, documentType: documentType, timestamp: new Date().toISOString() }
       };
     } else {
