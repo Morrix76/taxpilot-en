@@ -361,7 +361,7 @@ function safeJSONParse(jsonString, fallback = null) {
 }
 
 // ==========================================================================
-// *** INIZIO MODIFICA: Funzione Helper di Normalizzazione ***
+// *** Funzione Helper di Normalizzazione ***
 // ==========================================================================
 
 /**
@@ -421,10 +421,6 @@ function normalizeDocument(doc) {
     original_filename: doc.original_filename || baseName
   };
 }
-
-// ==========================================================================
-// *** FINE MODIFICA: Funzione Helper di Normalizzazione ***
-// ==========================================================================
 
 
 /**
@@ -660,9 +656,6 @@ router.post(
  * @route   GET /api/documents
  * @desc    Recupera tutti i documenti.
  */
-// ==========================================================================
-// *** INIZIO MODIFICA: GET /api/documents ***
-// ==========================================================================
 router.get('/', authMiddleware, async (req, res) => {
   try {
     console.log('📋 GET /api/documents chiamato');
@@ -685,9 +678,6 @@ router.get('/', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Errore nel recupero dei dati', details: error.message });
   }
 });
-// ==========================================================================
-// *** FINE MODIFICA: GET /api/documents ***
-// ==========================================================================
 
 /**
  * @route   GET /api/documents/system/stats
@@ -707,9 +697,6 @@ router.get('/system/stats', authMiddleware, async (_req, res) => {
  * @route   GET /api/documents/:id
  * @desc    Recupera un documento specifico.
  */
-// ==========================================================================
-// *** INIZIO MODIFICA: GET /api/documents/:id ***
-// ==========================================================================
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     console.log(`📋 GET documento ID: ${req.params.id}`);
@@ -727,9 +714,6 @@ router.get('/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Errore nel recupero del dato', details: error.message });
   }
 });
-// ==========================================================================
-// *** FINE MODIFICA: GET /api/documents/:id ***
-// ==========================================================================
 
 /**
  * @route   PATCH /api/documents/:id
@@ -989,7 +973,8 @@ router.get('/:id/report', authMiddleware, async (req, res) => {
     console.log('📄 Generazione report per:', baseName);
     
     const analysisResult = safeJSONParse(document.analysis_result, {});
-  _issues = safeJSONParse(document.ai_issues, []);
+    // *** CORREZIONE 2: Rimosso '_' underscore iniziale ***
+    const aiIssues = safeJSONParse(document.ai_issues, []);
     
     const reportData = {
       // *** CONVERTED: Usa baseName ***
@@ -1078,7 +1063,7 @@ router.get('/stats/overview', authMiddleware, async (_req, res) => {
 /**
  * @route   POST /api/documents/batch/delete
  * @desc    Eliminazione batch di documenti selezionati
- */
+*/
 router.post('/batch/delete', authMiddleware, async (req, res) => {
   const { document_ids } = req.body;
   if (!document_ids || !Array.isArray(document_ids) || document_ids.length === 0) {
@@ -1204,7 +1189,8 @@ router.get('/:id/content', authMiddleware, async (req, res) => {
     
     const fileExtension = path.extname(filePath).toLowerCase();
     let contentType = 'application/octet-stream';
-  t (fileExtension === '.xml') contentType = 'application/xml';
+    // *** CORREZIONE 1: Sostituito 't' con 'if' ***
+    if (fileExtension === '.xml') contentType = 'application/xml';
     else if (fileExtension === '.pdf') contentType = 'application/pdf';
     else if (fileExtension === '.txt') contentType = 'text/plain';
     else if (fileExtension === '.json') contentType = 'application/json';
@@ -1358,13 +1344,12 @@ router.get('/liquidazioni/:periodo', authMiddleware, async (req, res) => {
     res.json({ success: true, liquidazione, summary: { periodo: liquidazione.periodo, regime: liquidazione.regime, documenti_elaborati: liquidazione.documenti.totale, iva_da_versare: liquidazione.liquidazione.ivaDaVersare, situazione: liquidazione.liquidazione.situazione, validazioni_ok: liquidazione.validazioni.valida }});
   } catch (error) {
     console.error('💥 Errore calcolo liquidazione IVA:', error);
-    res.status(500).json({ error: 'Errore durante calcolo liquidazione IVA', details: error.message });
+  tatus(500).json({ error: 'Errore durante calcolo liquidazione IVA', details: error.message });
   }
 });
 
 /**
- * @route   GET /api/liquidazioni/:periodo/csv
- * @desc    Download CSV liquidazione IVA
+A
  */
 router.get('/liquidazioni/:periodo/csv', authMiddleware, async (req, res) => {
   const { periodo } = req.params;
