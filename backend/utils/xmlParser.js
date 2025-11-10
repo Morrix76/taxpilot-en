@@ -598,6 +598,11 @@ class FatturaElettronicaValidator {
       this.validateDate(parsedData.issueDate, 'issueDate', errors);
     }
     
+    console.log(`🔍 Validation complete: ${errors.length} errors found`);
+    if (errors.length > 0) {
+      console.log('🔍 Errors:', JSON.stringify(errors, null, 2));
+    }
+    
     return errors;
   }
   
