@@ -1,6 +1,5 @@
 // frontend/app/documents/page.tsx
 'use client';
-
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EditableDocumentForm from '@/components/EditableDocumentForm';
@@ -54,75 +53,36 @@ type EditPacket = {
 
 const API = process.env.NEXT_PUBLIC_API_URL!;
 
-/* ---------- Helpers fuori dal componente ---------- */
+/* ===== Detect kind (robusto) ===== */
 function detectDocKind(doc: Doc) {
-  const name = (doc.original_filename || doc.name || '').toLowerCase();
-  const ext = name.split('.').pop() || '';
+  const candidate = (doc.file_path || doc.original_filename || doc.name || '').toLowerCase();
+  const ext = candidate.split('.').pop() || '';
   const t = (doc.type || doc.document_category || '').toLowerCase();
+  const ai = (doc.ai_analysis || doc.content || '').toLowerCase();
 
-  const isXML =
-    ext === 'xml' ||
-    /fattura|invoice|\.xml$/.test(name) ||
-    /fattura|invoice/.test(t);
+  // by extension
+  if (ext === 'xml') return { key: 'invoice_xml' as const, label: 'Invoice' };
+  if (ext === 'pdf') return { key: 'payslip_pdf' as const, label: 'Payslip' };
 
-  const isPDF =
-    ext === 'pdf' ||
-    /busta|paga|payslip|\.pdf$/.test(name) ||
-    /busta|paga|payslip/.test(t);
+  // by name/type keywords
+  if (/fattura|invoice/.test(candidate) || /fattura|invoice/.test(t))
+    return { key: 'invoice_xml' as const, label: 'Invoice' };
+  if (/busta|paga|payslip/.test(candidate) || /busta|paga|payslip/.test(t))
+    return { key: 'payslip_pdf' as const, label: 'Payslip' };
 
-  if (isXML) return { key: 'invoice_xml' as const, label: 'Invoice (XML)' };
-  if (isPDF) return { key: 'payslip_pdf' as const, label: 'Payslip (PDF)' };
+  // by AI content hints
+  if (/fatturapa|<fatturaelettronica|partita\s*iva|p\.iva|aliquota/.test(ai))
+    return { key: 'invoice_xml' as const, label: 'Invoice' };
+  if (/stipendio|inps|busta\s*paga|netto|irpef/.test(ai))
+    return { key: 'payslip_pdf' as const, label: 'Payslip' };
+
   return { key: 'other' as const, label: 'Fiscal Document' };
 }
 
-function handleExport() {
-  const csvHeaders = ['File Name', 'Type', 'Date', 'Status', 'ID'];
-  // @ts-ignore
-  const docs: Doc[] = (typeof window !== 'undefined' && (window as any).__docs) ? (window as any).__docs : [];
-  const rows = docs.map((d) => {
-    // Type
-    const typeLabel = detectDocKind(d).label;
-    // Date
-    const dateStr = d.created_at || d.upload_date || d.updated_at || '';
-    const niceDate = (() => {
-      try { return dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A'; } catch { return 'Invalid Date'; }
-    })();
-    // Status
-    const status = (() => {
-      try {
-        const a = typeof d.analysis_result === 'string' ? JSON.parse(d.analysis_result) : d.analysis_result;
-        const s = a?.combined?.overall_status || d.ai_status || 'processing';
-        return s === 'error' ? 'Error' : s === 'warning' ? 'Warning' : s === 'ok' ? 'Processed' : 'Processing';
-      } catch {
-        const s = d.ai_status || 'processing';
-        return s === 'error' ? 'Error' : s === 'warning' ? 'Warning' : s === 'ok' ? 'Processed' : 'Processing';
-      }
-    })();
-
-    return [
-      d.original_filename || d.name || '',
-      typeLabel,
-      niceDate,
-      status,
-      d.id,
-    ];
-  });
-
-  const csv = [csvHeaders, ...rows].map((r) => r.map((c) => `"${c ?? ''}"`).join(',')).join('\n');
-  const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `documents_export_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/* ---------- Pagina ---------- */
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'elaborato' | 'elaborazione' | 'errore'>('all');
+  const [filter, setFilter] = useState<'all' | 'processed' | 'processing' | 'error'>('all');
   const [search, setSearch] = useState('');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Doc | null>(null);
@@ -163,9 +123,7 @@ export default function DocumentsPage() {
       const data = await res.json();
       const arr = Array.isArray(data) ? data : [];
       setDocuments(arr);
-      // Per Export CSV globale
-      // @ts-ignore
-      if (typeof window !== 'undefined') (window as any).__docs = arr;
+      (window as any).__docs = arr; // per export
     } catch (err) {
       console.error('Loading error:', err);
     } finally {
@@ -176,7 +134,8 @@ export default function DocumentsPage() {
   const getStatusFromAnalysis = (doc: Doc): 'ok' | 'warning' | 'error' | 'processing' => {
     if (doc.analysis_result) {
       try {
-        const analysis = typeof doc.analysis_result === 'string' ? JSON.parse(doc.analysis_result) : doc.analysis_result;
+        const analysis =
+          typeof doc.analysis_result === 'string' ? JSON.parse(doc.analysis_result) : doc.analysis_result;
         return analysis?.combined?.overall_status || 'processing';
       } catch {
         return 'processing';
@@ -190,25 +149,25 @@ export default function DocumentsPage() {
     switch (status) {
       case 'ok':
         return (
-          <span className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+          <span className="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-xl bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
             ✅ Processed
           </span>
         );
       case 'warning':
         return (
-          <span className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
+          <span className="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-xl bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
             ⚠️ Valid with warnings
           </span>
         );
       case 'error':
         return (
-          <span className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+          <span className="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-xl bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
             ❌ Errors detected
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
+          <span className="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
             ⏳ Processing
           </span>
         );
@@ -249,7 +208,7 @@ export default function DocumentsPage() {
       alert('⚠️ Accounting entries are available only for XML electronic invoices');
       return;
     }
-    if (!confirm(`Do you want to generate accounting entries for ${doc.original_filename || doc.name}?`)) return;
+    if (!confirm(`Generate accounting entries for ${doc.original_filename || doc.name}?`)) return;
     setAccountingLoading(true);
     setAccountingData(null);
     setAccountingDocument(doc);
@@ -300,36 +259,10 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDownloadAccountingCSV = () => {
-    if (!accountingData?.accounting?.entries_csv) {
-      alert('No CSV data to download.');
-      return;
-    }
-    const blob = new Blob([`\ufeff${accountingData.accounting.entries_csv}`], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `entries_${accountingDocument?.original_filename || 'document'}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
   const determineDocumentType = (doc: Doc): EditPacket['type'] | null => {
-    const fileName = (doc.original_filename || doc.name || '').toLowerCase();
-    const docType = (doc.type || '').toLowerCase();
-    const ext = fileName.split('.').pop();
-    if (ext === 'xml' || /fattura|invoice/.test(fileName) || /fattura/.test(docType)) {
-      return 'fattura';
-    }
-    if (ext === 'pdf' && (/busta|paga|payslip/.test(fileName) || /busta/.test(docType))) {
-      return 'busta_paga';
-    }
-    const content = (doc.ai_analysis || doc.content || '').toLowerCase();
-    if (/iva|partita\s*iva|p\.iva/.test(content)) return 'fattura';
-    if (/stipendio|inps/.test(content)) return 'busta_paga';
-    console.warn('⚠️ Document type not recognized:', { fileName, docType, ext });
+    const kind = detectDocKind(doc).key;
+    if (kind === 'invoice_xml') return 'fattura';
+    if (kind === 'payslip_pdf') return 'busta_paga';
     return null;
   };
 
@@ -337,7 +270,8 @@ export default function DocumentsPage() {
     let extracted: any = {};
     try {
       if (doc.analysis_result) {
-        const analysis = typeof doc.analysis_result === 'string' ? JSON.parse(doc.analysis_result) : doc.analysis_result;
+        const analysis =
+          typeof doc.analysis_result === 'string' ? JSON.parse(doc.analysis_result) : doc.analysis_result;
         if (type === 'fattura') {
           extracted = {
             numero: analysis?.numero || (doc as any)?.numero || '',
@@ -412,52 +346,25 @@ export default function DocumentsPage() {
   };
 
   const handleManualCorrect = async (doc: Doc) => {
-    try {
-      const t = determineDocumentType(doc);
-      if (t !== 'fattura' && t !== 'busta_paga') {
-        alert('⚠️ Editor available only for Invoices and Payslips');
-        return;
-      }
-      const packet: EditPacket = {
-        type: t,
-        extractedData: extractDataFromDocument(doc, t),
-        originalDoc: doc,
-      };
-      setDocumentForEdit(packet);
-      setShowEditorModal(true);
-    } catch (e: any) {
-      console.error('⚠️ Error preparing editor:', e);
-      alert('Error opening editor: ' + e?.message);
+    const t = determineDocumentType(doc);
+    if (t !== 'fattura' && t !== 'busta_paga') {
+      alert('⚠️ Editor available only for Invoices and Payslips');
+      return;
     }
+    const packet: EditPacket = {
+      type: t,
+      extractedData: extractDataFromDocument(doc, t),
+      originalDoc: doc,
+    };
+    setDocumentForEdit(packet);
+    setShowEditorModal(true);
   };
 
-  // VIEW: usa il backend /api/documents/:id/content (inline)
   const handleViewDocument = (doc: Doc) => {
-    if (!doc.id) return alert('File path missing');
-    window.open(`${API}/api/documents/${doc.id}/content`, '_blank');
-  };
-
-  // DOWNLOAD: usa il backend /api/documents/:id/download (attachment)
-  const handleDownloadDocument = async (doc: Doc) => {
-    try {
-      const token = localStorage.getItem('taxpilot_token');
-      const res = await fetch(`${API}/api/documents/${doc.id}/download`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return alert('Download error');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = doc.original_filename || doc.name || 'document';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error(e);
-      alert('Connection error during download');
-    }
+    if (!doc.file_path) return alert('File path missing');
+    const fixed = doc.file_path.replace(/\\/g, '/');
+    const encoded = encodeURIComponent(fixed);
+    window.open(`${API}/api/files/${encoded}`);
   };
 
   const handleSaveFromViewer = async (documentId: Doc['id'], metadata: any) => {
@@ -554,12 +461,23 @@ export default function DocumentsPage() {
     setShowReportModal(true);
   };
 
+  const handleDownloadDocument = (doc: Doc) => {
+    const name = doc.original_filename || doc.name || `document_${doc.id}.xml`;
+    const blob = new Blob([`Document: ${name}`], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const filteredDocuments = useMemo(() => {
     const base = documents.filter((d) => {
       const status = getStatusFromAnalysis(d);
-      if (filter === 'elaborato') return status === 'ok';
-      if (filter === 'elaborazione') return status === 'processing';
-      if (filter === 'errore') return status === 'error';
+      if (filter === 'processed') return status === 'ok';
+      if (filter === 'processing') return status === 'processing';
+      if (filter === 'error') return status === 'error';
       return true;
     });
     if (!search) return base;
@@ -568,6 +486,31 @@ export default function DocumentsPage() {
       (d) => d.original_filename?.toLowerCase().includes(q) || d.name?.toLowerCase().includes(q),
     );
   }, [documents, filter, search]);
+
+  const handleExport = () => {
+    const csvHeaders = ['File Name', 'Type', 'Date', 'Status', 'ID'];
+    const rows = filteredDocuments.map((d) => [
+      d.original_filename || d.name || `Document #${d.id}`,
+      getDocumentType(d),
+      getDocumentDate(d),
+      getStatusFromAnalysis(d) === 'error'
+        ? 'Error'
+        : getStatusFromAnalysis(d) === 'warning'
+        ? 'Warning'
+        : getStatusFromAnalysis(d) === 'ok'
+        ? 'Processed'
+        : 'Processing',
+      d.id,
+    ]);
+    const csv = [csvHeaders, ...rows].map((r) => r.map((c) => `"${c ?? ''}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `documents_export_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (loading) {
     return (
@@ -615,7 +558,7 @@ export default function DocumentsPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              {(['all', 'elaborato', 'elaborazione', 'errore'] as const).map((opt) => (
+              {(['all', 'processed', 'processing', 'error'] as const).map((opt) => (
                 <button
                   key={opt}
                   onClick={() => setFilter(opt)}
@@ -625,7 +568,13 @@ export default function DocumentsPage() {
                       : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
-                  {opt === 'all' ? 'All' : opt === 'elaborato' ? 'Processed' : opt === 'elaborazione' ? 'Processing' : 'With Errors'}
+                  {opt === 'all'
+                    ? 'All'
+                    : opt === 'processed'
+                    ? 'Processed'
+                    : opt === 'processing'
+                    ? 'Processing'
+                    : 'With Errors'}
                 </button>
               ))}
             </div>
@@ -676,14 +625,7 @@ export default function DocumentsPage() {
                 <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
                   {filteredDocuments.map((doc) => {
                     const kind = detectDocKind(doc).key;
-                    const typeLabel = detectDocKind(doc).label;
-                    const chipClass =
-                      kind === 'invoice_xml'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        : kind === 'payslip_pdf'
-                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300';
-
+                    const status = getStatusFromAnalysis(doc);
                     return (
                       <tr key={doc.id} className="hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 dark:hover:from-slate-700 dark:hover:to-slate-600 transition-all duration-300">
                         <td className="px-4 py-6">
@@ -696,22 +638,22 @@ export default function DocumentsPage() {
                               </div>
                             </div>
                             <div className="ml-5">
-                              <div className="text-sm font-bold text-slate-800 dark:text-white">{doc.original_filename || doc.name}</div>
+                              <div className="text-sm font-bold text-slate-800 dark:text-white">
+                                {doc.original_filename || doc.name || `Document #${doc.id}`}
+                              </div>
                               <div className="text-xs text-slate-500 dark:text-slate-400">ID: #{doc.id}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-3 py-6">
-                          <span className={`inline-flex px-4 py-2 text-sm font-bold rounded-xl ${chipClass}`}>
-                            {typeLabel}
+                          <span className="inline-flex px-4 py-2 text-sm font-bold rounded-xl bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 text-indigo-700 dark:text-indigo-300">
+                            {getDocumentType(doc)}
                           </span>
                         </td>
                         <td className="px-3 py-6 text-sm font-medium text-slate-700 dark:text-slate-300">
                           {getDocumentDate(doc)}
                         </td>
-                        <td className="px-3 py-6">
-                          {getStatusBadge(doc)}
-                        </td>
+                        <td className="px-3 py-6">{getStatusBadge(doc)}</td>
                         <td className="px-4 py-6 text-sm font-medium">
                           <div className="flex flex-wrap gap-1">
                             <button
@@ -734,7 +676,7 @@ export default function DocumentsPage() {
                                 📊 Entries
                               </button>
                             )}
-                            {getStatusFromAnalysis(doc) === 'error' && (
+                            {status === 'error' && (
                               <button
                                 onClick={() => handleManualCorrect(doc)}
                                 className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 text-xs"
@@ -821,13 +763,24 @@ export default function DocumentsPage() {
                   <div className="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 text-green-800 dark:text-green-300 p-4 rounded-r-lg mb-6">
                     <h4 className="font-bold text-lg">✅ {accountingData.message}</h4>
                     <p className="text-sm mt-1">
-                      Document: <strong>{accountingDocument?.original_filename}</strong> • Generated rows:{' '}
+                      Document: <strong>{accountingDocument?.original_filename || accountingDocument?.name}</strong> • Generated rows:{' '}
                       <strong>{accountingData.accounting?.entries_count}</strong>
                     </p>
                   </div>
                   <div className="mb-6">
                     <button
-                      onClick={handleDownloadAccountingCSV}
+                      onClick={() => {
+                        if (!accountingData?.accounting?.entries_csv) return alert('No CSV data to download.');
+                        const blob = new Blob([`\ufeff${accountingData.accounting.entries_csv}`], { type: 'text/csv;charset=utf-8;' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `entries_${accountingDocument?.original_filename || 'document'}.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                      }}
                       className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg"
                     >
                       💾 Download CSV for ERP
@@ -933,6 +886,7 @@ export default function DocumentsPage() {
                 </svg>
               </button>
             </div>
+
             <div className="overflow-y-auto flex-grow">
               {/* Header Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -957,7 +911,13 @@ export default function DocumentsPage() {
                 >
                   <div className="flex items-center mb-4">
                     <span className="text-2xl mr-3">
-                      {getStatusFromAnalysis(selectedDocument) === 'error' ? '❌' : getStatusFromAnalysis(selectedDocument) === 'warning' ? '⚠️' : getStatusFromAnalysis(selectedDocument) === 'ok' ? '✅' : '⏳'}
+                      {getStatusFromAnalysis(selectedDocument) === 'error'
+                        ? '❌'
+                        : getStatusFromAnalysis(selectedDocument) === 'warning'
+                        ? '⚠️'
+                        : getStatusFromAnalysis(selectedDocument) === 'ok'
+                        ? '✅'
+                        : '⏳'}
                     </span>
                     <h5
                       className={`text-xl font-bold ${
@@ -992,7 +952,10 @@ export default function DocumentsPage() {
                   >
                     {(() => {
                       try {
-                        const analysis = typeof selectedDocument.analysis_result === 'string' ? JSON.parse(selectedDocument.analysis_result) : selectedDocument.analysis_result;
+                        const analysis =
+                          typeof selectedDocument.analysis_result === 'string'
+                            ? JSON.parse(selectedDocument.analysis_result)
+                            : selectedDocument.analysis_result;
                         return analysis?.combined?.final_message || 'Analysis result not available.';
                       } catch {
                         return 'Analysis result not available.';
@@ -1066,33 +1029,9 @@ export default function DocumentsPage() {
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Engine: TaxPilot Assistant v2.1</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  AI Status: {getStatusFromAnalysis(selectedDocument)} | Confidence: {Math.round((selectedDocument.ai_confidence || 0.85) * 100)}%
+                  AI Status: {getStatusFromAnalysis(selectedDocument)} | Confidence:{' '}
+                  {Math.round((selectedDocument.ai_confidence || 0.85) * 100)}%
                 </p>
-              </div>
-              <div className="mt-8 p-6 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600">
-                <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">📋 Overall Outcome</h4>
-                {getStatusFromAnalysis(selectedDocument) === 'error' ? (
-                  <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-400 p-4 rounded-r-lg">
-                    <p className="text-red-800 dark:text-red-300 font-medium">❌ Document contains errors to correct</p>
-                    <p className="text-sm text-red-700 dark:text-red-300 mt-2">
-                      AI analysis detected issues in the document requiring attention. Use manual editor or AI automatic correction.
-                    </p>
-                  </div>
-                ) : getStatusFromAnalysis(selectedDocument) === 'warning' ? (
-                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4 rounded-r-lg">
-                    <p className="text-yellow-800 dark:text-yellow-300 font-medium">⚠️ Document valid with warnings</p>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
-                      The document is compliant but contains minor warnings that can be reviewed.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-400 p-4 rounded-r-lg">
-                    <p className="text-green-800 dark:text-green-300 font-medium">✅ Document fully compliant with regulations</p>
-                    <p className="text-sm text-green-700 dark:text-green-300 mt-2">
-                      All automatic checks passed successfully. The document is compliant with DM 55/2013.
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
             <div className="flex justify-end space-x-4 mt-6 pt-4 border-t border-slate-200 dark:border-slate-600">
@@ -1131,8 +1070,10 @@ export default function DocumentsPage() {
 /* ---------- Small UI helper ---------- */
 function InfoCard({ title, value, color }: { title: string; value: string; color: 'indigo' | 'blue' | 'emerald' }) {
   const map = {
-    indigo: 'from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400',
-    blue: 'from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400',
+    indigo:
+      'from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400',
+    blue:
+      'from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400',
     emerald:
       'from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 border-emerald-200 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400',
   } as const;
