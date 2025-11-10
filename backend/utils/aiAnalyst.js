@@ -1,19 +1,34 @@
 /**
  * 🤖 AI ANALYST - CONSULENTE FISCALE INTELLIGENTE
- * 
- * Analizza i risultati del parser tecnico e fornisce:
  * - Spiegazioni umane degli errori
- * - Suggerimenti di correzione step-by-step
- * - Priorità di intervento
- * - Valutazione impatto fiscale
+ * - Suggerimenti step-by-step
+ * - Priorità, impatto, prossimi passi
+ * - Safe per Vercel/Railway: nessun throw se manca GROQ_API_KEY
  */
 
 import Groq from 'groq-sdk';
 
 export class AIDocumentAnalyst {
   constructor(apiKey) {
-    this.groq = new Groq({ apiKey: apiKey || process.env.GROQ_API_KEY });
-    this.model = 'llama3-8b-8192'; // AGGIORNATO: nuovo modello supportato
+    // Lettura chiave in modo sicuro
+    const envKey = (process.env.GROQ_API_KEY || '').trim();
+    this.apiKey = (apiKey || envKey || '').trim();
+
+    this.model = 'llama3-8b-8192'; // mantieni il tuo modello
+    this.groq = null;
+
+    // Instanzia solo se c'è la chiave; non lanciare mai qui
+    if (this.apiKey) {
+      try {
+        this.groq = new Groq({ apiKey: this.apiKey });
+        console.log('✅ AIDocumentAnalyst: AI abilitata (Groq key presente)');
+      } catch (e) {
+        console.error('⚠️ AIDocumentAnalyst: init Groq fallito:', e?.message);
+        this.groq = null;
+      }
+    } else {
+      console.log('ℹ️ AIDocumentAnalyst: AI disabilitata (manca GROQ_API_KEY)');
+    }
   }
 
   /**
@@ -21,42 +36,51 @@ export class AIDocumentAnalyst {
    */
   async analyzeWithContext(parserResults, xmlContent, documentInfo = {}) {
     try {
-      // 1. Genera prompt strutturato
+      // Se AI non disponibile → fallback immediato
+      if (!this.groq) {
+        return this.getFallbackAnalysis(parserResults);
+      }
+
+      // 1) Prompt
       const prompt = this.buildAnalysisPrompt(parserResults, documentInfo);
-      
-      // 2. Chiamata AI
+
+      // 2) Chiamata AI
       const aiResponse = await this.callGroqAPI(prompt);
-      
-      // 3. Parse e validazione risposta
+
+      // 3) Parse risposta
       const analysis = this.parseAIResponse(aiResponse);
-      
-      // 4. Combina con dati parser
+
+      // 4) Merge
       return this.combineResults(parserResults, analysis);
-      
     } catch (error) {
-      console.error('🤖 AI Analyst Error:', error);
+      console.error('🤖 AI Analyst Error:', error?.message || error);
       return this.getFallbackAnalysis(parserResults);
     }
   }
 
   /**
-   * Costruisce prompt specifico per l'analisi
+   * Costruisce prompt specifico
    */
   buildAnalysisPrompt(parserResults, documentInfo) {
     const { status, errors, warnings, details, summary } = parserResults;
-    
+
     return `
 RUOLO: Sei un COMMERCIALISTA ESPERTO specializzato in fatturazione elettronica italiana.
 
 CONTESTO CONTROLLI TECNICI:
-${JSON.stringify({
-  status: status,
-  errori_critici: errors.length,
-  avvertenze: warnings.length,
-  dettagli_errori: errors.map(e => ({ codice: e.code, messaggio: e.message })),
-  dettagli_avvertenze: warnings.map(w => ({ codice: w.code, messaggio: w.message })),
-  risultati_validazione: details
-}, null, 2)}
+${JSON.stringify(
+  {
+    status,
+    errori_critici: errors.length,
+    avvertenze: warnings.length,
+    dettagli_errori: errors.map((e) => ({ codice: e.code, messaggio: e.message })),
+    dettagli_avvertenze: warnings.map((w) => ({ codice: w.code, messaggio: w.message })),
+    risultati_validazione: details,
+    documento: documentInfo || {}
+  },
+  null,
+  2
+)}
 
 COMPITO: Fornisci un'analisi PROFESSIONALE e ACTIONABLE in formato JSON:
 
@@ -71,102 +95,96 @@ COMPITO: Fornisci un'analisi PROFESSIONALE e ACTIONABLE in formato JSON:
     {
       "codice": "codice_errore",
       "titolo": "Nome errore comprensibile",
-      "spiegazione": "Cosa significa questo errore in termini pratici",
+      "spiegazione": "Cosa significa in pratica",
       "conseguenze": "Cosa succede se non lo correggi",
       "soluzione": "Come correggere step-by-step",
       "urgenza": 1-10,
       "tempo_stimato": "5 minuti|30 minuti|1 ora|etc"
     }
   ],
-  "suggerimenti_pratici": [
-    "Suggerimento pratico 1",
-    "Suggerimento pratico 2"
-  ],
+  "suggerimenti_pratici": ["Suggerimento 1", "Suggerimento 2"],
   "valutazione_rischio": {
     "rischio_rigetto_sdi": "basso|medio|alto",
     "rischio_sanzioni": "nullo|basso|medio|alto",
     "rischio_controlli": "basso|medio|alto"
   },
-  "prossimi_passi": [
-    "Azione 1 da fare subito",
-    "Azione 2 da fare dopo",
-    "Azione 3 per il futuro"
-  ],
-  "note_commercialista": "Commento professionale aggiuntivo se necessario"
+  "prossimi_passi": ["Azione 1", "Azione 2", "Azione 3"],
+  "note_commercialista": "Commento aggiuntivo se serve"
 }
 
-REGOLE IMPORTANTI:
-- Se NON ci sono errori, status="ok" → analisi POSITIVA
-- Se status="error" → analisi CRITICA con soluzioni concrete
-- Se status="warning" → analisi EQUILIBRATA con suggerimenti
-- Sii SPECIFICO: non dire "controlla i dati" ma "verifica che la P.IVA sia nel formato IT12345678901"
-- Usa linguaggio PROFESSIONALE ma COMPRENSIBILE
-- Ogni errore DEVE avere una soluzione pratica
-- Stima tempi realistici per le correzioni
-- Considera il contesto della normativa italiana
-
-RISPOSTA (solo JSON valido, nessun altro testo):`;
+REGOLE:
+- Se status="ok" → analisi positiva
+- Se status="error" → analisi critica con soluzioni concrete
+- Se status="warning" → analisi equilibrata con suggerimenti
+- Sii specifico (es: "P.IVA formato IT12345678901")
+- Rispondi SOLO con JSON valido (nessun testo fuori JSON)
+RISPOSTA:`;
   }
 
   /**
-   * Chiamata API Groq
+   * Chiamata API Groq (guardata)
    */
   async callGroqAPI(prompt) {
+    if (!this.groq) {
+      throw new Error('AI_DISABLED');
+    }
+
     const completion = await this.groq.chat.completions.create({
       messages: [
         {
-          role: "system",
-          content: "Sei un commercialista esperto in fatturazione elettronica italiana. Rispondi SOLO con JSON valido, senza markup o commenti."
+          role: 'system',
+          content:
+            'Sei un commercialista esperto in fatturazione elettronica italiana. Rispondi SOLO con JSON valido, senza markup o commenti.'
         },
-        {
-          role: "user", 
-          content: prompt
-        }
+        { role: 'user', content: prompt }
       ],
       model: this.model,
-      temperature: 0.1, // Bassa creatività per consistenza
+      temperature: 0.1,
       max_tokens: 4000
     });
 
-    return completion.choices[0]?.message?.content || '';
+    const content = completion?.choices?.[0]?.message?.content || '';
+    if (!content) throw new Error('EMPTY_AI_RESPONSE');
+    return content;
   }
 
   /**
-   * Parse e validazione risposta AI
+   * Parse e validazione
    */
   parseAIResponse(aiResponse) {
     try {
-      // Rimuovi eventuali markup
       const cleanResponse = aiResponse
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .replace(/^[^{]*/g, '')
-        .replace(/[^}]*$/g, '');
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/g, '')
+        .trim();
 
-      const parsed = JSON.parse(cleanResponse);
-      
-      // Validazione struttura base
-      if (!parsed.analisi_generale || !parsed.errori_prioritizzati) {
-        throw new Error('Struttura risposta AI incompleta');
+      // Trova il primo JSON valido anche se c’è rumore
+      const firstBrace = cleanResponse.indexOf('{');
+      const lastBrace = cleanResponse.lastIndexOf('}');
+      if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+        throw new Error('NO_JSON_FOUND');
+      }
+
+      const jsonSlice = cleanResponse.slice(firstBrace, lastBrace + 1);
+      const parsed = JSON.parse(jsonSlice);
+
+      if (!parsed.analisi_generale || !Array.isArray(parsed.errori_prioritizzati)) {
+        throw new Error('INVALID_AI_STRUCTURE');
       }
 
       return parsed;
-      
     } catch (error) {
-      console.error('🤖 Parse AI Response Error:', error);
-      console.error('🤖 Raw Response:', aiResponse);
-      
-      // Fallback con analisi base
+      console.error('🤖 Parse AI Response Error:', error?.message || error);
+      console.error('🤖 Raw Response (truncated):', String(aiResponse).slice(0, 500));
       return this.getBasicAnalysis(aiResponse);
     }
   }
 
   /**
-   * Combina risultati parser + AI
+   * Merge parser + AI
    */
   combineResults(parserResults, aiAnalysis) {
     return {
-      // Dati tecnici dal parser
       technical: {
         status: parserResults.status,
         isValid: parserResults.isValid,
@@ -175,11 +193,7 @@ RISPOSTA (solo JSON valido, nessun altro testo):`;
         details: parserResults.details,
         summary: parserResults.summary
       },
-      
-      // Analisi esperta dall'AI
       expert: aiAnalysis,
-      
-      // Combinazione intelligente
       combined: {
         overall_status: this.determineOverallStatus(parserResults, aiAnalysis),
         confidence: this.calculateConfidence(parserResults, aiAnalysis),
@@ -188,81 +202,39 @@ RISPOSTA (solo JSON valido, nessun altro testo):`;
         estimated_fix_time: this.estimateFixTime(aiAnalysis),
         compliance_score: this.calculateComplianceScore(parserResults, aiAnalysis)
       },
-      
-      // Metadati
       metadata: {
         analysis_timestamp: new Date().toISOString(),
         parser_version: '1.0.0',
-        ai_model: this.model,
+        ai_model: this.groq ? this.model : 'disabled',
+        ai_used: !!this.groq,
         processing_time: Date.now()
       }
     };
   }
 
-  /**
-   * Determina status complessivo
-   */
   determineOverallStatus(parserResults, aiAnalysis) {
-    // Parser ha priorità per errori tecnici
     if (parserResults.status === 'error') return 'error';
-    
-    // AI può degradare da ok a warning
-    if (aiAnalysis.analisi_generale?.raccomandazione === 'revisiona_approfondita') {
-      return 'warning';
-    }
-    
-    if (aiAnalysis.analisi_generale?.raccomandazione === 'correggi') {
-      return 'error';
-    }
-    
+    if (aiAnalysis.analisi_generale?.raccomandazione === 'revisiona_approfondita') return 'warning';
+    if (aiAnalysis.analisi_generale?.raccomandazione === 'correggi') return 'error';
     return parserResults.status;
   }
 
-  /**
-   * Calcola livello di confidenza
-   */
   calculateConfidence(parserResults, aiAnalysis) {
-    let confidence = 0.5; // Base
-    
-    // Parser deterministico aumenta confidenza
-    if (parserResults.isValid) {
-      confidence += 0.3;
-    }
-    
-    // Pochi errori = maggiore confidenza
-    if (parserResults.errors.length === 0) {
-      confidence += 0.15;
-    } else if (parserResults.errors.length <= 2) {
-      confidence += 0.05;
-    }
-    
-    // AI analysis quality
-    if (aiAnalysis.analisi_generale?.gravita_complessiva <= 3) {
-      confidence += 0.05;
-    }
-    
-    return Math.min(confidence, 0.99); // Max 99%
+    let confidence = 0.5;
+    if (parserResults.isValid) confidence += 0.3;
+    if (parserResults.errors.length === 0) confidence += 0.15;
+    else if (parserResults.errors.length <= 2) confidence += 0.05;
+    if (aiAnalysis.analisi_generale?.gravita_complessiva <= 3) confidence += 0.05;
+    return Math.min(confidence, 0.99);
   }
 
-  /**
-   * Determina se richiede revisione manuale
-   */
   shouldFlagForReview(parserResults, aiAnalysis) {
-    // Errori critici sempre in revisione
     if (parserResults.summary?.criticalIssues > 0) return true;
-    
-    // AI raccomanda revisione
     if (aiAnalysis.analisi_generale?.raccomandazione === 'revisiona_approfondita') return true;
-    
-    // Rischio alto
     if (aiAnalysis.valutazione_rischio?.rischio_rigetto_sdi === 'alto') return true;
-    
     return false;
   }
 
-  /**
-   * Determina livello priorità
-   */
   determinePriorityLevel(parserResults, aiAnalysis) {
     if (parserResults.errors.length === 0) return 'low';
     if (parserResults.summary?.criticalIssues > 0) return 'critical';
@@ -270,113 +242,85 @@ RISPOSTA (solo JSON valido, nessun altro testo):`;
     return 'medium';
   }
 
-  /**
-   * Stima tempo correzione
-   */
   estimateFixTime(aiAnalysis) {
     const errori = aiAnalysis.errori_prioritizzati || [];
     if (errori.length === 0) return '0 minuti';
-    
-    // Somma tempi stimati
-    const tempiTotali = errori.reduce((acc, errore) => {
-      const tempo = errore.tempo_stimato || '5 minuti';
-      const minuti = parseInt(tempo.match(/\d+/)?.[0] || '5');
-      return acc + minuti;
+    const minutiTot = errori.reduce((acc, e) => {
+      const m = parseInt(String(e.tempo_stimato || '5').match(/\d+/)?.[0] || '5', 10);
+      return acc + m;
     }, 0);
-    
-    if (tempiTotali < 60) return `${tempiTotali} minuti`;
-    return `${Math.ceil(tempiTotali / 60)} ore`;
+    return minutiTot < 60 ? `${minutiTot} minuti` : `${Math.ceil(minutiTot / 60)} ore`;
   }
 
-  /**
-   * Calcola score conformità
-   */
   calculateComplianceScore(parserResults, aiAnalysis) {
     let score = 100;
-    
-    // Penalità errori
     score -= parserResults.errors.length * 15;
     score -= parserResults.warnings.length * 5;
-    
-    // Bonus conformità AI
-    if (aiAnalysis.analisi_generale?.conformita_sdi === 'conforme') {
-      score += 10;
-    }
-    
+    if (aiAnalysis.analisi_generale?.conformita_sdi === 'conforme') score += 10;
     return Math.max(score, 0);
   }
 
-  /**
-   * Analisi di fallback se AI fallisce
-   */
+  // ---------- Fallbacks ----------
   getFallbackAnalysis(parserResults) {
     const hasErrors = parserResults.errors.length > 0;
     const hasWarnings = parserResults.warnings.length > 0;
-    
+
     return this.combineResults(parserResults, {
       analisi_generale: {
-        gravita_complessiva: hasErrors ? 8 : (hasWarnings ? 4 : 2),
-        impatto_fiscale: hasErrors ? 'alto' : (hasWarnings ? 'medio' : 'basso'),
+        gravita_complessiva: hasErrors ? 8 : hasWarnings ? 4 : 2,
+        impatto_fiscale: hasErrors ? 'alto' : hasWarnings ? 'medio' : 'basso',
         conformita_sdi: hasErrors ? 'non_conforme' : 'conforme',
-        raccomandazione: hasErrors ? 'correggi' : (hasWarnings ? 'revisiona' : 'approva')
+        raccomandazione: hasErrors ? 'correggi' : hasWarnings ? 'revisiona' : 'approva'
       },
-      errori_prioritizzati: parserResults.errors.map(error => ({
+      errori_prioritizzati: parserResults.errors.map((error) => ({
         codice: error.code,
         titolo: error.message,
-        spiegazione: "Errore rilevato dal controllo automatico",
-        conseguenze: "Potrebbe causare problemi nell'invio",
-        soluzione: "Verificare e correggere il dato indicato",
+        spiegazione: 'Errore rilevato dal controllo automatico',
+        conseguenze: 'Potrebbe causare problemi nell’invio',
+        soluzione: 'Verificare e correggere il dato indicato',
         urgenza: 7,
-        tempo_stimato: "15 minuti"
+        tempo_stimato: '15 minuti'
       })),
       suggerimenti_pratici: [
-        "Verificare tutti i campi obbligatori",
-        "Controllare i calcoli matematici",
-        "Validare codici fiscali e partite IVA"
+        'Verificare i campi obbligatori',
+        'Controllare i calcoli',
+        'Validare CF e P.IVA'
       ],
       valutazione_rischio: {
         rischio_rigetto_sdi: hasErrors ? 'alto' : 'basso',
         rischio_sanzioni: hasErrors ? 'medio' : 'nullo',
         rischio_controlli: 'basso'
       },
-      prossimi_passi: [
-        "Correggere gli errori evidenziati",
-        "Ricontrollare il documento",
-        "Procedere con l'invio"
-      ],
-      note_commercialista: "Analisi automatica - consultare un professionista per casi complessi"
+      prossimi_passi: ['Correggere gli errori', 'Ricontrollare il documento', 'Procedere con l’invio'],
+      note_commercialista: 'Analisi automatica (AI non disponibile)'
     });
   }
 
-  /**
-   * Analisi base da testo grezzo (se JSON parse fallisce)
-   */
   getBasicAnalysis(rawResponse) {
-    const hasErrorKeywords = /errore|critico|problema|rigetto/i.test(rawResponse);
-    const hasWarningKeywords = /attenzione|verifica|controlla/i.test(rawResponse);
-    
+    const hasError = /errore|critico|problema|rigetto/i.test(rawResponse || '');
+    const hasWarn = /attenzione|verifica|controlla/i.test(rawResponse || '');
     return {
       analisi_generale: {
-        gravita_complessiva: hasErrorKeywords ? 7 : 3,
-        impatto_fiscale: hasErrorKeywords ? 'alto' : 'basso',
-        conformita_sdi: hasErrorKeywords ? 'dubbioso' : 'conforme',
-        raccomandazione: hasErrorKeywords ? 'correggi' : 'approva'
+        gravita_complessiva: hasError ? 7 : 3,
+        impatto_fiscale: hasError ? 'alto' : 'basso',
+        conformita_sdi: hasError ? 'dubbioso' : 'conforme',
+        raccomandazione: hasError ? 'correggi' : 'approva'
       },
       errori_prioritizzati: [],
-      suggerimenti_pratici: [rawResponse.substring(0, 200)],
+      suggerimenti_pratici: [String(rawResponse || '').slice(0, 200)],
       valutazione_rischio: {
-        rischio_rigetto_sdi: hasErrorKeywords ? 'medio' : 'basso',
+        rischio_rigetto_sdi: hasError ? 'medio' : 'basso',
         rischio_sanzioni: 'basso',
         rischio_controlli: 'basso'
       },
-      prossimi_passi: ["Verificare il documento manualmente"],
-      note_commercialista: "Analisi AI parziale - richiesta revisione manuale"
+      prossimi_passi: ['Verificare manualmente il documento'],
+      note_commercialista: 'Analisi AI parziale - richiede revisione'
     };
   }
 }
 
-// Export per uso diretto
+// Export helper
 export const analyzeDocumentWithAI = async (parserResults, xmlContent, apiKey) => {
   const analyst = new AIDocumentAnalyst(apiKey);
-  return await analyst.analyzeWithContext(parserResults, xmlContent);
+  return analyst.analyzeWithContext(parserResults, xmlContent);
 };
