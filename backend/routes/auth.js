@@ -50,14 +50,10 @@ router.post('/register', async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
     
-    // FIX: Aggiungi trial_end_date (30 giorni da ora)
-    const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 30);
-    const trialEndISO = trialEndDate.toISOString();
-    
+    // FIX: Inserisci solo email e password (le altre colonne non esistono)
     const insertResult = await db.execute({
-      sql: 'INSERT INTO users (email, password, trial_end_date, subscription_status) VALUES (?, ?, ?, ?)',
-      args: [email, hashedPassword, trialEndISO, 'trial']
+      sql: 'INSERT INTO users (email, password) VALUES (?, ?)',
+      args: [email, hashedPassword]
     });
     
     const newUserId = Number(insertResult.lastInsertRowid);
