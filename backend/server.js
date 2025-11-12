@@ -32,13 +32,21 @@ function requireEnv(keys) {
   console.log('✅ All required environment variables present');
 }
 
-// Validate critical env vars
+// Validate critical env vars (only database and auth)
 requireEnv([
   'TURSO_DATABASE_URL',
   'TURSO_AUTH_TOKEN',
-  'GROQ_API_KEY',
   'JWT_SECRET'
 ]);
+
+// ====== OPTIONAL ENV WARNING ======
+// GROQ_API_KEY is optional - server works without it (AI disabled)
+if (!process.env.GROQ_API_KEY) {
+  console.warn('⚠️  WARNING: GROQ_API_KEY not found - AI document analysis will be disabled');
+  console.warn('   Documents will be processed with technical parser only\n');
+} else {
+  console.log('✅ GROQ_API_KEY found - AI analysis enabled');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -128,19 +136,20 @@ app.get('/healthz', (req, res) => {
   const envStatus = {
     TURSO_DATABASE_URL: !!process.env.TURSO_DATABASE_URL,
     TURSO_AUTH_TOKEN: !!process.env.TURSO_AUTH_TOKEN,
-    GROQ_API_KEY: !!process.env.GROQ_API_KEY,
     JWT_SECRET: !!process.env.JWT_SECRET,
+    GROQ_API_KEY: !!process.env.GROQ_API_KEY, // Optional - AI disabled if missing
     PORT: !!process.env.PORT,
     NODE_ENV: process.env.NODE_ENV || 'development'
   };
   
-  const allPresent = Object.entries(envStatus)
-    .filter(([key]) => key !== 'NODE_ENV' && key !== 'PORT')
-    .every(([, value]) => value === true);
+  // Only check REQUIRED env vars (GROQ_API_KEY is optional)
+  const requiredEnvs = ['TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN', 'JWT_SECRET'];
+  const allRequiredPresent = requiredEnvs.every(key => envStatus[key] === true);
   
-  res.status(allPresent ? 200 : 503).json({
-    ok: allPresent,
+  res.status(allRequiredPresent ? 200 : 503).json({
+    ok: allRequiredPresent,
     has: envStatus,
+    ai_enabled: envStatus.GROQ_API_KEY,
     time: new Date().toISOString(),
     version: '3.7.0-turso',
     uptime: process.uptime()
