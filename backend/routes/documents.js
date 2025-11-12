@@ -87,8 +87,8 @@ const accountingService = new AccountingService();
 /**
  * Estrae testo da XML o PDF
  */
-async function readFileContent(file) {
-  const buffer = await fs.readFile(file.path);
+async function readFileContent(file, bufferOverride = null) {
+  const buffer = bufferOverride || await fs.readFile(file.path);
   const extension = path.extname(file.originalname).toLowerCase();
 
   console.log(`📖 Lettura contenuto da: ${file.path}`);
@@ -130,6 +130,43 @@ async function readFileContent(file) {
   }
 
   throw new Error('FILE_TYPE_UNSUPPORTED');
+}
+
+function getDocumentFilename(document) {
+  return document.original_filename || path.basename(document.file_path || 'documento');
+}
+
+async function getDocumentBuffer(document) {
+  if (document.file_content) {
+    try {
+      return Buffer.from(document.file_content, 'base64');
+    } catch (error) {
+      console.error(`❌ Errore decodifica contenuto per documento ${document.id}:`, error.message);
+    }
+  }
+
+  if (document.file_path) {
+    try {
+      const legacyPath = path.join(UPLOADS_DIR, document.file_path);
+      return await fs.readFile(legacyPath);
+    } catch (error) {
+      console.warn(`⚠️ Contenuto legacy non trovato per documento ${document.id}:`, error.message);
+    }
+  }
+
+  return null;
+}
+
+function bufferToDocumentString(buffer, filename, mimeType) {
+  const extension = path.extname(filename || '').toLowerCase();
+  if (extension === '.xml' || mimeType === 'application/xml' || mimeType === 'text/xml') {
+    return buffer.toString('utf8');
+  }
+  if (extension === '.json' || mimeType === 'application/json') {
+    return buffer.toString('utf8');
+  }
+  // Default fallback
+  return buffer.toString('utf8');
 }
 
 /**
@@ -486,7 +523,8 @@ router.post(
     const startTime = Date.now();
 
     try {
-      const rawContent = await readFileContent(req.file);
+      const fileBuffer = await fs.readFile(req.file.path);
+      const rawContent = await readFileContent(req.file, fileBuffer);
       console.log('📄 Contenuto estratto, lunghezza:', rawContent.length);
 
       console.log('🔍 Avvio classificazione automatica...');
@@ -512,13 +550,17 @@ router.post(
       const analysisResult = await runAnalysis(rawContent, analysisOptions);
       console.log('🤖 Analisi completata:', analysisResult.combined?.overall_status);
 
+      const fileContentBase64 = fileBuffer.toString('base64');
+
       // *** CONVERTED: Rimossi i campi 'name' e 'original_filename' ***
       const documentData = {
         user_id: userId,
         type: analysisResult.metadata?.documentTypeDetected || classificationResult.category,
+        original_filename: req.file.originalname,
         file_path: classificationResult.file_path,
         file_size: req.file.size,
         mime_type: req.file.mimetype,
+        file_content: fileContentBase64,
         ai_analysis: analysisResult.combined?.final_message || 'Analisi completata',
         ai_status: analysisResult.combined?.overall_status || 'ok',
         ai_confidence: analysisResult.combined?.confidence || 0.8,
@@ -707,17 +749,20 @@ router.put('/:id/fix', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Documento non trovato' });
     }
     
-    // *** CONVERTED: Fallback dal file_path ***
+    // *** FIXED: Read from database instead of filesystem ***
     const baseName = path.basename(document.file_path || 'documento');
     console.log('✅ Step 2 OK: Documento trovato:', baseName);
 
-    console.log('🔧 Step 3: Costruisco percorso file...');
-    const filePath = path.join(UPLOADS_DIR, document.file_path);
-    console.log('📁 Step 3: Percorso completo:', filePath);
+    console.log('🔧 Step 3: Leggo contenuto da database...');
+    const buffer = await getDocumentBuffer(document);
+    if (!buffer) {
+      console.error('❌ Step 3 FALLITO: Contenuto documento non disponibile');
+      return res.status(404).json({ error: 'Contenuto documento non disponibile', code: 'CONTENT_NOT_FOUND' });
+    }
 
-    console.log('🔧 Step 4: Leggo contenuto file...');
-    let xmlContent = await fs.readFile(filePath, 'utf8');
-    console.log('✅ Step 4 OK: File letto, lunghezza:', xmlContent.length);
+    console.log('🔧 Step 4: Converto contenuto...');
+    let xmlContent = bufferToDocumentString(buffer, baseName, document.mime_type);
+    console.log('✅ Step 4 OK: Contenuto letto, lunghezza:', xmlContent.length);
 
     console.log('🔧 Step 5: Applico correzioni...');
     let corrections = [];
@@ -744,11 +789,11 @@ router.put('/:id/fix', authMiddleware, async (req, res) => {
     }
     console.log('✅ Step 5 OK: Correzioni applicate:', corrections);
 
-    console.log('🔧 Step 6: Salvo file corretto...');
-    const correctedFileName = `corrected-${Date.now()}-${document.file_path}`;
-    const correctedPath = path.join(UPLOADS_DIR, correctedFileName);
-    await fs.writeFile(correctedPath, xmlContent);
-    console.log('✅ Step 6 OK: File salvato come:', correctedFileName);
+    console.log('🔧 Step 6: Salvo file corretto in database...');
+    const correctedFileName = `corrected-${Date.now()}-${baseName}`;
+    const correctedBuffer = Buffer.from(xmlContent, 'utf8');
+    const correctedContentBase64 = correctedBuffer.toString('base64');
+    console.log('✅ Step 6 OK: File preparato per salvataggio:', correctedFileName);
 
     console.log('🔧 Step 7: Ri-analizzo documento...');
     // *** CONVERTED: Usa baseName per runAnalysis ***
@@ -758,6 +803,7 @@ router.put('/:id/fix', authMiddleware, async (req, res) => {
     console.log('🔧 Step 8: Aggiorno database...');
     const updateData = {
       file_path: String(correctedFileName),
+      file_content: correctedContentBase64,
       ai_analysis: '✅ Documento corretto automaticamente dall\'AI. Tutti gli errori sono stati risolti.',
       ai_status: 'ok',
       ai_confidence: 0.95,
@@ -797,16 +843,18 @@ router.put('/:id/reanalyze', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Documento non trovato' });
     }
     
-    // *** CONVERTED: Fallback dal file_path ***
+    // *** FIXED: Read from database instead of filesystem ***
     const baseName = path.basename(document.file_path || 'documento');
     console.log('📄 Ri-analisi per:', baseName);
 
-    const filePath = path.join(UPLOADS_DIR, document.file_path);
-    await fs.access(filePath).catch(() => { throw new Error('File fisico non trovato'); });
+    const buffer = await getDocumentBuffer(document);
+    if (!buffer) {
+      throw new Error('Contenuto documento non disponibile');
+    }
     
     console.log('🤖 Avvio ri-analisi AI...');
-    let fileContent = await fs.readFile(filePath, 'utf8');
-    console.log('📖 File letto, lunghezza:', fileContent.length);
+    let fileContent = bufferToDocumentString(buffer, baseName, document.mime_type);
+    console.log('📖 Contenuto letto, lunghezza:', fileContent.length);
 
     // *** CONVERTED: Usa baseName per runAnalysis ***
     const analysisResult = await runAnalysis(fileContent, { filename: baseName, forceReanalysis: true });
@@ -827,7 +875,7 @@ router.put('/:id/reanalyze', authMiddleware, async (req, res) => {
     res.json({ success: true, message: 'Ri-analisi AI completata con successo', document: updatedDocument, analysis: analysisResult, reanalysis_timestamp: new Date().toISOString() });
   } catch (error) {
     console.error('💥 Errore durante ri-analisi:', error);
-    if (error.message === 'File fisico non trovato') return res.status(404).json({ error: 'File fisico non trovato' });
+    if (error.message === 'Contenuto documento non disponibile') return res.status(404).json({ error: 'Contenuto documento non disponibile' });
     res.status(500).json({ error: 'Errore durante ri-analisi AI', details: error.message });
   }
 });
@@ -869,19 +917,19 @@ router.get('/:id/download', authMiddleware, async (req, res) => {
     if (!document) {
       return res.status(404).json({ error: 'Documento non trovato' });
     }
-    const filePath = path.join(UPLOADS_DIR, document.file_path);
-    console.log(`📂 Percorso file: ${filePath}`);
+    const buffer = await getDocumentBuffer(document);
+    if (!buffer) {
+      return res.status(404).json({ error: 'Contenuto documento non disponibile' });
+    }
 
-    await fs.access(filePath).catch(() => { throw new Error('File fisico non trovato'); });
-    
-    // *** CONVERTED: Usa path.basename come fallback ***
-    const baseName = path.basename(document.file_path || 'documento');
-    const actualFileName = document.file_path.includes('corrected-') ? `CORRETTO_${baseName}` : baseName;
+    const baseName = getDocumentFilename(document);
+    const actualFileName = document.file_path?.includes('corrected-') ? `CORRETTO_${baseName}` : baseName;
     
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(actualFileName)}"`);
     res.setHeader('Content-Type', document.mime_type || 'application/octet-stream');
+    res.setHeader('Content-Length', buffer.length);
     console.log(`✅ Invio file: ${actualFileName}`);
-    res.sendFile(filePath);
+    res.send(buffer);
   } catch (error) {
     console.error('❌ Errore download:', error);
     if (error.message === 'File fisico non trovato') return res.status(404).json({ error: 'File non trovato sul server' });
@@ -1112,29 +1160,24 @@ router.get('/:id/content', authMiddleware, async (req, res) => {
     console.log(`📄 Richiesta contenuto documento ID: ${id}`);
     const document = await getDocumentById(id);
     if (!document) return res.status(404).json({ error: 'Documento non trovato' });
-    if (!document.file_path) return res.status(404).json({ error: 'Percorso file non disponibile' });
 
-    const filePath = path.join(UPLOADS_DIR, document.file_path);
-    const uploadsDir = UPLOADS_DIR;
-    if (!filePath.startsWith(uploadsDir)) return res.status(403).json({ error: 'Accesso negato' });
-
-    await fs.access(filePath).catch(() => { throw new Error('File non trovato sul server'); });
+    const buffer = await getDocumentBuffer(document);
+    if (!buffer) {
+      return res.status(404).json({ error: 'File non trovato sul server' });
+    }
     
-    const fileExtension = path.extname(filePath).toLowerCase();
+    const filename = getDocumentFilename(document);
+    const fileExtension = path.extname(filename).toLowerCase();
     let contentType = 'application/octet-stream';
     if (fileExtension === '.xml') contentType = 'application/xml';
     else if (fileExtension === '.pdf') contentType = 'application/pdf';
     else if (fileExtension === '.txt') contentType = 'text/plain';
     else if (fileExtension === '.json') contentType = 'application/json';
     
-    // *** CONVERTED: Usa path.basename come fallback ***
-    const baseName = path.basename(document.file_path || 'documento');
-    const fileContent = await fs.readFile(filePath);
-    
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `inline; filename="${baseName}"`);
-    res.setHeader('Content-Length', fileContent.length);
-    res.send(fileContent);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
   } catch (error) {
     console.error('❌ Errore lettura contenuto file:', error);
     if(error.message === 'File non trovato sul server') return res.status(404).json({ error: 'File non trovato sul server' });
@@ -1179,13 +1222,14 @@ router.post('/:id/generate-entries', authMiddleware, async (req, res) => {
     const document = await getDocumentById(id);
     if (!document) return res.status(404).json({ error: 'Documento non trovato', code: 'DOCUMENT_NOT_FOUND' });
 
-    const filePath = path.join(UPLOADS_DIR, document.file_path);
-    await fs.access(filePath).catch(() => { throw new Error('FILE_NOT_FOUND'); });
-    
-    // *** CONVERTED: Usa path.basename come fallback ***
-    const baseName = path.basename(document.file_path || 'documento');
-    const fileContent = await fs.readFile(filePath, 'utf8');
-    const fileType = detectDocumentType(baseName, fileContent);
+    const filename = getDocumentFilename(document);
+    const buffer = await getDocumentBuffer(document);
+    if (!buffer) {
+      return res.status(404).json({ error: 'Contenuto documento non disponibile', code: 'CONTENT_NOT_FOUND' });
+    }
+
+    const fileContent = bufferToDocumentString(buffer, filename, document.mime_type);
+    const fileType = detectDocumentType(filename, fileContent);
 
     let serviceFileType;
     if (fileType === 'FATTURA_XML') serviceFileType = 'fattura';
@@ -1199,10 +1243,10 @@ router.post('/:id/generate-entries', authMiddleware, async (req, res) => {
     
     if (result.status === 'OK') {
       // *** CONVERTED: Usa baseName nel response ***
-      res.json({ success: true, message: 'Scritture contabili generate con successo', document: { id: document.id, name: baseName, type: document.type }, accounting: { entries_count: result.entries_json?.length || 0, status: result.status, messages: result.messages, entries_json: result.entries_json, entries_csv: result.entries_csv }, account_map_used: finalAccountMap, generation_timestamp: new Date().toISOString() });
+      res.json({ success: true, message: 'Scritture contabili generate con successo', document: { id: document.id, name: filename, type: document.type }, accounting: { entries_count: result.entries_json?.length || 0, status: result.status, messages: result.messages, entries_json: result.entries_json, entries_csv: result.entries_csv }, account_map_used: finalAccountMap, generation_timestamp: new Date().toISOString() });
     } else {
       // *** CONVERTED: Usa baseName nel response ***
-      res.status(400).json({ success: false, error: 'Errore nella generazione delle scritture', details: result.messages, status: result.status, document: { id: document.id, name: baseName } });
+      res.status(400).json({ success: false, error: 'Errore nella generazione delle scritture', details: result.messages, status: result.status, document: { id: document.id, name: filename } });
     }
   } catch (error) {
     console.error('💥 Errore generazione scritture:', error);
@@ -1225,10 +1269,13 @@ router.get('/:id/entries-csv', authMiddleware, async (req, res) => {
     const document = await getDocumentById(id);
     if (!document) return res.status(404).json({ error: 'Documento non trovato' });
 
-    // *** CONVERTED: Usa path.basename come fallback ***
+    // *** FIXED: Read from database instead of filesystem ***
     const baseName = path.basename(document.file_path || 'documento');
-    const filePath = path.join(UPLOADS_DIR, document.file_path);
-    const fileContent = await fs.readFile(filePath, 'utf8');
+    const buffer = await getDocumentBuffer(document);
+    if (!buffer) {
+      return res.status(404).json({ error: 'Contenuto documento non disponibile', code: 'CONTENT_NOT_FOUND' });
+    }
+    const fileContent = bufferToDocumentString(buffer, baseName, document.mime_type);
     const fileType = detectDocumentType(baseName, fileContent);
 
     let serviceFileType;
