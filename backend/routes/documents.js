@@ -567,6 +567,12 @@ router.post(
 
       const fileContentBase64 = fileBuffer.toString('base64');
 
+      // Determina lo status finale del documento basato sull'analisi
+      const overallStatus = analysisResult.combined?.overall_status || 'ok';
+      const documentStatus = overallStatus === 'ok' ? 'completed' : 
+                            overallStatus === 'error' ? 'error' : 
+                            overallStatus === 'warning' ? 'warning' : 'completed';
+
       // *** CONVERTED: Rimossi i campi 'name' e 'original_filename' ***
       const documentData = {
         user_id: userId,
@@ -576,6 +582,7 @@ router.post(
         file_size: req.file.size,
         mime_type: req.file.mimetype,
         file_content: fileContentBase64,
+        status: documentStatus, // ✅ FIX: Imposta status basato sull'analisi
         ai_analysis: analysisResult.combined?.final_message || 'Analisi completata',
         ai_status: analysisResult.combined?.overall_status || 'ok',
         ai_confidence: analysisResult.combined?.confidence || 0.8,
@@ -588,8 +595,10 @@ router.post(
         document_category: classificationResult.category
       };
       
-      // Salva documento
+      // Salva documento con status aggiornato
       const savedDocument = await saveDocument(documentData);
+      
+      console.log(`✅ Status documento ${savedDocument.id}: ${documentStatus} (analisi: ${overallStatus})`);
       
       // ✅ Incrementa il contatore corretto
       await db.execute({
@@ -621,6 +630,20 @@ router.post(
       
     } catch (error) {
       console.error('❌ Errore durante elaborazione:', error);
+      
+      // Se il documento è stato parzialmente creato, aggiorna lo status a 'error'
+      if (error.savedDocumentId) {
+        try {
+          await updateDocument(error.savedDocumentId, { 
+            status: 'error',
+            ai_status: 'error',
+            ai_analysis: `Errore: ${error.message}`
+          });
+          console.log(`⚠️ Status documento ${error.savedDocumentId} aggiornato a 'error'`);
+        } catch (updateErr) {
+          console.error('❌ Errore aggiornamento status:', updateErr);
+        }
+      }
       
       // *** CONVERTED: Aggiunto check esistenza file prima di unlink ***
       if (req.file?.path && fsSync.existsSync(req.file.path)) {
