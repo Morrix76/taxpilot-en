@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDatabase } from './db.js';
@@ -10,42 +9,79 @@ import documentsRoutes from './routes/documents.js';
 import billingRoutes from './routes/billing.js';
 import checkTrialStatus from './middleware/trialMiddleware.js';
 
-dotenv.config();
+// ====== ENV LOADING ======
+// Only load dotenv in development (via --import=dotenv/config)
+// In production (Railway/Vercel), use provider's env vars directly
+const isDev = process.env.NODE_ENV !== 'production';
+
+// ====== FAIL-FAST ENV VALIDATION ======
+/**
+ * Validates required environment variables at startup
+ * Exits process if any critical env var is missing
+ */
+function requireEnv(keys) {
+  const missing = keys.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    console.error('❌ FATAL: Missing required environment variables:');
+    missing.forEach(key => console.error(`   - ${key}`));
+    console.error('\n💡 Set these variables in your Railway/Vercel dashboard or .env file\n');
+    process.exit(1);
+  }
+  
+  console.log('✅ All required environment variables present');
+}
+
+// Validate critical env vars
+requireEnv([
+  'TURSO_DATABASE_URL',
+  'TURSO_AUTH_TOKEN',
+  'GROQ_API_KEY',
+  'JWT_SECRET'
+]);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3003;
 
-// ====== CORS ======
+// ====== CORS CONFIGURATION ======
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://taxpilot-en.vercel.app'
+];
+
+// Add FRONTEND_URL if specified (for custom domains)
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
   origin: function(origin, callback) {
-    // Permetti richieste senza origin (es. Postman, curl)
+    // Allow requests with no origin (mobile apps, Postman, curl)
     if (!origin) return callback(null, true);
     
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://taxpilot-en-git-main-franks-projects-c85cd5ad.vercel.app',
-      'https://taxpilot-en.vercel.app',
-      'https://taxpilot-en-franks-projects-c85cd5ad.vercel.app',
-      'https://taxpilot-en-production.up.railway.app'
-    ];
-    
-    // Permetti tutti i domini Vercel
-    if (origin.endsWith('.vercel.app') || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // Check allowlist
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
+    
+    // Allow all Vercel preview deployments (*.vercel.app)
+    if (/\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+    
+    // Reject other origins
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
 }));
 
 // ====== Middleware ======
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ====== Static files ======
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -82,12 +118,36 @@ console.log('✅ Rotte /api/documents montate (protected)');
 app.use('/api/billing', checkTrialStatus, billingRoutes);
 console.log('✅ Rotte /api/billing montate (protected)');
 
-// ====== Test interno ======
-app.get('/api/auth/test-inline', (req, res) => {
-  res.json({ message: 'Rotta inline funzionante!' });
+// ====== HEALTHZ ENDPOINT ======
+/**
+ * Production-ready health check endpoint
+ * Shows presence of critical env vars without exposing their values
+ * Used by Railway/Vercel for readiness probes
+ */
+app.get('/healthz', (req, res) => {
+  const envStatus = {
+    TURSO_DATABASE_URL: !!process.env.TURSO_DATABASE_URL,
+    TURSO_AUTH_TOKEN: !!process.env.TURSO_AUTH_TOKEN,
+    GROQ_API_KEY: !!process.env.GROQ_API_KEY,
+    JWT_SECRET: !!process.env.JWT_SECRET,
+    PORT: !!process.env.PORT,
+    NODE_ENV: process.env.NODE_ENV || 'development'
+  };
+  
+  const allPresent = Object.entries(envStatus)
+    .filter(([key]) => key !== 'NODE_ENV' && key !== 'PORT')
+    .every(([, value]) => value === true);
+  
+  res.status(allPresent ? 200 : 503).json({
+    ok: allPresent,
+    has: envStatus,
+    time: new Date().toISOString(),
+    version: '3.7.0-turso',
+    uptime: process.uptime()
+  });
 });
 
-// ====== Health Check ======
+// ====== Legacy Health Check (kept for backward compatibility) ======
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -105,12 +165,20 @@ app.use((err, req, res, next) => {
 // ====== Start Server ======
 async function startServer() {
   try {
+    console.log('\n🚀 TaxPilot Backend Starting...');
+    console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌍 Port: ${PORT}`);
+    console.log(`🔐 CORS: Vercel domains + ${allowedOrigins.length} explicit origins`);
+    
     await initializeDatabase();
-    app.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
+    
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`✅ Server running on http://0.0.0.0:${PORT}`);
+      console.log(`🏥 Health check: http://0.0.0.0:${PORT}/healthz`);
+      console.log(`📡 Ready to accept connections\n`);
     });
   } catch (err) {
-    console.error('❌ Fatal error:', err);
+    console.error('❌ Fatal error during startup:', err);
     process.exit(1);
   }
 }

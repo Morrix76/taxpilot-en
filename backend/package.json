@@ -5,7 +5,8 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node --import=dotenv/config server.js",
+    "start": "node server.js",
+    "start:dev": "node --import=dotenv/config server.js",
     "dev": "nodemon --import=dotenv/config server.js",
     "test": "node services/fiscalValidator.js && echo 'All tests completed'",
     "test:fiscal": "node services/fiscalValidator.js",
@@ -13,7 +14,7 @@
     "test:ocr": "node services/pdf-ocr.js",
     "lint": "echo 'Linting skipped - add ESLint if needed'",
     "clean": "rm -rf temp/* && echo 'Temp files cleaned'",
-    "health": "curl http://localhost:3001/health || echo 'Server not running'"
+    "health": "curl http://localhost:3003/healthz || echo 'Server not running'"
   },
   "dependencies": {
     "@libsql/client": "^0.5.6",
