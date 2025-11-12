@@ -36,7 +36,12 @@ export default function ContabilitaDashboard() {
 
   const verificaInizializzazione = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contabilita/status`)
+      const token = localStorage.getItem('token')
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contabilita/status`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      })
+      
       const data = await response.json()
       setContabilitaInizializzata(data.initialized || false)
     } catch (error) {
