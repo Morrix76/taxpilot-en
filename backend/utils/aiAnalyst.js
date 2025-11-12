@@ -14,7 +14,7 @@ export class AIDocumentAnalyst {
     const envKey = (process.env.GROQ_API_KEY || '').trim();
     this.apiKey = (apiKey || envKey || '').trim();
 
-    this.model = 'llama3-8b-8192'; // mantieni il tuo modello
+    this.model = 'llama-3.3-70b-versatile'; // ✅ FIXED: modello aggiornato
     this.groq = null;
 
     // Instanzia solo se c'è la chiave; non lanciare mai qui
@@ -158,7 +158,7 @@ RISPOSTA:`;
         .replace(/```\s*/g, '')
         .trim();
 
-      // Trova il primo JSON valido anche se c’è rumore
+      // Trova il primo JSON valido anche se c'è rumore
       const firstBrace = cleanResponse.indexOf('{');
       const lastBrace = cleanResponse.lastIndexOf('}');
       if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
@@ -276,7 +276,7 @@ RISPOSTA:`;
         codice: error.code,
         titolo: error.message,
         spiegazione: 'Errore rilevato dal controllo automatico',
-        conseguenze: 'Potrebbe causare problemi nell’invio',
+        conseguenze: 'Potrebbe causare problemi nell\'invio',
         soluzione: 'Verificare e correggere il dato indicato',
         urgenza: 7,
         tempo_stimato: '15 minuti'
@@ -291,7 +291,7 @@ RISPOSTA:`;
         rischio_sanzioni: hasErrors ? 'medio' : 'nullo',
         rischio_controlli: 'basso'
       },
-      prossimi_passi: ['Correggere gli errori', 'Ricontrollare il documento', 'Procedere con l’invio'],
+      prossimi_passi: ['Correggere gli errori', 'Ricontrollare il documento', 'Procedere con l\'invio'],
       note_commercialista: 'Analisi automatica (AI non disponibile)'
     });
   }
