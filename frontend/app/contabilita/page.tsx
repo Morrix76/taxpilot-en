@@ -48,12 +48,27 @@ export default function ContabilitaDashboard() {
 
   const inizializzaContabilita = async () => {
     try {
+      const token = localStorage.getItem('token')
+      
+      if (!token) {
+        alert('Please login first')
+        return
+      }
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contabilita/initialize`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       })
+      
       if (response.ok) {
         setContabilitaInizializzata(true)
+        alert('Accounting initialized successfully!')
+      } else {
+        const error = await response.text()
+        alert('Error: ' + error)
       }
     } catch (error) {
       console.error('Error initializing:', error)
