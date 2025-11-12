@@ -30,7 +30,8 @@ router.get('/*', async (req, res) => {
     }
     
     // Costruisci percorso completo
-    const uploadsDir = path.join(__dirname, '../uploads');
+    // ✅ FIX: Usa process.cwd() per allinearsi con documentClassifier
+    const uploadsDir = path.join(process.cwd(), 'uploads');
     const fullPath = path.join(uploadsDir, filePath);
     
     // Verifica sicurezza: il file deve essere dentro uploads/
@@ -284,7 +285,8 @@ router.get('/:filename/info', async (req, res) => {
       return res.status(400).json({ error: 'Nome file non valido' });
     }
     
-    const uploadsDir = path.join(__dirname, '../uploads');
+    // ✅ FIX: Usa process.cwd() per allinearsi con documentClassifier
+    const uploadsDir = path.join(process.cwd(), 'uploads');
     const filePath = path.join(uploadsDir, filename);
     const normalizedFilePath = path.resolve(filePath);
     const normalizedUploadsDir = path.resolve(uploadsDir);

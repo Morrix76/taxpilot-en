@@ -36,7 +36,8 @@ import PayrollService from '../services/payrollService.js';
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const UPLOADS_DIR = path.join(__dirname, '../uploads');
+// ✅ FIX: Usa process.cwd() come documentClassifier per evitare discrepanze
+const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
 
 // Configurazione Multer per upload file
 const storage = multer.diskStorage({
@@ -136,7 +137,16 @@ function getDocumentFilename(document) {
   return document.original_filename || path.basename(document.file_path || 'documento');
 }
 
+/**
+ * Legge il buffer di un documento dal database o dal filesystem
+ * @param {Object} document - Documento dal database
+ * @returns {Promise<Buffer|null>} Buffer del file o null se non trovato
+ * 
+ * ✅ FIX 2025-01-27: UPLOADS_DIR ora usa process.cwd() per allinearsi con documentClassifier
+ *    Questo risolve l'errore ENOENT quando si cerca di visualizzare i documenti
+ */
 async function getDocumentBuffer(document) {
+  // Priorità 1: Contenuto salvato nel database (nuovo sistema)
   if (document.file_content) {
     try {
       return Buffer.from(document.file_content, 'base64');
@@ -145,12 +155,17 @@ async function getDocumentBuffer(document) {
     }
   }
 
+  // Priorità 2: Contenuto su filesystem (sistema legacy o file classificati)
   if (document.file_path) {
     try {
-      const legacyPath = path.join(UPLOADS_DIR, document.file_path);
-      return await fs.readFile(legacyPath);
+      // file_path è relativo, es: "clienti/4/fatture/1762799567644-stx4ww.xml"
+      // UPLOADS_DIR è assoluto, es: "/app/uploads"
+      const fullPath = path.join(UPLOADS_DIR, document.file_path);
+      console.log(`📂 Leggo file da: ${fullPath}`);
+      return await fs.readFile(fullPath);
     } catch (error) {
-      console.warn(`⚠️ Contenuto legacy non trovato per documento ${document.id}:`, error.message);
+      console.warn(`⚠️ File non trovato per documento ${document.id}:`, error.message);
+      console.warn(`   Percorso tentato: ${path.join(UPLOADS_DIR, document.file_path)}`);
     }
   }
 
