@@ -9,6 +9,12 @@ import documentsRoutes from './routes/documents.js';
 import billingRoutes from './routes/billing.js';
 import checkTrialStatus from './middleware/trialMiddleware.js';
 
+// ====== DEBUG: ENV INSPECTION ======
+console.log('🔍 RAW ENV TEST:');
+console.log('  - GROQ_API_KEY exists:', 'GROQ_API_KEY' in process.env);
+console.log('  - GROQ_API_KEY value:', process.env.GROQ_API_KEY);
+console.log('  - All env keys with GROQ:', Object.keys(process.env).filter(k => k.includes('GROQ')));
+
 // ====== ENV LOADING ======
 // Only load dotenv in development (via --import=dotenv/config)
 // In production (Railway/Vercel), use provider's env vars directly
