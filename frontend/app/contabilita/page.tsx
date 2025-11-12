@@ -36,7 +36,7 @@ export default function ContabilitaDashboard() {
 
   const verificaInizializzazione = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('taxpilot_token')
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contabilita/status`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
@@ -53,7 +53,7 @@ export default function ContabilitaDashboard() {
 
   const inizializzaContabilita = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('taxpilot_token')
       
       if (!token) {
         alert('Please login first')
