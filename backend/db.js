@@ -13,11 +13,34 @@ export const db = createClient({
   authToken: authToken
 });
 
+async function ensureFileContentColumn() {
+  try {
+    const result = await db.execute({
+      sql: 'PRAGMA table_info(documents)',
+      args: []
+    });
+
+    const hasColumn = Array.isArray(result.rows) && result.rows.some((row) => row.name === 'file_content');
+
+    if (!hasColumn) {
+      await db.execute({
+        sql: 'ALTER TABLE documents ADD COLUMN file_content TEXT',
+        args: []
+      });
+      console.log("✅ Added file_content column to documents table");
+    }
+  } catch (error) {
+    // Se la tabella non esiste ancora o il database non supporta la pragma, logghiamo e continuiamo
+    console.warn('⚠️ Impossibile assicurare la colonna file_content:', error?.message || error);
+  }
+}
+
 export async function initializeDatabase() {
   console.log('Inizializzazione database...');
   
   try {
     await db.execute({ sql: 'SELECT 1', args: [] });
+    await ensureFileContentColumn();
     console.log('✅ Database inizializzato');
   } catch (error) {
     console.error('❌ Errore connessione database:', error);
@@ -36,6 +59,7 @@ export async function saveDocument(documentData) {
         client_id,
         file_name,
         file_path,
+        file_content,
         file_type,
         category,
         ocr_data,
@@ -47,6 +71,7 @@ export async function saveDocument(documentData) {
         documentData.client_id || null,
         documentData.original_filename || documentData.name || 'unknown',
         documentData.file_path,
+        documentData.file_content || null,
         documentData.type || documentData.mime_type || 'application/octet-stream',
         documentData.document_category || 'general',
         JSON.stringify({
@@ -154,6 +179,7 @@ export async function getDocumentById(id) {
       client_id: doc.client_id,
       original_filename: doc.file_name,
       file_path: doc.file_path,
+      file_content: doc.file_content,
       type: doc.file_type,
       document_category: doc.category,
       created_at: doc.created_at,
@@ -164,7 +190,8 @@ export async function getDocumentById(id) {
       analysis_result: JSON.parse(doc.ocr_data || '{}').analysis_result || '{}',
       file_size: JSON.parse(doc.ocr_data || '{}').file_size || 0,
       mime_type: JSON.parse(doc.ocr_data || '{}').mime_type || 'application/octet-stream',
-      flag_manual_review: false
+      flag_manual_review: false,
+      ocr_data: doc.ocr_data
     };
   } catch (error) {
     console.error('❌ Errore recupero documento:', error);
@@ -177,11 +204,13 @@ export async function getDocumentById(id) {
  */
 export async function updateDocument(id, updateData) {
   try {
-    // Recupera documento corrente per merge
-    const current = await getDocumentById(id);
-    if (!current) throw new Error('Documento non trovato');
+    const currentRow = await db.execute({
+      sql: 'SELECT ocr_data FROM documents WHERE id = ?',
+      args: [id]
+    });
+    if (!currentRow.rows[0]) throw new Error('Documento non trovato');
     
-    const currentOcrData = JSON.parse(current.ocr_data || '{}');
+    const currentOcrData = JSON.parse(currentRow.rows[0].ocr_data || '{}');
     
     // Mappa campi a struttura tabella
     const updates = {};
@@ -189,16 +218,30 @@ export async function updateDocument(id, updateData) {
     if (updateData.client_id !== undefined) updates.client_id = updateData.client_id;
     if (updateData.document_category !== undefined) updates.category = updateData.document_category;
     if (updateData.file_path !== undefined) updates.file_path = updateData.file_path;
-    if (updateData.ai_status !== undefined) updates.status = updateData.ai_status;
+    
+    // ✅ FIX: Gestisci sia 'status' che 'ai_status' (priorità a 'status')
+    if (updateData.status !== undefined) {
+      updates.status = updateData.status;
+      console.log(`🔄 Aggiornamento status documento ${id}: ${updateData.status}`);
+    } else if (updateData.ai_status !== undefined) {
+      updates.status = updateData.ai_status;
+      console.log(`🔄 Aggiornamento status documento ${id} (da ai_status): ${updateData.ai_status}`);
+    }
+    
+    if (updateData.file_content !== undefined) updates.file_content = updateData.file_content;
     
     // Aggiorna ocr_data con nuovi campi AI
     const newOcrData = {
       ...currentOcrData,
-      ai_analysis: updateData.ai_analysis || currentOcrData.ai_analysis,
-      ai_status: updateData.ai_status || currentOcrData.ai_status,
+      ai_analysis: updateData.ai_analysis ?? currentOcrData.ai_analysis,
+      // ✅ FIX: Sincronizza ai_status con status per mantenere coerenza
+      ai_status: updateData.status ?? updateData.ai_status ?? currentOcrData.ai_status,
       ai_confidence: updateData.ai_confidence !== undefined ? updateData.ai_confidence : currentOcrData.ai_confidence,
-      ai_issues: updateData.ai_issues || currentOcrData.ai_issues,
-      analysis_result: updateData.analysis_result || currentOcrData.analysis_result
+      ai_issues: updateData.ai_issues ?? currentOcrData.ai_issues,
+      analysis_result: updateData.analysis_result ?? currentOcrData.analysis_result,
+      file_size: updateData.file_size ?? currentOcrData.file_size,
+      mime_type: updateData.mime_type ?? currentOcrData.mime_type,
+      processing_version: updateData.processing_version ?? currentOcrData.processing_version
     };
     
     updates.ocr_data = JSON.stringify(newOcrData);
@@ -208,12 +251,20 @@ export async function updateDocument(id, updateData) {
     const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
     const values = Object.values(updates);
     
+    console.log(`📝 Query UPDATE per documento ${id}:`, fields);
+    console.log(`📝 Valori:`, values);
+    
     await db.execute({
       sql: `UPDATE documents SET ${fields} WHERE id = ?`,
       args: [...values, id]
     });
     
-    return await getDocumentById(id);
+    console.log(`✅ UPDATE eseguito con successo per documento ${id}`);
+    
+    const updatedDoc = await getDocumentById(id);
+    console.log(`✅ Documento ${id} ricaricato - status nel DB: ${updatedDoc.ai_status}`);
+    
+    return updatedDoc;
   } catch (error) {
     console.error('❌ Errore aggiornamento documento:', error);
     throw error;
