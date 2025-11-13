@@ -3,6 +3,56 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation';
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`;
 
+// ========================================================================
+// HELPER FUNCTIONS - Date e Categorie
+// ========================================================================
+
+// ✅ Normalizza varianti categorie (spazi, underscore, trattini)
+function normalizeCategory(category?: string): string {
+  if (!category) return "";
+  return category
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ");
+}
+
+// ✅ Traduce categorie italiano → inglese
+function getCategoryLabel(category?: string): string {
+  const norm = normalizeCategory(category);
+  if (!norm) return "—";
+
+  // FATTURE / FATTURA / FATTURA ELETTRONICA
+  if (norm === "fatture" || norm === "fattura" || norm === "fattura elettronica") {
+    return "Invoice";
+  }
+
+  // BUSTA PAGA (varianti singolare/plurale/con separatori)
+  if (norm === "busta paga" || norm === "buste paga" || norm === "bustapaga" || norm === "bustepaga") {
+    return "Payslip";
+  }
+
+  // FALLBACK: restituisci il valore originale
+  return category ?? "—";
+}
+
+// ✅ Formatta date in modo sicuro (ritorna "—" se invalid)
+function formatDocumentDate(doc: any): string {
+  const raw =
+    doc.issueDate ||
+    doc.invoice_date ||
+    doc.created_at ||
+    doc.upload_date ||
+    doc.updated_at ||
+    doc.date;
+
+  if (!raw) return "—";
+
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return "—";
+
+  return d.toLocaleDateString("en-GB");
+}
+
 // Interfaccia per il tipo Cliente, per la tipizzazione
 interface Client {
   id: number;
@@ -948,10 +998,10 @@ Contact the administrator to configure the file service.`);
                             </td>
                             <td className="px-8 py-6">
                                 <span className={`inline-flex px-4 py-2 text-sm font-bold rounded-xl bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 text-indigo-700 dark:text-indigo-300`}>
-                                    {doc.type}
+                                    {getCategoryLabel(doc.type || doc.document_category || doc.category)}
                                 </span>
                             </td>
-                            <td className="px-8 py-6 text-sm font-medium text-slate-700 dark:text-slate-300">{new Date(doc.date).toLocaleDateString()}</td>
+                            <td className="px-8 py-6 text-sm font-medium text-slate-700 dark:text-slate-300">{formatDocumentDate(doc)}</td>
                             <td className="px-8 py-6">
                                 <span className={`inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl ${
                                   getAiStatus(doc) === 'error'
@@ -1131,13 +1181,13 @@ Contact the administrator to configure the file service.`);
                 </div>
                 <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 p-6 rounded-xl border border-purple-200 dark:border-purple-700">
                   <label className="block text-sm font-bold text-purple-600 dark:text-purple-400 mb-2 uppercase tracking-wide">Document Type</label>
-                  <p className="text-slate-800 dark:text-white font-medium text-lg">{selectedDoc.type}</p>
+                  <p className="text-slate-800 dark:text-white font-medium text-lg">{getCategoryLabel(selectedDoc.type || selectedDoc.document_category || selectedDoc.category)}</p>
                 </div>
               </div>
               <div className="space-y-6">
                 <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 p-6 rounded-xl border border-emerald-200 dark:border-emerald-700">
                   <label className="block text-sm font-bold text-emerald-600 dark:text-emerald-400 mb-2 uppercase tracking-wide">Processing Date</label>
-                  <p className="text-slate-800 dark:text-white font-medium text-lg">{new Date(selectedDoc.date).toLocaleDateString()}</p>
+                  <p className="text-slate-800 dark:text-white font-medium text-lg">{formatDocumentDate(selectedDoc)}</p>
                 </div>
                 <div className="bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/30 dark:to-yellow-900/30 p-6 rounded-xl border border-orange-200 dark:border-orange-700">
                   <label className="block text-sm font-bold text-orange-600 dark:text-orange-400 mb-2 uppercase tracking-wide">Status</label>

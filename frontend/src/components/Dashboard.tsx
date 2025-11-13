@@ -4,6 +4,56 @@ import React, { useState, useEffect } from 'react'
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}`
 
+// ========================================================================
+// HELPER FUNCTIONS - Date e Categorie
+// ========================================================================
+
+// ✅ Normalizza varianti categorie (spazi, underscore, trattini)
+function normalizeCategory(category?: string): string {
+  if (!category) return "";
+  return category
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ");
+}
+
+// ✅ Traduce categorie italiano → inglese
+function getCategoryLabel(category?: string): string {
+  const norm = normalizeCategory(category);
+  if (!norm) return "—";
+
+  // FATTURE / FATTURA / FATTURA ELETTRONICA
+  if (norm === "fatture" || norm === "fattura" || norm === "fattura elettronica") {
+    return "Invoice";
+  }
+
+  // BUSTA PAGA (varianti singolare/plurale/con separatori)
+  if (norm === "busta paga" || norm === "buste paga" || norm === "bustapaga" || norm === "bustepaga") {
+    return "Payslip";
+  }
+
+  // FALLBACK: restituisci il valore originale
+  return category ?? "—";
+}
+
+// ✅ Formatta date in modo sicuro (ritorna "—" se invalid)
+function formatDocumentDate(doc: any): string {
+  const raw =
+    doc.issueDate ||
+    doc.invoice_date ||
+    doc.created_at ||
+    doc.upload_date ||
+    doc.updated_at ||
+    doc.date;
+
+  if (!raw) return "—";
+
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return "—";
+
+  return d.toLocaleDateString("en-GB");
+}
+
 export default function Dashboard() {
   const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(false)
@@ -312,14 +362,14 @@ export default function Dashboard() {
                     </td>
                     <td className="px-8 py-6">
                       <span className={`inline-flex px-4 py-2 text-sm font-bold rounded-xl ${
-                        doc.type === 'Fattura Elettronica' 
+                        getCategoryLabel(doc.type) === 'Invoice' 
                           ? 'bg-gradient-to-r from-blue-100 to-indigo-100 text-indigo-700' 
                           : 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700'
                       }`}>
-                        {doc.type === 'Fattura Elettronica' ? '🧾' : '💰'} {doc.type}
+                        {getCategoryLabel(doc.type) === 'Invoice' ? '🧾' : '💰'} {getCategoryLabel(doc.type)}
                       </span>
                     </td>
-                    <td className="px-8 py-6 text-sm font-medium text-slate-700">{doc.date}</td>
+                    <td className="px-8 py-6 text-sm font-medium text-slate-700">{formatDocumentDate(doc)}</td>
                     <td className="px-8 py-6">
                       <span className={`inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl ${
                         doc.status === 'Elaborato' 
@@ -493,14 +543,14 @@ export default function Dashboard() {
                 </div>
                 <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl border border-purple-200">
                   <label className="block text-sm font-bold text-purple-600 mb-2 uppercase tracking-wide">Tipo Documento</label>
-                  <p className="text-slate-800 font-medium text-lg">{selectedDoc.type}</p>
+                  <p className="text-slate-800 font-medium text-lg">{getCategoryLabel(selectedDoc.type)}</p>
                 </div>
               </div>
               
               <div className="space-y-6">
                 <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-6 rounded-xl border border-emerald-200">
                   <label className="block text-sm font-bold text-emerald-600 mb-2 uppercase tracking-wide">Data Elaborazione</label>
-                  <p className="text-slate-800 font-medium text-lg">{selectedDoc.date}</p>
+                  <p className="text-slate-800 font-medium text-lg">{formatDocumentDate(selectedDoc)}</p>
                 </div>
                 <div className="bg-gradient-to-br from-orange-50 to-yellow-50 p-6 rounded-xl border border-orange-200">
                   <label className="block text-sm font-bold text-orange-600 mb-2 uppercase tracking-wide">Status</label>

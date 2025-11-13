@@ -3,6 +3,41 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+// ========================================================================
+// HELPER FUNCTIONS - Date e Categorie
+// ========================================================================
+
+// ✅ Normalizza varianti categorie
+function normalizeCategory(category?: string): string {
+  if (!category) return "";
+  return category.trim().toLowerCase().replace(/[\s_-]+/g, " ");
+}
+
+// ✅ Traduce categorie italiano → inglese
+function getCategoryLabel(category?: string): string {
+  const norm = normalizeCategory(category);
+  if (!norm) return "—";
+  if (norm === "fatture" || norm === "fattura" || norm === "fattura elettronica") return "Invoice";
+  if (norm === "busta paga" || norm === "buste paga" || norm === "bustapaga" || norm === "bustepaga") return "Payslip";
+  return category ?? "—";
+}
+
+// ✅ Formatta date in modo sicuro
+function formatDocumentDate(doc: any): string {
+  const raw = doc.issueDate || doc.invoice_date || doc.created_at || doc.upload_date || doc.updated_at || doc.date;
+  if (!raw) return "—";
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB");
+}
+
+// ✅ Safe date parsing for sorting
+function safeParseDate(dateStr: any): number {
+  if (!dateStr) return 0;
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
 export default function DocumentiCompleta() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,8 +81,8 @@ export default function DocumentiCompleta() {
     })
     .filter(doc => doc.original_filename?.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
-      if (sortBy === 'date') return new Date(b.created_at) - new Date(a.created_at);
-      if (sortBy === 'name') return a.original_filename.localeCompare(b.original_filename);
+      if (sortBy === 'date') return safeParseDate(b.created_at) - safeParseDate(a.created_at);
+      if (sortBy === 'name') return (a.original_filename || '').localeCompare(b.original_filename || '');
       return 0;
     });
 
@@ -155,11 +190,11 @@ export default function DocumentiCompleta() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800">
-                          {doc.type}
+                          {getCategoryLabel(doc.type || doc.document_category || doc.category)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {new Date(doc.created_at).toLocaleDateString('en-US')}
+                        {formatDocumentDate(doc)}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 text-xs font-bold rounded-full ${
