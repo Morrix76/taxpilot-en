@@ -556,51 +556,34 @@ router.post(
       console.log(`📁 Documento classificato come: ${classificationResult.category}`);
       console.log(`💾 Salvato in: ${classificationResult.file_path}`);
 
-      const analysisOptions = { 
-        ...req.body, 
-        filename: req.file.originalname, // Usato solo per detection, non per salvataggio
-        client_id: clientId,
-        category: classificationResult.category
-      };
-      const analysisResult = await runAnalysis(rawContent, analysisOptions);
-      console.log('🤖 Analisi completata:', analysisResult.combined?.overall_status);
-
       const fileContentBase64 = fileBuffer.toString('base64');
 
-      // Determina lo status finale del documento basato sull'analisi
-      const overallStatus = analysisResult.combined?.overall_status || 'ok';
-      const documentStatus = overallStatus === 'ok' ? 'completed' : 
-                            overallStatus === 'error' ? 'error' : 
-                            overallStatus === 'warning' ? 'warning' : 'completed';
-
-      // *** CONVERTED: Rimossi i campi 'name' e 'original_filename' ***
+      // ✅ STEP 1: Salva documento PRIMA con status 'processing'
       const documentData = {
         user_id: userId,
-        type: analysisResult.metadata?.documentTypeDetected || classificationResult.category,
+        type: classificationResult.category,
         original_filename: req.file.originalname,
         file_path: classificationResult.file_path,
         file_size: req.file.size,
         mime_type: req.file.mimetype,
         file_content: fileContentBase64,
-        status: documentStatus, // ✅ FIX: Imposta status basato sull'analisi
-        ai_analysis: analysisResult.combined?.final_message || 'Analisi completata',
-        ai_status: analysisResult.combined?.overall_status || 'ok',
-        ai_confidence: analysisResult.combined?.confidence || 0.8,
-        ai_issues: JSON.stringify(analysisResult.technical?.errors || []),
-        analysis_result: JSON.stringify(analysisResult),
-        confidence: analysisResult.combined?.confidence || 0.8,
-        flag_manual_review: analysisResult.combined?.flag_manual_review || false,
-        processing_version: '3.5.0-classifier-hotfix',
+        status: 'processing', // ✅ Inizia sempre con 'processing'
+        ai_analysis: 'Analisi in corso...',
+        ai_status: 'processing',
+        ai_confidence: 0,
+        ai_issues: JSON.stringify([]),
+        analysis_result: JSON.stringify({}),
+        confidence: 0,
+        flag_manual_review: false,
+        processing_version: '3.5.0-status-fix',
         client_id: parseInt(clientId),
         document_category: classificationResult.category
       };
       
-      // Salva documento con status aggiornato
       const savedDocument = await saveDocument(documentData);
+      console.log(`💾 Documento ${savedDocument.id} salvato con status 'processing'`);
       
-      console.log(`✅ Status documento ${savedDocument.id}: ${documentStatus} (analisi: ${overallStatus})`);
-      
-      // ✅ Incrementa il contatore corretto
+      // ✅ Incrementa il contatore subito dopo il salvataggio
       await db.execute({
         sql: `
           UPDATE users 
@@ -610,23 +593,90 @@ router.post(
         args: [userId]
       });
 
-      const processingTime = Date.now() - startTime;
-      
-      console.log(`✅ Documento ${savedDocument.id} elaborato e classificato in ${processingTime}ms`);
-      console.log(`📁 Categoria: ${classificationResult.category}, Cliente: ${clientId}`);
-      
-      res.status(201).json({ 
-        success: true, 
-        message: `Upload completato - Documento classificato come "${classificationResult.category}"`, 
-        document: savedDocument, 
-        analysis: analysisResult,
-        classification: {
-          category: classificationResult.category,
+      // ✅ STEP 2: Esegui analisi in nested try/catch per garantire update status
+      try {
+        console.log('🤖 Avvio analisi AI...');
+        const analysisOptions = { 
+          ...req.body, 
+          filename: req.file.originalname,
           client_id: clientId,
-          file_path: classificationResult.file_path
-        },
-        processing_time_ms: processingTime 
-      });
+          category: classificationResult.category
+        };
+        const analysisResult = await runAnalysis(rawContent, analysisOptions);
+        console.log('🤖 Analisi completata:', analysisResult.combined?.overall_status);
+
+        // Determina lo status finale basato sull'analisi
+        const overallStatus = analysisResult.combined?.overall_status || 'ok';
+        const documentStatus = overallStatus === 'ok' ? 'completed' : 
+                              overallStatus === 'error' ? 'error' : 
+                              overallStatus === 'warning' ? 'warning' : 'completed';
+
+        // ✅ Aggiorna documento con risultati analisi
+        await updateDocument(savedDocument.id, {
+          status: documentStatus,
+          type: analysisResult.metadata?.documentTypeDetected || classificationResult.category,
+          ai_analysis: analysisResult.combined?.final_message || 'Analisi completata',
+          ai_status: analysisResult.combined?.overall_status || 'ok',
+          ai_confidence: analysisResult.combined?.confidence || 0.8,
+          ai_issues: JSON.stringify(analysisResult.technical?.errors || []),
+          analysis_result: JSON.stringify(analysisResult),
+          confidence: analysisResult.combined?.confidence || 0.8,
+          flag_manual_review: analysisResult.combined?.flag_manual_review || false
+        });
+
+        console.log(`✅ Status documento ${savedDocument.id} aggiornato: ${documentStatus}`);
+        
+        const processingTime = Date.now() - startTime;
+        console.log(`✅ Documento ${savedDocument.id} elaborato in ${processingTime}ms`);
+        
+        // ✅ STEP 3: Risposta con documento aggiornato
+        const updatedDocument = await getDocumentById(savedDocument.id);
+        res.status(201).json({ 
+          success: true, 
+          message: `Upload completato - Documento classificato come "${classificationResult.category}"`, 
+          document: updatedDocument, 
+          analysis: analysisResult,
+          classification: {
+            category: classificationResult.category,
+            client_id: clientId,
+            file_path: classificationResult.file_path
+          },
+          processing_time_ms: processingTime 
+        });
+
+      } catch (analysisError) {
+        // ✅ Se l'analisi fallisce, aggiorna sempre lo status a 'error'
+        console.error('❌ Errore durante analisi AI:', analysisError);
+        
+        await updateDocument(savedDocument.id, {
+          status: 'error',
+          ai_status: 'error',
+          ai_analysis: `Errore durante analisi: ${analysisError.message}`,
+          ai_confidence: 0.1,
+          ai_issues: JSON.stringify([{ error: analysisError.message, timestamp: new Date().toISOString() }]),
+          flag_manual_review: true
+        });
+
+        console.log(`⚠️ Status documento ${savedDocument.id} aggiornato a 'error' dopo crash analisi`);
+        
+        const processingTime = Date.now() - startTime;
+        
+        // ✅ Restituisci comunque successo (documento salvato) ma con warning
+        const updatedDocument = await getDocumentById(savedDocument.id);
+        res.status(201).json({ 
+          success: true,
+          warning: 'Documento salvato ma analisi fallita',
+          message: `Upload completato - Documento classificato come "${classificationResult.category}" (analisi non disponibile)`, 
+          document: updatedDocument,
+          classification: {
+            category: classificationResult.category,
+            client_id: clientId,
+            file_path: classificationResult.file_path
+          },
+          processing_time_ms: processingTime,
+          analysis_error: analysisError.message
+        });
+      }
       
     } catch (error) {
       console.error('❌ Errore durante elaborazione:', error);
