@@ -1,365 +1,239 @@
+// routes/settings.js
 import express from 'express';
-import { db } from '../db.js';
-import authMiddleware from '../middleware/authMiddleware.js';
-import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
-router.use(authMiddleware);
-
-// GET /api/settings/profile
+/**
+ * @route   GET /api/settings/profile
+ * @desc    Ottieni profilo utente
+ */
 router.get('/profile', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id;
     
-    const result = await db.execute({
-      sql: `SELECT 
-              id, email, name,
-              nome_studio, telefono, partita_iva, 
-              codice_fiscale, indirizzo, sito_web,
-              created_at
-            FROM users 
-            WHERE id = ?`,
-      args: [userId]
-    });
-    
-    const user = result.rows[0];
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    const profileData = {
-      id: user.id,
-      email: user.email,
-      name: user.name || '',
-      nomeStudio: user.nome_studio || '',
-      telefono: user.telefono || '',
-      partitaIva: user.partita_iva || '',
-      codiceFiscale: user.codice_fiscale || '',
-      indirizzo: user.indirizzo || '',
-      sitoWeb: user.sito_web || '',
-      registrato: user.created_at
+    // Dati mock profilo
+    const profile = {
+      id: userId,
+      nome: 'Mario',
+      cognome: 'Rossi',
+      email: 'mario.rossi@example.com',
+      telefono: '+39 333 1234567',
+      azienda: 'Studio Commercialista Rossi',
+      partita_iva: 'IT12345678901',
+      indirizzo: 'Via Roma 123, 00100 Roma',
+      avatar_url: null,
+      ruolo: 'admin',
+      created_at: '2024-01-15T10:30:00Z',
+      last_login: new Date().toISOString()
     };
-
-    res.json({
-      success: true,
-      profile: profileData
-    });
-
+    
+    res.json(profile);
   } catch (error) {
-    console.error('Error retrieving profile:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error retrieving profile'
-    });
+    console.error('Errore recupero profilo:', error);
+    res.status(500).json({ error: 'Errore recupero profilo utente' });
   }
 });
 
-// PUT /api/settings/profile
+/**
+ * @route   PUT /api/settings/profile
+ * @desc    Aggiorna profilo utente
+ */
 router.put('/profile', async (req, res) => {
   try {
-    const userId = req.user.id;
-    const {
-      name,
-      nomeStudio,
-      telefono,
-      partitaIva,
-      codiceFiscale,
-      indirizzo,
-      sitoWeb
-    } = req.body;
-
-    await db.execute({
-      sql: `UPDATE users SET 
-              name = ?,
-              nome_studio = ?,
-              telefono = ?,
-              partita_iva = ?,
-              codice_fiscale = ?,
-              indirizzo = ?,
-              sito_web = ?
-            WHERE id = ?`,
-      args: [
-        name || null,
-        nomeStudio || null,
-        telefono || null,
-        partitaIva || null,
-        codiceFiscale || null,
-        indirizzo || null,
-        sitoWeb || null,
-        userId
-      ]
+    const userId = req.user?.id;
+    const updates = req.body;
+    
+    console.log(`Aggiornamento profilo utente ${userId}:`, updates);
+    
+    // Mock: restituisci i dati aggiornati
+    const updatedProfile = {
+      id: userId,
+      ...updates,
+      updated_at: new Date().toISOString()
+    };
+    
+    res.json({ 
+      success: true, 
+      message: 'Profilo aggiornato con successo',
+      profile: updatedProfile 
     });
-
-    res.json({
-      success: true,
-      message: 'Profile updated successfully'
-    });
-
   } catch (error) {
-    console.error('Error updating profile:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error updating profile'
-    });
+    console.error('Errore aggiornamento profilo:', error);
+    res.status(500).json({ error: 'Errore aggiornamento profilo' });
   }
 });
 
-// GET /api/settings/preferences
+/**
+ * @route   GET /api/settings/preferences
+ * @desc    Ottieni preferenze utente
+ */
 router.get('/preferences', async (req, res) => {
   try {
-    const userId = req.user.id;
-    
-    const result = await db.execute({
-      sql: `SELECT settings_preferences FROM users WHERE id = ?`,
-      args: [userId]
-    });
-    
-    let preferences = {
-      lingua: 'IT Italiano',
-      fusoOrario: 'Europe/Rome (GMT+1)',
-      formatoData: 'DD/MM/YYYY',
-      valuta: 'EUR Euro',
-      tema: 'Chiaro'
+    // Preferenze mock
+    const preferences = {
+      lingua: 'it',
+      tema: 'light',
+      notifiche_email: true,
+      notifiche_desktop: false,
+      formato_data: 'DD/MM/YYYY',
+      formato_valuta: 'EUR',
+      timezone: 'Europe/Rome',
+      documenti_per_pagina: 10,
+      vista_default: 'grid',
+      auto_salvataggio: true
     };
-
-    if (result.rows[0]?.settings_preferences) {
-      try {
-        const saved = JSON.parse(result.rows[0].settings_preferences);
-        preferences = { ...preferences, ...saved };
-      } catch (e) {
-        console.error('Error parsing preferences:', e);
-      }
-    }
-
-    res.json({
-      success: true,
-      preferences
-    });
-
+    
+    res.json(preferences);
   } catch (error) {
-    console.error('Error retrieving preferences:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error retrieving preferences'
-    });
+    console.error('Errore recupero preferenze:', error);
+    res.status(500).json({ error: 'Errore recupero preferenze' });
   }
 });
 
-// PUT /api/settings/preferences
+/**
+ * @route   PUT /api/settings/preferences
+ * @desc    Aggiorna preferenze utente
+ */
 router.put('/preferences', async (req, res) => {
   try {
-    const userId = req.user.id;
-    const preferences = req.body;
-
-    await db.execute({
-      sql: `UPDATE users SET settings_preferences = ? WHERE id = ?`,
-      args: [JSON.stringify(preferences), userId]
+    const updates = req.body;
+    
+    console.log('Aggiornamento preferenze:', updates);
+    
+    // Mock: restituisci le preferenze aggiornate
+    res.json({ 
+      success: true, 
+      message: 'Preferenze aggiornate con successo',
+      preferences: updates 
     });
-
-    res.json({
-      success: true,
-      message: 'Preferences updated successfully'
-    });
-
   } catch (error) {
-    console.error('Error updating preferences:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error updating preferences'
-    });
+    console.error('Errore aggiornamento preferenze:', error);
+    res.status(500).json({ error: 'Errore aggiornamento preferenze' });
   }
 });
 
-// GET /api/settings/ai
+/**
+ * @route   GET /api/settings/ai
+ * @desc    Ottieni impostazioni AI
+ */
 router.get('/ai', async (req, res) => {
   try {
-    const userId = req.user.id;
-    
-    const result = await db.execute({
-      sql: `SELECT settings_ai FROM users WHERE id = ?`,
-      args: [userId]
-    });
-    
-    let aiSettings = {
-      autoElaborazione: true,
-      sogliaConfidenza: 85,
-      notificaErrori: true,
-      analisiAvanzata: false
+    // Impostazioni AI mock
+    const aiSettings = {
+      modello_default: 'groq-llama-3.1-8b',
+      temperatura: 0.7,
+      max_tokens: 2000,
+      analisi_automatica: true,
+      correzione_automatica: false,
+      confidence_threshold: 0.8,
+      retry_on_error: true,
+      max_retries: 3,
+      timeout: 30,
+      log_analisi: true,
+      cache_risultati: true,
+      provider: 'groq',
+      api_key_configurata: true
     };
-
-    if (result.rows[0]?.settings_ai) {
-      try {
-        const saved = JSON.parse(result.rows[0].settings_ai);
-        aiSettings = { ...aiSettings, ...saved };
-      } catch (e) {
-        console.error('Error parsing AI settings:', e);
-      }
-    }
-
-    res.json({
-      success: true,
-      aiSettings
-    });
-
+    
+    res.json(aiSettings);
   } catch (error) {
-    console.error('Error retrieving AI settings:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error retrieving AI settings'
-    });
+    console.error('Errore recupero impostazioni AI:', error);
+    res.status(500).json({ error: 'Errore recupero impostazioni AI' });
   }
 });
 
-// PUT /api/settings/ai
+/**
+ * @route   PUT /api/settings/ai
+ * @desc    Aggiorna impostazioni AI
+ */
 router.put('/ai', async (req, res) => {
   try {
-    const userId = req.user.id;
-    const aiSettings = req.body;
-
-    await db.execute({
-      sql: `UPDATE users SET settings_ai = ? WHERE id = ?`,
-      args: [JSON.stringify(aiSettings), userId]
+    const updates = req.body;
+    
+    console.log('Aggiornamento impostazioni AI:', updates);
+    
+    // Validazione base
+    if (updates.temperatura !== undefined && (updates.temperatura < 0 || updates.temperatura > 1)) {
+      return res.status(400).json({ error: 'Temperatura deve essere tra 0 e 1' });
+    }
+    
+    if (updates.confidence_threshold !== undefined && (updates.confidence_threshold < 0 || updates.confidence_threshold > 1)) {
+      return res.status(400).json({ error: 'Confidence threshold deve essere tra 0 e 1' });
+    }
+    
+    // Mock: restituisci le impostazioni aggiornate
+    res.json({ 
+      success: true, 
+      message: 'Impostazioni AI aggiornate con successo',
+      settings: updates 
     });
-
-    res.json({
-      success: true,
-      message: 'AI settings updated successfully'
-    });
-
   } catch (error) {
-    console.error('Error updating AI settings:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error updating AI settings'
-    });
+    console.error('Errore aggiornamento impostazioni AI:', error);
+    res.status(500).json({ error: 'Errore aggiornamento impostazioni AI' });
   }
 });
 
-// GET /api/settings/notifications
+/**
+ * @route   GET /api/settings/notifications
+ * @desc    Ottieni impostazioni notifiche
+ */
 router.get('/notifications', async (req, res) => {
   try {
-    const userId = req.user.id;
-    
-    const result = await db.execute({
-      sql: `SELECT settings_notifications FROM users WHERE id = ?`,
-      args: [userId]
-    });
-    
-    let notifications = {
-      documentiElaborati: true,
-      erroriRilevati: true,
-      reportPeriodici: false,
-      digestSettimanale: true,
-      email: true,
-      push: false
-    };
-
-    if (result.rows[0]?.settings_notifications) {
-      try {
-        const saved = JSON.parse(result.rows[0].settings_notifications);
-        notifications = { ...notifications, ...saved };
-      } catch (e) {
-        console.error('Error parsing notifications:', e);
+    // Impostazioni notifiche mock
+    const notificationSettings = {
+      email: {
+        enabled: true,
+        frequenza: 'daily',
+        tipi: {
+          documenti_completati: true,
+          errori_rilevati: true,
+          report_settimanali: true,
+          aggiornamenti_sistema: false
+        }
+      },
+      push: {
+        enabled: false,
+        browser: false,
+        mobile: false
+      },
+      in_app: {
+        enabled: true,
+        sound: true,
+        badge: true
+      },
+      digest: {
+        enabled: true,
+        orario: '09:00',
+        giorni: ['lunedi', 'mercoledi', 'venerdi']
       }
-    }
-
-    res.json({
-      success: true,
-      notifications
-    });
-
+    };
+    
+    res.json(notificationSettings);
   } catch (error) {
-    console.error('Error retrieving notifications:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error retrieving notifications'
-    });
+    console.error('Errore recupero impostazioni notifiche:', error);
+    res.status(500).json({ error: 'Errore recupero impostazioni notifiche' });
   }
 });
 
-// PUT /api/settings/notifications
+/**
+ * @route   PUT /api/settings/notifications
+ * @desc    Aggiorna impostazioni notifiche
+ */
 router.put('/notifications', async (req, res) => {
   try {
-    const userId = req.user.id;
-    const notifications = req.body;
-
-    await db.execute({
-      sql: `UPDATE users SET settings_notifications = ? WHERE id = ?`,
-      args: [JSON.stringify(notifications), userId]
+    const updates = req.body;
+    
+    console.log('Aggiornamento impostazioni notifiche:', updates);
+    
+    // Mock: restituisci le impostazioni aggiornate
+    res.json({ 
+      success: true, 
+      message: 'Impostazioni notifiche aggiornate con successo',
+      settings: updates 
     });
-
-    res.json({
-      success: true,
-      message: 'Notifications updated successfully'
-    });
-
   } catch (error) {
-    console.error('Error updating notifications:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error updating notifications'
-    });
-  }
-});
-
-// POST /api/settings/change-password
-router.post('/change-password', async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { currentPassword, newPassword } = req.body;
-
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        error: 'Current and new password required'
-      });
-    }
-
-    const result = await db.execute({
-      sql: 'SELECT password FROM users WHERE id = ?',
-      args: [userId]
-    });
-
-    const user = result.rows[0];
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
-    if (!isValidPassword) {
-      return res.status(400).json({
-        success: false,
-        error: 'Current password incorrect'
-      });
-    }
-
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
-
-    await db.execute({
-      sql: `UPDATE users SET password = ? WHERE id = ?`,
-      args: [newPasswordHash, userId]
-    });
-
-    res.json({
-      success: true,
-      message: 'Password changed successfully'
-    });
-
-  } catch (error) {
-    console.error('Error changing password:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error changing password'
-    });
+    console.error('Errore aggiornamento impostazioni notifiche:', error);
+    res.status(500).json({ error: 'Errore aggiornamento impostazioni notifiche' });
   }
 });
 

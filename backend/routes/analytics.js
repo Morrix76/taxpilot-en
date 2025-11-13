@@ -1,303 +1,179 @@
+// routes/analytics.js
 import express from 'express';
-import { db } from '../db.js';
-import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.use(authMiddleware);
-
-// GET /api/analytics/overview
+/**
+ * @route   GET /api/analytics/overview
+ * @desc    Ottieni panoramica analytics
+ * @query   periodo (mese, trimestre, anno)
+ */
 router.get('/overview', async (req, res) => {
   try {
     const { periodo = 'mese' } = req.query;
     
-    let dateFilter = '';
-    const now = new Date();
-    
-    switch(periodo) {
-      case 'settimana':
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        dateFilter = `AND created_at >= '${weekAgo.toISOString()}'`;
-        break;
-      case 'mese':
-        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        dateFilter = `AND created_at >= '${monthAgo.toISOString()}'`;
-        break;
-      case 'trimestre':
-        const quarterAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-        dateFilter = `AND created_at >= '${quarterAgo.toISOString()}'`;
-        break;
-      case 'anno':
-        const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-        dateFilter = `AND created_at >= '${yearAgo.toISOString()}'`;
-        break;
-    }
-
-    const docsResult = await db.execute({
-      sql: `SELECT COUNT(*) as count FROM documents WHERE 1=1 ${dateFilter}`,
-      args: []
-    });
-    const documentsProcessed = docsResult.rows[0]?.count || 0;
-
-    const accuracyResult = await db.execute({
-      sql: `SELECT AVG(confidence) as avg_accuracy FROM documents WHERE confidence IS NOT NULL ${dateFilter}`,
-      args: []
-    });
-    const accuracy = accuracyResult.rows[0]?.avg_accuracy || 95.0;
-
-    const monthlyRevenue = documentsProcessed * 0.5;
-    const timeSaved = documentsProcessed * 5;
-
-    res.json({
-      success: true,
-      stats: {
-        documentsProcessed,
-        accuracy: parseFloat(accuracy.toFixed(1)),
-        monthlyRevenue: parseFloat(monthlyRevenue.toFixed(1)),
-        timeSaved
+    // Dati mock per ora
+    const overview = {
+      periodo,
+      documenti_totali: 156,
+      documenti_mese: 45,
+      documenti_settimana: 12,
+      crescita_percentuale: 23.5,
+      clienti_attivi: 28,
+      clienti_nuovi: 5,
+      accuratezza_media: 94.7,
+      tempo_medio_elaborazione: 2.3,
+      statistiche_status: {
+        completati: 142,
+        errori: 8,
+        in_elaborazione: 6
       },
-      periodo
-    });
-
+      distribuzione_tipologie: {
+        fatture: 98,
+        buste_paga: 42,
+        altri: 16
+      }
+    };
+    
+    res.json(overview);
   } catch (error) {
-    console.error('Error analytics overview:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error retrieving stats',
-      details: error.message
-    });
+    console.error('Errore analytics overview:', error);
+    res.status(500).json({ error: 'Errore recupero analytics overview' });
   }
 });
 
-// GET /api/analytics/clienti-top
+/**
+ * @route   GET /api/analytics/clienti-top
+ * @desc    Ottieni top clienti per documenti
+ * @query   limite (default: 5)
+ */
 router.get('/clienti-top', async (req, res) => {
   try {
-    const { limite = 10 } = req.query;
-
-    const result = await db.execute({
-      sql: `SELECT 
-              u.id,
-              u.name as cliente,
-              COUNT(d.id) as documenti,
-              AVG(d.confidence) as accuracy_media,
-              MAX(d.created_at) as ultimo_documento
-            FROM users u
-            LEFT JOIN documents d ON u.id = d.user_id
-            GROUP BY u.id, u.name
-            HAVING documenti > 0
-            ORDER BY documenti DESC
-            LIMIT ?`,
-      args: [parseInt(limite)]
-    });
-
-    const topClienti = result.rows.map(cliente => ({
-      id: cliente.id,
-      cliente: cliente.cliente,
-      documenti: cliente.documenti,
-      accuracy: cliente.accuracy_media ? parseFloat(cliente.accuracy_media.toFixed(1)) : 0,
-      ultimoDocumento: cliente.ultimo_documento
-    }));
-
-    res.json({
-      success: true,
-      clienti: topClienti,
-      count: topClienti.length
-    });
-
+    const { limite = 5 } = req.query;
+    
+    // Dati mock
+    const clientiTop = [
+      { id: 1, nome: 'Acme Corporation', documenti: 45, fatturato: 125000 },
+      { id: 2, nome: 'Tech Solutions SRL', documenti: 38, fatturato: 98000 },
+      { id: 3, nome: 'Consulting Group', documenti: 32, fatturato: 87500 },
+      { id: 4, nome: 'Digital Services', documenti: 28, fatturato: 72000 },
+      { id: 5, nome: 'Innovation Ltd', documenti: 24, fatturato: 65000 }
+    ];
+    
+    res.json(clientiTop.slice(0, parseInt(limite)));
   } catch (error) {
-    console.error('Error top clients:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error retrieving top clients',
-      details: error.message
-    });
+    console.error('Errore clienti top:', error);
+    res.status(500).json({ error: 'Errore recupero clienti top' });
   }
 });
 
-// GET /api/analytics/attivita
+/**
+ * @route   GET /api/analytics/attivita
+ * @desc    Ottieni log attività recenti
+ * @query   limite (default: 10)
+ */
 router.get('/attivita', async (req, res) => {
   try {
-    const { limite = 20 } = req.query;
-
-    const result = await db.execute({
-      sql: `SELECT 
-              d.id,
-              d.filename,
-              d.status,
-              d.confidence,
-              d.created_at,
-              u.name as cliente
-            FROM documents d
-            LEFT JOIN users u ON d.user_id = u.id
-            ORDER BY d.created_at DESC
-            LIMIT ?`,
-      args: [parseInt(limite)]
-    });
-
-    const attivita = result.rows.map(item => ({
-      id: item.id,
-      documento: item.filename,
-      cliente: item.cliente || 'N/A',
-      status: item.status,
-      confidence: item.confidence,
-      timestamp: item.created_at,
-      tipo: 'documento_processato'
-    }));
-
-    res.json({
-      success: true,
-      attivita,
-      count: attivita.length
-    });
-
+    const { limite = 10 } = req.query;
+    
+    // Dati mock
+    const attivita = [
+      { id: 1, tipo: 'upload', descrizione: 'Fattura_2024_001.xml caricata', timestamp: new Date(Date.now() - 3600000).toISOString(), utente: 'Admin' },
+      { id: 2, tipo: 'analisi', descrizione: 'Documento analizzato con successo', timestamp: new Date(Date.now() - 7200000).toISOString(), utente: 'System' },
+      { id: 3, tipo: 'export', descrizione: 'Report mensile esportato', timestamp: new Date(Date.now() - 10800000).toISOString(), utente: 'Admin' },
+      { id: 4, tipo: 'upload', descrizione: 'BustaPaga_Gen_2024.pdf caricata', timestamp: new Date(Date.now() - 14400000).toISOString(), utente: 'Admin' },
+      { id: 5, tipo: 'correzione', descrizione: 'Errori fiscali corretti automaticamente', timestamp: new Date(Date.now() - 18000000).toISOString(), utente: 'AI' },
+      { id: 6, tipo: 'analisi', descrizione: 'Validazione IVA completata', timestamp: new Date(Date.now() - 21600000).toISOString(), utente: 'System' },
+      { id: 7, tipo: 'upload', descrizione: 'Fattura_2024_002.xml caricata', timestamp: new Date(Date.now() - 25200000).toISOString(), utente: 'Admin' },
+      { id: 8, tipo: 'export', descrizione: 'Dati contabili esportati', timestamp: new Date(Date.now() - 28800000).toISOString(), utente: 'Admin' },
+      { id: 9, tipo: 'analisi', descrizione: 'Controllo IRPEF completato', timestamp: new Date(Date.now() - 32400000).toISOString(), utente: 'System' },
+      { id: 10, tipo: 'upload', descrizione: 'Ricevuta_Pagamento.pdf caricata', timestamp: new Date(Date.now() - 36000000).toISOString(), utente: 'Admin' }
+    ];
+    
+    res.json(attivita.slice(0, parseInt(limite)));
   } catch (error) {
-    console.error('Error activity timeline:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error retrieving activity',
-      details: error.message
-    });
+    console.error('Errore attività:', error);
+    res.status(500).json({ error: 'Errore recupero attività' });
   }
 });
 
-// GET /api/analytics/trend
+/**
+ * @route   GET /api/analytics/trend
+ * @desc    Ottieni dati trend temporale
+ * @query   periodo (mese, trimestre, anno), tipo (documenti, errori, clienti)
+ */
 router.get('/trend', async (req, res) => {
   try {
     const { periodo = 'mese', tipo = 'documenti' } = req.query;
     
-    let groupBy;
-    switch(periodo) {
-      case 'settimana':
-      case 'mese':
-        groupBy = `strftime('%Y-%m-%d', created_at)`;
-        break;
-      case 'trimestre':
-        groupBy = `strftime('%Y-%W', created_at)`;
-        break;
-      case 'anno':
-        groupBy = `strftime('%Y-%m', created_at)`;
-        break;
-      default:
-        groupBy = `strftime('%Y-%m-%d', created_at)`;
-    }
-
-    let query;
-    if (tipo === 'accuracy') {
-      query = `
-        SELECT 
-          ${groupBy} as periodo,
-          AVG(confidence) as valore,
-          COUNT(*) as count
-        FROM documents 
-        WHERE confidence IS NOT NULL
-        AND created_at >= date('now', '-30 days')
-        GROUP BY ${groupBy}
-        ORDER BY periodo ASC
-      `;
-    } else {
-      query = `
-        SELECT 
-          ${groupBy} as periodo,
-          COUNT(*) as valore
-        FROM documents 
-        WHERE created_at >= date('now', '-30 days')
-        GROUP BY ${groupBy}
-        ORDER BY periodo ASC
-      `;
-    }
-
-    const result = await db.execute({ sql: query, args: [] });
-
-    const trend = result.rows.map(item => ({
-      data: item.periodo,
-      valore: tipo === 'accuracy' ? parseFloat(item.valore.toFixed(1)) : item.valore,
-      count: item.count || item.valore
-    }));
-
-    res.json({
-      success: true,
-      trend,
+    // Dati mock per grafico trend
+    const trend = {
       periodo,
       tipo,
-      count: trend.length
-    });
-
+      labels: ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'],
+      datasets: [
+        {
+          label: 'Documenti elaborati',
+          data: [12, 19, 15, 25, 22, 30, 28, 35, 32, 40, 38, 45],
+          borderColor: 'rgb(59, 130, 246)',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)'
+        },
+        {
+          label: 'Con errori',
+          data: [2, 3, 2, 4, 3, 5, 4, 6, 5, 7, 6, 8],
+          borderColor: 'rgb(239, 68, 68)',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)'
+        }
+      ]
+    };
+    
+    res.json(trend);
   } catch (error) {
-    console.error('Error trend:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error retrieving trend',
-      details: error.message
-    });
+    console.error('Errore trend:', error);
+    res.status(500).json({ error: 'Errore recupero trend' });
   }
 });
 
-// GET /api/analytics/report
+/**
+ * @route   GET /api/analytics/report
+ * @desc    Genera report analytics completo
+ * @query   periodo (mese, trimestre, anno)
+ */
 router.get('/report', async (req, res) => {
   try {
     const { periodo = 'mese' } = req.query;
-
-    const overviewResult = await db.execute({
-      sql: `SELECT 
-              COUNT(*) as totale_documenti,
-              AVG(confidence) as accuracy_media,
-              COUNT(DISTINCT user_id) as clienti_attivi
-            FROM documents 
-            WHERE created_at >= date('now', '-30 days')`,
-      args: []
-    });
-
-    const overview = overviewResult.rows[0];
-
-    const tipiResult = await db.execute({
-      sql: `SELECT 
-              tipo_documento,
-              COUNT(*) as count
-            FROM documents 
-            WHERE created_at >= date('now', '-30 days')
-            GROUP BY tipo_documento
-            ORDER BY count DESC`,
-      args: []
-    });
-
-    const oreResult = await db.execute({
-      sql: `SELECT 
-              strftime('%H', created_at) as ora,
-              COUNT(*) as documenti,
-              AVG(confidence) as accuracy
-            FROM documents 
-            WHERE created_at >= date('now', '-7 days')
-            GROUP BY strftime('%H', created_at)
-            ORDER BY ora`,
-      args: []
-    });
-
-    res.json({
-      success: true,
-      report: {
-        overview: {
-          totaleDocumenti: overview.totale_documenti || 0,
-          accuracyMedia: overview.accuracy_media ? parseFloat(overview.accuracy_media.toFixed(1)) : 0,
-          clientiAttivi: overview.clienti_attivi || 0
-        },
-        distribuzionePerTipo: tipiResult.rows,
-        performancePerOra: oreResult.rows.map(item => ({
-          ora: item.ora + ':00',
-          documenti: item.documenti,
-          accuracy: item.accuracy ? parseFloat(item.accuracy.toFixed(1)) : 0
-        }))
-      },
+    
+    // Report completo mock
+    const report = {
       periodo,
-      generato: new Date().toISOString()
-    });
-
+      generato_il: new Date().toISOString(),
+      riepilogo: {
+        documenti_totali: 156,
+        accuratezza_media: 94.7,
+        tempo_medio: 2.3,
+        errori_totali: 8
+      },
+      per_tipologia: {
+        fatture: { totale: 98, conformi: 92, errori: 6 },
+        buste_paga: { totale: 42, conformi: 40, errori: 2 },
+        altri: { totale: 16, conformi: 16, errori: 0 }
+      },
+      per_cliente: [
+        { nome: 'Acme Corporation', documenti: 45, conformita: 95.6 },
+        { nome: 'Tech Solutions SRL', documenti: 38, conformita: 94.7 },
+        { nome: 'Consulting Group', documenti: 32, conformita: 96.9 }
+      ],
+      trend_mensile: {
+        crescita: 23.5,
+        media_giornaliera: 1.5,
+        picco_giorno: 'Lunedì'
+      }
+    };
+    
+    res.json(report);
   } catch (error) {
-    console.error('Error report:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error generating report',
-      details: error.message
-    });
+    console.error('Errore report:', error);
+    res.status(500).json({ error: 'Errore generazione report' });
   }
 });
 

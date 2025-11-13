@@ -8,6 +8,8 @@ import clientsRoutes from './routes/clients.js';
 import documentsRoutes from './routes/documents.js';
 import billingRoutes from './routes/billing.js';
 import contabilitaRoutes from './routes/contabilita.js';
+import analyticsRoutes from './routes/analytics.js';
+import settingsRoutes from './routes/settings.js';
 import checkTrialStatus from './middleware/trialMiddleware.js';
 
 // ====== DEBUG: ENV INSPECTION ======
@@ -135,6 +137,12 @@ console.log('✅ Rotte /api/billing montate (protected)');
 
 app.use('/api/contabilita', checkTrialStatus, contabilitaRoutes);
 console.log('✅ Rotte /api/contabilita montate (protected)');
+
+app.use('/api/analytics', checkTrialStatus, analyticsRoutes);
+console.log('✅ Rotte /api/analytics montate (protected)');
+
+app.use('/api/settings', checkTrialStatus, settingsRoutes);
+console.log('✅ Rotte /api/settings montate (protected)');
 
 // ====== HEALTHZ ENDPOINT ======
 /**
