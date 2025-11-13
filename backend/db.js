@@ -136,24 +136,34 @@ export async function getAllDocuments(userId = null) {
     
     const result = await db.execute({ sql: query, args });
     
+    console.log(`📋 getAllDocuments: recuperati ${result.rows.length} documenti`);
+    
     // Mappa a formato atteso
-    return result.rows.map(doc => ({
-      id: doc.id,
-      user_id: doc.user_id,
-      client_id: doc.client_id,
-      original_filename: doc.file_name,
-      file_path: doc.file_path,
-      type: doc.file_type,
-      document_category: doc.category,
-      created_at: doc.created_at,
-      ai_status: JSON.parse(doc.ocr_data || '{}').ai_status || doc.status,
-      ai_analysis: JSON.parse(doc.ocr_data || '{}').ai_analysis || '',
-      ai_confidence: JSON.parse(doc.ocr_data || '{}').ai_confidence || 0,
-      ai_issues: JSON.parse(doc.ocr_data || '{}').ai_issues || '[]',
-      analysis_result: JSON.parse(doc.ocr_data || '{}').analysis_result || '{}',
-      file_size: JSON.parse(doc.ocr_data || '{}').file_size || 0,
-      flag_manual_review: false
-    }));
+    return result.rows.map(doc => {
+      const ocrData = JSON.parse(doc.ocr_data || '{}');
+      // ✅ FIX: Priorità al campo status diretto del database, non a ocr_data.ai_status
+      const status = doc.status || ocrData.ai_status || 'processing';
+      
+      console.log(`📄 Doc ${doc.id}: status DB="${doc.status}", ocr_data.ai_status="${ocrData.ai_status}", finale="${status}"`);
+      
+      return {
+        id: doc.id,
+        user_id: doc.user_id,
+        client_id: doc.client_id,
+        original_filename: doc.file_name,
+        file_path: doc.file_path,
+        type: doc.file_type,
+        document_category: doc.category,
+        created_at: doc.created_at,
+        ai_status: status,
+        ai_analysis: ocrData.ai_analysis || '',
+        ai_confidence: ocrData.ai_confidence || 0,
+        ai_issues: ocrData.ai_issues || '[]',
+        analysis_result: ocrData.analysis_result || '{}',
+        file_size: ocrData.file_size || 0,
+        flag_manual_review: false
+      };
+    });
   } catch (error) {
     console.error('❌ Errore recupero documenti:', error);
     throw error;
@@ -173,6 +183,12 @@ export async function getDocumentById(id) {
     if (!result.rows[0]) return null;
     
     const doc = result.rows[0];
+    const ocrData = JSON.parse(doc.ocr_data || '{}');
+    // ✅ FIX: Priorità al campo status diretto del database
+    const status = doc.status || ocrData.ai_status || 'processing';
+    
+    console.log(`📄 getDocumentById(${id}): status DB="${doc.status}", ocr_data.ai_status="${ocrData.ai_status}", finale="${status}"`);
+    
     return {
       id: doc.id,
       user_id: doc.user_id,
@@ -183,13 +199,13 @@ export async function getDocumentById(id) {
       type: doc.file_type,
       document_category: doc.category,
       created_at: doc.created_at,
-      ai_status: JSON.parse(doc.ocr_data || '{}').ai_status || doc.status,
-      ai_analysis: JSON.parse(doc.ocr_data || '{}').ai_analysis || '',
-      ai_confidence: JSON.parse(doc.ocr_data || '{}').ai_confidence || 0,
-      ai_issues: JSON.parse(doc.ocr_data || '{}').ai_issues || '[]',
-      analysis_result: JSON.parse(doc.ocr_data || '{}').analysis_result || '{}',
-      file_size: JSON.parse(doc.ocr_data || '{}').file_size || 0,
-      mime_type: JSON.parse(doc.ocr_data || '{}').mime_type || 'application/octet-stream',
+      ai_status: status,
+      ai_analysis: ocrData.ai_analysis || '',
+      ai_confidence: ocrData.ai_confidence || 0,
+      ai_issues: ocrData.ai_issues || '[]',
+      analysis_result: ocrData.analysis_result || '{}',
+      file_size: ocrData.file_size || 0,
+      mime_type: ocrData.mime_type || 'application/octet-stream',
       flag_manual_review: false,
       ocr_data: doc.ocr_data
     };
