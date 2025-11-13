@@ -724,18 +724,23 @@ router.post(
 router.get('/', authMiddleware, async (req, res) => {
   try {
     console.log('📋 GET /api/documents chiamato');
-    const { rows } = await db.execute({
-      sql: 'SELECT * FROM documents WHERE user_id = ? ORDER BY created_at DESC',
-      args: [req.user.id]
-    });
-    const documents = rows;
+    const documents = await getAllDocuments(req.user.id);
     console.log(`📋 Trovati ${documents.length} documenti`);
-    const processedDocuments = documents.map(doc => ({
-      ...doc,
-      analysis_result: safeJSONParse(doc.analysis_result, {}),
-      ai_issues: safeJSONParse(doc.ai_issues, [])
-    }));
-    res.json(processedDocuments);
+    
+    // ✅ Normalizza i documenti per garantire coerenza tra status e ai_status
+    const normalizedDocuments = documents.map(doc => {
+      const finalStatus = doc.status || doc.ai_status || 'processing';
+      return {
+        ...doc,
+        status: finalStatus,
+        ai_status: finalStatus,
+        analysis_result: safeJSONParse(doc.analysis_result, {}),
+        ai_issues: safeJSONParse(doc.ai_issues, [])
+      };
+    });
+    
+    console.log(`📋 Documenti normalizzati con status coerenti`);
+    res.json(normalizedDocuments);
   } catch (error) {
     console.error('❌ Errore nel recuperare i documenti:', error);
     res.status(500).json({ error: 'Errore nel recupero dei dati', details: error.message });

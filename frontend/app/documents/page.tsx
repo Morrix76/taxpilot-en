@@ -14,7 +14,8 @@ type Doc = {
   created_at?: string;
   upload_date?: string;
   updated_at?: string;
-  ai_status?: 'ok' | 'processing' | 'error' | 'warning';
+  status?: 'ok' | 'completed' | 'processing' | 'error' | 'warning';  // ✅ Aggiunto campo status
+  ai_status?: 'ok' | 'completed' | 'processing' | 'error' | 'warning';
   ai_analysis?: string;
   ai_confidence?: number;
   analysis_result?: any;
@@ -132,16 +133,25 @@ export default function DocumentsPage() {
   };
 
   const getStatusFromAnalysis = (doc: Doc): 'ok' | 'warning' | 'error' | 'processing' => {
+    // ✅ FIX: Legge prima 'status', poi 'ai_status' come fallback
+    const directStatus = doc.status || doc.ai_status;
+    if (directStatus) {
+      // Normalizza 'completed' a 'ok' per compatibilità UI
+      return (directStatus === 'completed' ? 'ok' : directStatus) as any;
+    }
+    
+    // Fallback su analysis_result
     if (doc.analysis_result) {
       try {
         const analysis =
           typeof doc.analysis_result === 'string' ? JSON.parse(doc.analysis_result) : doc.analysis_result;
-        return analysis?.combined?.overall_status || 'processing';
+        const status = analysis?.combined?.overall_status || 'processing';
+        return (status === 'completed' ? 'ok' : status) as any;
       } catch {
         return 'processing';
       }
     }
-    return (doc.ai_status as any) || 'processing';
+    return 'processing';
   };
 
   const getStatusBadge = (doc: Doc) => {
@@ -150,7 +160,7 @@ export default function DocumentsPage() {
       case 'ok':
         return (
           <span className="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-xl bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-            ✅ Processed
+            ✅ Completed
           </span>
         );
       case 'warning':
@@ -162,7 +172,7 @@ export default function DocumentsPage() {
       case 'error':
         return (
           <span className="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-xl bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
-            ❌ Errors detected
+            ❌ Error
           </span>
         );
       default:
