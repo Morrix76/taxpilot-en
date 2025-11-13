@@ -10,11 +10,15 @@ type Doc = {
   original_filename?: string;
   name?: string;
   type?: string;
+  category?: string;
   document_category?: string;
   created_at?: string;
   upload_date?: string;
   updated_at?: string;
-  status?: 'ok' | 'completed' | 'processing' | 'error' | 'warning';  // ✅ Aggiunto campo status
+  issueDate?: string;
+  invoice_date?: string;
+  date?: string;
+  status?: 'ok' | 'completed' | 'processing' | 'error' | 'warning';
   ai_status?: 'ok' | 'completed' | 'processing' | 'error' | 'warning';
   ai_analysis?: string;
   ai_confidence?: number;
@@ -53,6 +57,42 @@ type EditPacket = {
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL!;
+
+/* ===== Mappa categorie italiano → inglese ===== */
+const CATEGORY_LABELS: Record<string, string> = {
+  fatture: "Invoice",
+  fattura: "Invoice",
+  "busta paga": "Payslip",
+  busta_paga: "Payslip",
+  bustapaga: "Payslip",
+  payslip: "Payslip",
+  invoice: "Invoice",
+};
+
+/* ===== Helper per tradurre categorie ===== */
+function getCategoryLabel(category?: string): string {
+  if (!category) return "—";
+  const key = category.toLowerCase().trim();
+  return CATEGORY_LABELS[key] ?? category;
+}
+
+/* ===== Helper per formattare date in modo sicuro ===== */
+function formatDocumentDate(doc: Doc): string {
+  const raw =
+    doc.issueDate ||
+    doc.invoice_date ||
+    doc.created_at ||
+    doc.upload_date ||
+    doc.updated_at ||
+    doc.date;
+
+  if (!raw) return "—";
+
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return "—";
+
+  return d.toLocaleDateString("en-GB");
+}
 
 /* ===== Detect kind (robusto) ===== */
 function detectDocKind(doc: Doc) {
@@ -184,17 +224,16 @@ export default function DocumentsPage() {
     }
   };
 
-  const getDocumentDate = (doc: Doc) => {
-    const dateStr = doc.created_at || doc.upload_date || doc.updated_at || '';
-    if (!dateStr) return 'N/A';
-    try {
-      return new Date(dateStr).toLocaleDateString('en-GB');
-    } catch {
-      return 'Invalid Date';
-    }
-  };
+  const getDocumentDate = (doc: Doc) => formatDocumentDate(doc);
 
-  const getDocumentType = (doc: Doc) => detectDocKind(doc).label;
+  const getDocumentType = (doc: Doc) => {
+    // Prova prima con la categoria diretta
+    if (doc.category || doc.document_category) {
+      return getCategoryLabel(doc.category || doc.document_category);
+    }
+    // Fallback su detectDocKind
+    return detectDocKind(doc).label;
+  };
 
   const handleDelete = async (docId: Doc['id']) => {
     if (!confirm('Are you sure you want to delete this document?')) return;

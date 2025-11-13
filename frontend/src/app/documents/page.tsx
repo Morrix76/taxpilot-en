@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL}/api'
 
 // ========================================================================
-// FUNZIONE HELPER AGGIUNTA COME DA ISTRUZIONI
+// FUNZIONI HELPER
 // ========================================================================
 const safeParseJSON = (jsonString, fallback = []) => {
   try {
@@ -15,6 +15,36 @@ const safeParseJSON = (jsonString, fallback = []) => {
   } catch {
     return fallback;
   }
+};
+
+// ✅ Mappa categorie italiano → inglese
+const CATEGORY_LABELS: Record<string, string> = {
+  fatture: "Invoice",
+  fattura: "Invoice",
+  "fattura elettronica": "Invoice",
+  "busta paga": "Payslip",
+  busta_paga: "Payslip",
+  bustapaga: "Payslip",
+  payslip: "Payslip",
+  invoice: "Invoice",
+};
+
+// ✅ Helper per tradurre categorie
+const getCategoryLabel = (category?: string): string => {
+  if (!category) return "—";
+  const key = category.toLowerCase().trim();
+  return CATEGORY_LABELS[key] ?? category;
+};
+
+// ✅ Helper per formattare date in modo sicuro
+const formatDocumentDate = (doc: Document): string => {
+  const raw = doc.created_at;
+  if (!raw) return "—";
+  
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return "—";
+  
+  return d.toLocaleDateString("en-GB");
 };
 
 interface Document {
@@ -270,8 +300,8 @@ export default function Documents() {
       ['Nome', 'Tipo', 'Data', 'Status', 'Confidence'],
       ...filteredDocuments.map(doc => [
         doc.name,
-        doc.document_type_detected || doc.type,
-        new Date(doc.created_at).toLocaleDateString('it-IT'),
+        getCategoryLabel(doc.document_type_detected || doc.type),
+        formatDocumentDate(doc),
         doc.ai_status === 'ok' ? 'Conforme' : 'Con errori',
         `${(doc.ai_confidence * 100).toFixed(1)}%`
       ])
@@ -606,15 +636,15 @@ export default function Documents() {
                         </td>
                         <td className="px-8 py-6">
                           <span className={`inline-flex px-4 py-2 text-sm font-bold rounded-xl ${
-                            (doc.document_type_detected || doc.type) === 'Fattura Elettronica' 
+                            getCategoryLabel(doc.document_type_detected || doc.type) === 'Invoice' 
                               ? 'bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 text-indigo-700 dark:text-indigo-300' 
                               : 'bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 text-purple-700 dark:text-purple-300'
                           }`}>
-                            {(doc.document_type_detected || doc.type) === 'Fattura Elettronica' ? '🧾' : '💰'} {doc.document_type_detected || doc.type}
+                            {getCategoryLabel(doc.document_type_detected || doc.type) === 'Invoice' ? '🧾' : '💰'} {getCategoryLabel(doc.document_type_detected || doc.type)}
                           </span>
                         </td>
                         <td className="px-8 py-6 text-sm font-medium text-slate-700 dark:text-slate-300">
-                          {new Date(doc.created_at).toLocaleDateString('it-IT')}
+                          {formatDocumentDate(doc)}
                         </td>
                         <td className="px-8 py-6">
                           <span className={`inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-gradient-to-r ${statusInfo.color}`}>
@@ -735,7 +765,7 @@ export default function Documents() {
                   <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 p-6 rounded-xl border border-purple-200 dark:border-purple-700">
                     <label className="block text-sm font-bold text-purple-600 dark:text-purple-400 mb-2 uppercase tracking-wide">📋 Tipo Documento</label>
                     <p className="text-slate-800 dark:text-white font-medium text-lg">
-                      {selectedDoc.document_type_detected || selectedDoc.type}
+                      {getCategoryLabel(selectedDoc.document_type_detected || selectedDoc.type)}
                     </p>
                   </div>
                   
@@ -872,8 +902,8 @@ export default function Documents() {
                     const reportContent = `📊 REPORT AI DETTAGLIATO
 
 📄 File: ${selectedDoc.name}
-🤖 Tipo: ${selectedDoc.document_type_detected || selectedDoc.type}
-📅 Data: ${new Date(selectedDoc.created_at).toLocaleString('it-IT')}
+🤖 Tipo: ${getCategoryLabel(selectedDoc.document_type_detected || selectedDoc.type)}
+📅 Data: ${formatDocumentDate(selectedDoc)}
 📈 Confidence: ${(selectedDoc.ai_confidence * 100).toFixed(1)}%
 🎯 Status: ${selectedDoc.ai_status?.toUpperCase()}
 
