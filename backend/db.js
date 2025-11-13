@@ -65,7 +65,7 @@ export async function saveDocument(documentData) {
         ocr_data,
         status,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
       args: [
         documentData.user_id,
         documentData.client_id || null,
