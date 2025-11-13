@@ -58,22 +58,30 @@ type EditPacket = {
 
 const API = process.env.NEXT_PUBLIC_API_URL!;
 
-/* ===== Mappa categorie italiano → inglese ===== */
-const CATEGORY_LABELS: Record<string, string> = {
-  fatture: "Invoice",
-  fattura: "Invoice",
-  "busta paga": "Payslip",
-  busta_paga: "Payslip",
-  bustapaga: "Payslip",
-  payslip: "Payslip",
-  invoice: "Invoice",
-};
+/* ===== Helper per normalizzare categorie (spazi, underscore, trattini) ===== */
+function normalizeCategory(category?: string): string {
+  if (!category) return "";
+  return category.trim().toLowerCase().replace(/[\s_-]+/g, " ");
+}
 
 /* ===== Helper per tradurre categorie ===== */
 function getCategoryLabel(category?: string): string {
-  if (!category) return "—";
-  const key = category.toLowerCase().trim();
-  return CATEGORY_LABELS[key] ?? category;
+  const norm = normalizeCategory(category);
+  
+  if (!norm) return "—";
+  
+  // Invoice (tutte le varianti)
+  if (norm === "fatture" || norm === "fattura" || norm === "fattura elettronica" || norm === "invoice") {
+    return "Invoice";
+  }
+  
+  // Payslip (tutte le varianti: busta-paga, buste-paga, busta_paga, buste_paga, bustapaga, bustepaga)
+  if (norm === "busta paga" || norm === "buste paga" || norm === "bustapaga" || norm === "bustepaga" || norm === "payslip") {
+    return "Payslip";
+  }
+  
+  // Fallback: restituisci il valore originale
+  return category ?? "—";
 }
 
 /* ===== Helper per formattare date in modo sicuro ===== */
@@ -227,9 +235,10 @@ export default function DocumentsPage() {
   const getDocumentDate = (doc: Doc) => formatDocumentDate(doc);
 
   const getDocumentType = (doc: Doc) => {
-    // Prova prima con la categoria diretta
-    if (doc.category || doc.document_category) {
-      return getCategoryLabel(doc.category || doc.document_category);
+    // Prova prima con la categoria diretta (qualsiasi variante)
+    const categoryValue = doc.category || doc.document_category || doc.type;
+    if (categoryValue) {
+      return getCategoryLabel(categoryValue);
     }
     // Fallback su detectDocKind
     return detectDocKind(doc).label;
