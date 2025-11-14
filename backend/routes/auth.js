@@ -133,6 +133,72 @@ router.get('/verify-email/:token', async (req, res) => {
   }
 });
 
+// ====== RESEND VERIFICATION EMAIL ======
+router.post('/resend-verification', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ success: false, error: 'Email richiesta' });
+  }
+  
+  try {
+    // Cerca utente per email
+    const userResult = await db.execute({
+      sql: 'SELECT * FROM users WHERE email = ?',
+      args: [email]
+    });
+    
+    const user = userResult.rows[0];
+    
+    // Verifica se l'utente esiste
+    if (!user) {
+      console.warn(`⚠️ Tentativo di reinvio verifica per email inesistente: ${email}`);
+      return res.status(404).json({ success: false, error: 'Utente non trovato' });
+    }
+    
+    // Verifica se l'email è già verificata
+    if (user.email_verified === 1) {
+      console.warn(`⚠️ Tentativo di reinvio verifica per email già verificata: ${email}`);
+      return res.status(400).json({ success: false, error: 'Email già verificata' });
+    }
+    
+    // Genera nuovo token e scadenza
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    
+    // Aggiorna DB con nuovo token
+    await db.execute({
+      sql: 'UPDATE users SET verification_token = ?, verification_token_expires = ? WHERE id = ?',
+      args: [token, expires, user.id]
+    });
+    
+    console.log(`✅ Nuovo token di verifica generato per ${email}`);
+    
+    // Invia email di verifica
+    try {
+      const emailResult = await sendVerificationEmail(email, token);
+      if (emailResult.success) {
+        console.log(`✅ Email di verifica reinviata a ${email}`);
+      } else {
+        console.warn(`⚠️ Errore invio email a ${email}:`, emailResult.error);
+        return res.status(500).json({ success: false, error: 'Errore invio email' });
+      }
+    } catch (emailError) {
+      console.error(`❌ Errore invio email di verifica:`, emailError);
+      return res.status(500).json({ success: false, error: 'Errore invio email' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Email di verifica inviata'
+    });
+    
+  } catch (err) {
+    console.error("Errore reinvio verifica:", err);
+    res.status(500).json({ success: false, error: 'Errore server' });
+  }
+});
+
 // ====== PROFILE (verifica token e ritorna info utente + piano) ======
 router.get('/profile', async (req, res) => {
   try {
