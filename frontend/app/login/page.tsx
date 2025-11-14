@@ -1,19 +1,45 @@
 ﻿'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showResendButton, setShowResendButton] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check query params for verification status
+  useEffect(() => {
+    const verified = searchParams?.get('verified');
+    const errorParam = searchParams?.get('error');
+
+    if (verified === 'true') {
+      setSuccessMessage('Email verificata con successo! Ora puoi accedere.');
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } else if (verified === 'false') {
+      if (errorParam === 'expired') {
+        setError('Il link di verifica è scaduto. Richiedi un nuovo link.');
+      } else if (errorParam === 'invalid') {
+        setError('Link di verifica non valido.');
+      } else {
+        setError('Link non valido o scaduto.');
+      }
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
+    setShowResendButton(false);
     setLoading(true);
 
     try {
@@ -31,12 +57,52 @@ export default function LoginPage() {
         localStorage.setItem('taxpilot_token', data.token);
         router.push('/dashboard');
       } else {
-        setError(data.error || 'Login error');
+        // Check for EMAIL_NOT_VERIFIED error
+        if (data.code === 'EMAIL_NOT_VERIFIED') {
+          setError('Devi verificare la tua email prima di accedere.');
+          setShowResendButton(true);
+        } else {
+          setError(data.error || 'Errore di login');
+        }
       }
     } catch (error) {
-      setError('Connection error');
+      setError('Errore di connessione');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError('Inserisci la tua email per reinviare la verifica.');
+      return;
+    }
+
+    setResendLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccessMessage('Email di verifica inviata! Controlla la tua casella di posta.');
+        setShowResendButton(false);
+        setTimeout(() => setSuccessMessage(''), 5000);
+      } else {
+        setError(data.error || 'Errore durante il reinvio dell\'email.');
+      }
+    } catch (error) {
+      setError('Errore di connessione');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -79,9 +145,28 @@ export default function LoginPage() {
             />
           </div>
 
+          {successMessage && (
+            <div className="rounded-md bg-green-50 p-4 text-sm font-semibold text-green-700">
+              {successMessage}
+            </div>
+          )}
+
           {error && (
             <div className="rounded-md bg-red-50 p-4 text-sm font-semibold text-red-700">
               {error}
+            </div>
+          )}
+
+          {showResendButton && (
+            <div>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+                className="w-full rounded-lg border border-indigo-600 bg-white px-4 py-3 text-base font-medium text-indigo-600 shadow-sm hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {resendLoading ? 'Invio in corso...' : 'Reinvia email di verifica'}
+              </button>
             </div>
           )}
 
