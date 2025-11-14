@@ -144,6 +144,12 @@ export default function RegisterPage() {
                 Torna al login
               </Link>
             </p>
+
+            <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+              <Link href="/privacy" className="text-xs text-gray-500 hover:text-indigo-600">
+                Privacy Policy
+              </Link>
+            </div>
           </div>
         ) : (
           // Registration Form
@@ -253,6 +259,12 @@ export default function RegisterPage() {
                 Log in
               </Link>
             </p>
+
+            <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+              <Link href="/privacy" className="text-xs text-gray-500 hover:text-indigo-600">
+                Privacy Policy
+              </Link>
+            </div>
           </>
         )}
       </div>

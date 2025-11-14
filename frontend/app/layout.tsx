@@ -63,7 +63,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
   /* ── Authentication Check ── */
   useEffect(() => {
-    const publicPages = ['/', '/login', '/register', '/trial-expired'];
+    const publicPages = ['/', '/login', '/register', '/trial-expired', '/privacy'];
     if (publicPages.includes(pathname)) {
         setAuthStatus('unauthenticated');
         return;
@@ -124,7 +124,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     return <LoadingScreen />;
   }
 
-  const isPublicPage = ['/', '/login', '/register', '/trial-expired'].includes(pathname);
+  const isPublicPage = ['/', '/login', '/register', '/trial-expired', '/privacy'].includes(pathname);
   if (isPublicPage) {
     return (
       <html lang="en">
