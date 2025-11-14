@@ -32,9 +32,9 @@ async function createDemoUser() {
     const password = 'Demo123!';
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Data di scadenza trial (30 giorni da oggi)
+    // Data di scadenza trial (15 giorni da oggi)
     const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 30);
+    trialEndDate.setDate(trialEndDate.getDate() + 15);
     const trialEndISO = trialEndDate.toISOString();
 
     // Crea utente
@@ -55,7 +55,7 @@ async function createDemoUser() {
         'Demo',
         'User',
         0,
-        10,
+        15,
         trialEndISO
       ]
     });
@@ -65,7 +65,7 @@ async function createDemoUser() {
     console.log('   Email: demo@taxpilot.com');
     console.log('   Password: Demo123!');
     console.log(`   Trial scade: ${trialEndDate.toLocaleDateString('it-IT')}`);
-    console.log('   Documenti limite: 10\n');
+    console.log('   Documenti limite: 15\n');
 
   } catch (error) {
     console.error('❌ Errore:', error.message);

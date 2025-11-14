@@ -23,7 +23,7 @@ class TrialService {
         isTrialActive: now < trialEnd && studio.subscription_status === 'trial',
         daysLeft: Math.max(0, daysLeft),
         documentsUsed: studio.documents_used || 0,
-        documentsLimit: studio.documents_limit || 20,
+        documentsLimit: studio.documents_limit || 15,
         clientsCount: studio.clients_count || 0,
         clientsLimit: studio.clients_limit || 5,
         subscriptionStatus: studio.subscription_status,
@@ -96,7 +96,7 @@ class TrialService {
           subscription_status: 'trial',
           documents_used: 0,
           clients_count: 0,
-          documents_limit: 20,
+          documents_limit: 15,
           clients_limit: 5
         })
         .eq('id', studioId)
@@ -112,7 +112,7 @@ class TrialService {
           studio_id: studioId,
           plan_type: 'trial',
           end_date: trialEndDate.toISOString(),
-          documents_limit: 20,
+          documents_limit: 15,
           clients_limit: 5,
           price_monthly: 0
         });
