@@ -154,6 +154,12 @@ export async function saveDocument(documentData) {
 
     // Mappa a formato atteso dal frontend
     const doc = insertedDoc.rows[0];
+    
+    if (!doc) {
+      console.error('❌ Documento non trovato dopo inserimento');
+      throw new Error('Documento non trovato dopo inserimento');
+    }
+    
     return {
       id: doc.id,
       user_id: doc.user_id,
