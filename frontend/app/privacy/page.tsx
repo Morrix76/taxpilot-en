@@ -33,6 +33,10 @@ export default function PrivacyPage() {
               collect, use, disclose, and protect your personal information when you use our services. By using 
               TaxPilot, you agree to the collection and use of information in accordance with this policy.
             </p>
+            <p className="text-gray-700 leading-relaxed mt-4">
+              TaxPilot is operated by Ciardo Francesco, acting as Data Controller under applicable data protection laws, 
+              including the GDPR.
+            </p>
           </section>
 
           {/* 2. Information We Collect */}
@@ -65,6 +69,10 @@ export default function PrivacyPage() {
               <li><strong>Security:</strong> To detect, prevent, and address technical issues, fraud, and security vulnerabilities</li>
               <li><strong>Legal Compliance:</strong> To comply with applicable laws, regulations, and legal processes</li>
             </ul>
+            <p className="text-gray-700 leading-relaxed mt-4">
+              We do not use your documents or personal data to train our own AI models. AI-based document analysis is 
+              performed in real time only for the purpose of providing the service.
+            </p>
           </section>
 
           {/* 4. Data Storage and Security */}
@@ -81,6 +89,7 @@ export default function PrivacyPage() {
               <li><strong>Data Transmission:</strong> All data transmitted between your device and our servers is encrypted using HTTPS/TLS protocols</li>
               <li><strong>Password Security:</strong> User passwords are hashed using bcrypt with salt and never stored in plain text</li>
               <li><strong>Access Controls:</strong> We implement strict access controls to ensure only authorized personnel can access user data</li>
+              <li><strong>Data Location:</strong> We strive to store and process your data within the European Union (EU) whenever possible.</li>
             </ul>
             <p className="text-gray-700 leading-relaxed mt-4">
               While we strive to protect your personal information, no method of transmission over the internet 
@@ -207,4 +216,3 @@ export default function PrivacyPage() {
     </div>
   );
 }
-
