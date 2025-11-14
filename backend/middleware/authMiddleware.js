@@ -41,7 +41,7 @@ const authMiddleware = async (req, res, next) => {
     const result = await db.execute({
       sql: `
         SELECT 
-          u.id, u.email, u.nome, 
+          u.id, u.email, u.nome, u.email_verified,
           u.trial_end_date, u.documents_used, u.documents_limit,
           u.piano_data_fine
         FROM users u
@@ -56,6 +56,25 @@ const authMiddleware = async (req, res, next) => {
       return res.status(404).json({ 
         success: false,
         error: 'Utente non trovato' 
+      });
+    }
+
+    // Verifica email verificata (con eccezioni per certe route)
+    const exemptRoutes = [
+      '/api/auth/verify-email',
+      '/api/auth/resend-verification',
+      '/api/auth/login',
+      '/api/auth/register'
+    ];
+    
+    const currentPath = req.originalUrl || req.path;
+    const isExemptRoute = exemptRoutes.some(route => currentPath.startsWith(route));
+    
+    if (!isExemptRoute && user.email_verified === 0) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Email non verificata',
+        code: 'EMAIL_NOT_VERIFIED'
       });
     }
 
