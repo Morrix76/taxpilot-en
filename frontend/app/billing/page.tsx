@@ -212,7 +212,7 @@ export default function BillingPage() {
                       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 mb-2">
                         <div 
                           className="bg-gradient-to-r from-yellow-500 to-orange-600 h-4 rounded-full transition-all duration-300" 
-                          style={{ width: `${Math.max(0, (billingData.periodo.giorni_rimasti / 30) * 100)}%` }}
+                          style={{ width: `${Math.max(0, (billingData.periodo.giorni_rimasti / 15) * 100)}%` }}
                         />
                       </div>
                     </div>

@@ -139,7 +139,7 @@ const LoginPage = () => {
                   <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
                     <div className="w-2 h-2 bg-green-600 rounded-full"></div>
                   </div>
-                  <span className="text-slate-700">✅ 20 documenti inclusi</span>
+                  <span className="text-slate-700">✅ 15 documenti inclusi</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">

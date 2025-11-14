@@ -32,7 +32,7 @@ export default function TrialExpiredPage() {
           Your trial period has expired
         </h1>
         <p className="mb-6 text-gray-500">
-          You have used 20/20 available documents during your 12-day trial.
+          You have used 15/15 available documents during your 15-day trial.
         </p>
 
         {/* Benefici */}

@@ -357,7 +357,7 @@ const SettingsPage = () => {
                                                 <h4 className="font-semibold text-gray-900 mb-2">Trial</h4>
                                                 <p className="text-2xl font-bold text-gray-900 mb-2">€0</p>
                                                 <ul className="text-sm text-gray-600 space-y-1 mb-4">
-                                                    <li>• 20 documenti/mese</li>
+                                                    <li>• 15 documenti/mese</li>
                                                     <li>• Analisi AI base</li>
                                                     <li>• Support email</li>
                                                 </ul>

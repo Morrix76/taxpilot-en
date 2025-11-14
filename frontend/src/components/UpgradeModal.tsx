@@ -113,7 +113,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-2 text-slate-700">
               <FileText className="text-blue-600" size={20} />
-              <span className="text-sm">Da 20 → Documenti illimitati</span>
+              <span className="text-sm">Da 15 → Documenti illimitati</span>
             </div>
             <div className="flex items-center gap-2 text-slate-700">
               <Users className="text-green-600" size={20} />

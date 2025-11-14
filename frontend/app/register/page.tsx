@@ -159,7 +159,7 @@ export default function RegisterPage() {
                 Create your Account
               </h1>
               <p className="mb-8 text-gray-500">
-                Start your 12-day free trial.
+                Start your 15-day free trial.
               </p>
             </div>
             
