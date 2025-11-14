@@ -91,6 +91,48 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// ====== VERIFY EMAIL ======
+router.get('/verify-email/:token', async (req, res) => {
+  const { token } = req.params;
+  
+  try {
+    // Cerca utente con il token di verifica
+    const userResult = await db.execute({
+      sql: 'SELECT * FROM users WHERE verification_token = ?',
+      args: [token]
+    });
+    
+    const user = userResult.rows[0];
+    
+    // Verifica se il token esiste
+    if (!user) {
+      console.warn(`⚠️ Token di verifica non valido: ${token}`);
+      return res.redirect(`${process.env.FRONTEND_URL}/login?verified=false&error=invalid`);
+    }
+    
+    // Verifica se il token è scaduto
+    if (new Date(user.verification_token_expires) < new Date()) {
+      console.warn(`⚠️ Token di verifica scaduto per utente ${user.email}`);
+      return res.redirect(`${process.env.FRONTEND_URL}/login?verified=false&error=expired`);
+    }
+    
+    // Token valido - aggiorna utente
+    await db.execute({
+      sql: 'UPDATE users SET email_verified = 1, verification_token = NULL, verification_token_expires = NULL WHERE id = ?',
+      args: [user.id]
+    });
+    
+    console.log(`✅ Email verificata con successo per utente ${user.email}`);
+    
+    // Redirect al frontend con successo
+    return res.redirect(`${process.env.FRONTEND_URL}/login?verified=true`);
+    
+  } catch (err) {
+    console.error("Errore verifica email:", err);
+    return res.redirect(`${process.env.FRONTEND_URL}/login?verified=false&error=server`);
+  }
+});
+
 // ====== PROFILE (verifica token e ritorna info utente + piano) ======
 router.get('/profile', async (req, res) => {
   try {
