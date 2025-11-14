@@ -83,6 +83,22 @@ export async function initializeDatabase() {
     await db.execute({ sql: 'SELECT 1', args: [] });
     await ensureFileContentColumn();
     await ensureUserVerificationColumns();
+    
+    // Marca come verificati tutti gli utenti creati prima del sistema di verifica
+    try {
+      await db.execute({
+        sql: `
+          UPDATE users 
+          SET email_verified = 1 
+          WHERE created_at < '2025-11-14' AND email_verified = 0
+        `,
+        args: []
+      });
+      console.log('✅ Utenti esistenti marcati come verificati');
+    } catch (migrationError) {
+      console.warn('⚠️ Impossibile aggiornare utenti esistenti:', migrationError?.message || migrationError);
+    }
+    
     console.log('✅ Database inizializzato');
   } catch (error) {
     console.error('❌ Errore connessione database:', error);
