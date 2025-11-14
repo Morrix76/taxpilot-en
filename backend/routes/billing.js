@@ -166,13 +166,13 @@ router.get('/status', async (req, res) => {
         id: userData.piano_id || 0,
         nome: 'Free Trial',
         prezzo: 0,
-        documenti_mensili: userData.documents_limit || 10,
+        documenti_mensili: userData.documents_limit || 15,
         storage_mb: 1000,
         features: []
       },
       utilizzo: {
         documenti_utilizzati: userData.documents_used || 0,
-        documenti_limite: userData.documents_limit || 10,
+        documenti_limite: userData.documents_limit || 15,
         storage_utilizzato: 0,
         storage_limite: 1000
       },
@@ -207,9 +207,9 @@ router.get('/piani', async (req, res) => {
         id: 1,
         nome: 'Free Trial',
         prezzo: 0,
-        documenti_mensili: 10,
+        documenti_mensili: 15,
         storage_mb: 1000,
-        features: ['10 documenti al mese', '1GB storage']
+        features: ['15 documenti al mese', '1GB storage']
       },
       {
         id: 2,

@@ -14,7 +14,8 @@
     "test:ocr": "node services/pdf-ocr.js",
     "lint": "echo 'Linting skipped - add ESLint if needed'",
     "clean": "rm -rf temp/* && echo 'Temp files cleaned'",
-    "health": "curl http://localhost:3003/healthz || echo 'Server not running'"
+    "health": "curl http://localhost:3003/healthz || echo 'Server not running'",
+    "fix:trial-limits": "node --import=dotenv/config scripts/fixTrialLimits.js"
   },
   "dependencies": {
     "@libsql/client": "^0.5.6",

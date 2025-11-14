@@ -5,7 +5,7 @@ import { db } from './db.js';
 
 const SALT_ROUNDS = 10;
 const TRIAL_DURATION_DAYS = 15; // Cambiato da 12 a 15 giorni
-const TRIAL_DOCUMENTS_LIMIT = 20;
+const TRIAL_DOCUMENTS_LIMIT = 15; // Cambiato da 20 a 15 documenti
 
 /**
  * Inizializza le tabelle 'users' e 'password_resets' se non esistono.
