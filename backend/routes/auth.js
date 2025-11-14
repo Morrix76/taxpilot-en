@@ -2,7 +2,9 @@
 import express from "express";
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { db } from '../db.js';
+import { sendVerificationEmail } from '../services/emailService.js';
 const router = express.Router();
 console.log("📦 routes/auth.js caricato correttamente");
 
@@ -50,18 +52,35 @@ router.post('/register', async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
     
-    // FIX: Inserisci solo email e password (le altre colonne non esistono)
+    // Genera token di verifica
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    
+    // Inserisci utente con dati di verifica
     const insertResult = await db.execute({
-      sql: 'INSERT INTO users (email, password) VALUES (?, ?)',
-      args: [email, hashedPassword]
+      sql: 'INSERT INTO users (email, password, email_verified, verification_token, verification_token_expires) VALUES (?, ?, ?, ?, ?)',
+      args: [email, hashedPassword, 0, token, expires]
     });
     
     const newUserId = Number(insertResult.lastInsertRowid);
+    console.log(`✅ Utente ${newUserId} creato, token di verifica generato`);
+    
+    // Invia email di verifica
+    try {
+      const emailResult = await sendVerificationEmail(email, token);
+      if (emailResult.success) {
+        console.log(`✅ Email di verifica inviata a ${email}`);
+      } else {
+        console.warn(`⚠️ Errore invio email a ${email}:`, emailResult.error);
+      }
+    } catch (emailError) {
+      console.error(`❌ Errore invio email di verifica:`, emailError);
+      // Continua comunque - l'utente è stato creato
+    }
     
     res.status(201).json({ 
       success: true, 
-      message: 'Utente registrato con successo', 
-      userId: newUserId 
+      message: 'Account creato. Controlla la tua email per verificare l\'account'
     });
   } catch (err) {
     console.error("Errore registrazione:", err);
