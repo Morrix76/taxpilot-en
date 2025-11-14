@@ -10,7 +10,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
  */
 export async function sendVerificationEmail(email, token) {
   try {
-    const verificationLink = `${process.env.FRONTEND_URL}/verify-email/${token}`;
+    const verificationLink = `https://taxpilot-en-production.up.railway.app/api/auth/verify-email/${token}`;
     
     const htmlTemplate = `
       <!DOCTYPE html>
