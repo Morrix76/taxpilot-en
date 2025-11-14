@@ -35,12 +35,54 @@ async function ensureFileContentColumn() {
   }
 }
 
+async function ensureUserVerificationColumns() {
+  try {
+    const result = await db.execute({
+      sql: 'PRAGMA table_info(users)',
+      args: []
+    });
+
+    const columns = Array.isArray(result.rows) ? result.rows.map(row => row.name) : [];
+    
+    // Check and add email_verified column
+    if (!columns.includes('email_verified')) {
+      await db.execute({
+        sql: 'ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0',
+        args: []
+      });
+      console.log("✅ Added email_verified column to users table");
+    }
+    
+    // Check and add verification_token column
+    if (!columns.includes('verification_token')) {
+      await db.execute({
+        sql: 'ALTER TABLE users ADD COLUMN verification_token TEXT',
+        args: []
+      });
+      console.log("✅ Added verification_token column to users table");
+    }
+    
+    // Check and add verification_token_expires column
+    if (!columns.includes('verification_token_expires')) {
+      await db.execute({
+        sql: 'ALTER TABLE users ADD COLUMN verification_token_expires TEXT',
+        args: []
+      });
+      console.log("✅ Added verification_token_expires column to users table");
+    }
+  } catch (error) {
+    // Se la tabella non esiste ancora o il database non supporta la pragma, logghiamo e continuiamo
+    console.warn('⚠️ Impossibile assicurare le colonne di verifica email:', error?.message || error);
+  }
+}
+
 export async function initializeDatabase() {
   console.log('Inizializzazione database...');
   
   try {
     await db.execute({ sql: 'SELECT 1', args: [] });
     await ensureFileContentColumn();
+    await ensureUserVerificationColumns();
     console.log('✅ Database inizializzato');
   } catch (error) {
     console.error('❌ Errore connessione database:', error);
