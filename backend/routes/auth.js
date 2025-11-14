@@ -56,10 +56,15 @@ router.post('/register', async (req, res) => {
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     
-    // Inserisci utente con dati di verifica
+    // Imposta limiti trial: 15 giorni, 15 documenti
+    const trialEndDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
+    const docLimit = 15;
+    const planType = 'trial';
+    
+    // Inserisci utente con dati di verifica e trial
     const insertResult = await db.execute({
-      sql: 'INSERT INTO users (email, password, email_verified, verification_token, verification_token_expires) VALUES (?, ?, ?, ?, ?)',
-      args: [email, hashedPassword, 0, token, expires]
+      sql: 'INSERT INTO users (email, password, email_verified, verification_token, verification_token_expires, trial_end_date, documents_limit, plan_type, documents_used) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [email, hashedPassword, 0, token, expires, trialEndDate, docLimit, planType, 0]
     });
     
     const newUserId = Number(insertResult.lastInsertRowid);
@@ -235,9 +240,9 @@ router.get('/profile', async (req, res) => {
         active: true,
         scaduto: false,
         piano_nome: 'Free Trial',
-        days_remaining: 30,
+        days_remaining: 15,
         documenti_utilizzati: 0,
-        documenti_limite: 100
+        documenti_limite: 15
       }
     });
   } catch (err) {
