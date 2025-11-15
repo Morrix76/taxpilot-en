@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { db } from '../db.js';
 import { sendVerificationEmail } from '../services/emailService.js';
+import { isDisposableEmail } from '../utils/disposableEmail.js';
 const router = express.Router();
 console.log("📦 routes/auth.js caricato correttamente");
 
@@ -49,6 +50,16 @@ router.post('/register', async (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ success: false, error: 'Email e password richiesti' });
   }
+  
+  // Check for disposable/temporary email addresses
+  if (isDisposableEmail(email)) {
+    console.warn(`⚠️  Registration blocked: disposable email attempted - ${email}`);
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Disposable or temporary email addresses are not allowed. Please use a permanent email address.' 
+    });
+  }
+  
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
     
