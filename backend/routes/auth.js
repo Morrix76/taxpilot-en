@@ -220,16 +220,31 @@ router.get('/profile', async (req, res) => {
     } catch (err) {
       return res.status(401).json({ success: false, error: 'Token non valido' });
     }
-    // Recupera utente dal database
+    // Recupera utente dal database con campi piano/trial
     const userResult = await db.execute({
-      sql: 'SELECT id, email FROM users WHERE id = ?',
+      sql: `SELECT 
+              id, 
+              email, 
+              documents_used, 
+              documents_limit, 
+              trial_end_date, 
+              piano_data_fine 
+            FROM users 
+            WHERE id = ?`,
       args: [decoded.userId]
     });
     const user = userResult.rows[0];
     if (!user) {
       return res.status(404).json({ success: false, error: 'Utente non trovato' });
     }
-    // Per ora ritorniamo piano fittizio (puoi implementare la logica vera dopo)
+    
+    // Calcola giorni rimasti e stato trial
+    const oggi = new Date();
+    const dataFine = user.piano_data_fine ? new Date(user.piano_data_fine) : new Date(user.trial_end_date);
+    const diffTime = dataFine - oggi;
+    const giorniRimasti = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    const trialScaduto = oggi > dataFine;
+    
     res.json({
       success: true,
       user: {
@@ -237,12 +252,12 @@ router.get('/profile', async (req, res) => {
         email: user.email
       },
       piano: {
-        active: true,
-        scaduto: false,
+        active: !trialScaduto,
+        scaduto: trialScaduto,
         piano_nome: 'Free Trial',
-        days_remaining: 15,
-        documenti_utilizzati: 0,
-        documenti_limite: 15
+        days_remaining: giorniRimasti,
+        documenti_utilizzati: user.documents_used || 0,
+        documenti_limite: user.documents_limit || 15
       }
     });
   } catch (err) {
