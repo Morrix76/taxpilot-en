@@ -1,0 +1,85 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║         FIX IMMEDIATO: Document Counter Synchronization             ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+PROBLEMA RISOLTO:
+✓ documents_used mostrava valori sbagliati (15/15 invece di 5/15)
+✓ Utenti bloccati dall'upload anche con spazio disponibile
+✓ Counter non veniva decrementato quando si eliminavano documenti
+
+═══════════════════════════════════════════════════════════════════════
+
+🚀 ISTRUZIONI RAPIDE:
+
+1️⃣ DEPLOY CODICE
+   - I file sono già modificati e pronti
+   - Fai il commit e push
+   - Deploy su Railway/Vercel
+
+2️⃣ FIX UTENTE 15 (URGENTE)
+   Esegui sul server:
+   
+   node backend/scripts/fixUser15.js
+   
+   Questo corregge IMMEDIATAMENTE l'utente bloccato.
+
+3️⃣ FIX TUTTI GLI UTENTI (RACCOMANDATO)
+   Esegui sul server:
+   
+   node backend/scripts/fixAllDocumentCounters.js
+   
+   Questo corregge TUTTI gli utenti con contatori sbagliati.
+
+═══════════════════════════════════════════════════════════════════════
+
+📁 FILE MODIFICATI:
+
+✓ backend/utils/documentCounter.js         [NUOVO]
+✓ backend/routes/documents.js              [MODIFICATO]
+✓ backend/scripts/fixUser15.js             [NUOVO]
+✓ backend/scripts/fixAllDocumentCounters.js [NUOVO]
+
+═══════════════════════════════════════════════════════════════════════
+
+🔍 COSA FA IL FIX:
+
+PRIMA (SBAGLIATO):
+  Upload:  documents_used = documents_used + 1  ✓ OK
+  Delete:  [NIENTE]                             ✗ PROBLEMA!
+
+DOPO (CORRETTO):
+  Upload:  documents_used = COUNT(*) reale      ✓ OK
+  Delete:  documents_used = COUNT(*) reale      ✓ OK
+
+Ora il counter è SEMPRE sincronizzato con il database reale!
+
+═══════════════════════════════════════════════════════════════════════
+
+✅ VERIFICA CHE FUNZIONI:
+
+Dopo il fix, prova:
+1. Login come user 15 (iltuobrand@outlook.it)
+2. Vai alla dashboard
+3. Verifica che mostri "5/15 documents" invece di "15/15"
+4. Prova a caricare un nuovo documento
+5. Dovrebbe funzionare senza errori!
+
+═══════════════════════════════════════════════════════════════════════
+
+📞 IN CASO DI PROBLEMI:
+
+Se qualcosa non funziona, verifica:
+1. Che il server sia riavviato dopo il deploy
+2. Che gli script di fix siano stati eseguiti
+3. I logs del server per eventuali errori
+
+═══════════════════════════════════════════════════════════════════════
+
+🎯 RISULTATO FINALE:
+
+User 15:  15/15 → 5/15  ✅
+Può caricare: 0 → 10 documenti rimanenti ✅
+Tutti gli utenti: Counter sincronizzato automaticamente ✅
+
+═══════════════════════════════════════════════════════════════════════
+

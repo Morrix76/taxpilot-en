@@ -15,6 +15,7 @@ import { parseStringPromise } from 'xml2js';
 // Import dei moduli dell'applicazione
 import { DocumentValidator } from '../utils/documentValidator.js';
 import { validateFatturaElettronica } from '../utils/xmlParser.js';
+import { syncDocumentCount } from '../utils/documentCounter.js';
 import {
   saveDocument,
   getAllDocuments,
@@ -583,15 +584,8 @@ router.post(
       const savedDocument = await saveDocument(documentData);
       console.log(`💾 Documento ${savedDocument.id} salvato con status 'processing'`);
       
-      // ✅ Incrementa il contatore subito dopo il salvataggio
-      await db.execute({
-        sql: `
-          UPDATE users 
-          SET documents_used = COALESCE(documents_used, 0) + 1 
-          WHERE id = ?
-        `,
-        args: [userId]
-      });
+      // ✅ Sincronizza il contatore con il COUNT reale
+      await syncDocumentCount(userId);
 
       // ✅ STEP 2: Esegui analisi in nested try/catch per garantire update status
       try {
@@ -985,11 +979,17 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Documento non trovato' });
     }
 
+    const userId = document.user_id; // Salva user_id prima di eliminare il documento
+    
     const filePath = path.join(UPLOADS_DIR, document.file_path);
     await fs.unlink(filePath).catch(fileError => console.warn('⚠️ File fisico non trovato:', fileError.message));
     console.log('📁 File fisico eliminato:', document.file_path);
     
     await deleteDocument(req.params.id);
+    
+    // ✅ Sincronizza il contatore con il COUNT reale dopo l'eliminazione
+    await syncDocumentCount(userId);
+    
     res.json({ success: true, message: 'Documento eliminato con successo' });
   } catch (error) {
     console.error(`❌ Errore durante eliminazione documento ${req.params.id}:`, error);
@@ -1146,12 +1146,19 @@ router.post('/batch/delete', authMiddleware, async (req, res) => {
   console.log(`🗑️ Richiesta eliminazione batch di ${document_ids.length} documenti:`, document_ids);
   try {
     const results = { eliminati: [], errori: [], totale_richiesti: document_ids.length };
+    let userIdToSync = null; // Memorizziamo l'user_id per sincronizzare una sola volta alla fine
+    
     for (const id of document_ids) {
       try {
         const document = await getDocumentById(id);
         if (!document) {
           results.errori.push({ id, errore: 'Documento non trovato nel database' });
           continue;
+        }
+        
+        // Salva l'user_id (tutti i documenti batch dovrebbero appartenere allo stesso utente)
+        if (!userIdToSync) {
+          userIdToSync = document.user_id;
         }
         
         // *** CONVERTED: Usa path.basename come fallback ***
@@ -1169,6 +1176,12 @@ router.post('/batch/delete', authMiddleware, async (req, res) => {
         results.errori.push({ id, errore: error.message });
       }
     }
+    
+    // ✅ Sincronizza il contatore una sola volta alla fine del batch
+    if (userIdToSync && results.eliminati.length > 0) {
+      await syncDocumentCount(userIdToSync);
+    }
+    
     const messaggioFinale = `Elaborazione completata: ${results.eliminati.length} eliminati, ${results.errori.length} errori`;
     const statusCode = results.errori.length === 0 ? 200 : results.eliminati.length === 0 ? 400 : 207;
     res.status(statusCode).json({ success: results.errori.length === 0, message: messaggioFinale, results, timestamp: new Date().toISOString() });
