@@ -13,7 +13,7 @@ export default function TrialExpiredPage() {
 
   const handleContactSales = () => {
     // Mostra un alert con le informazioni di contatto
-    alert('Contact our sales team at: sales@taxpilot.com');
+    alert('Contact our sales team at: iltuobrand@outlook.it');
   };
 
   return (
