@@ -98,7 +98,7 @@ export async function sendVerificationEmail(email, token) {
     `;
     
     const result = await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: 'noreply@diasai.xyz',
       to: email,
       subject: 'Verifica il tuo account TaxPilot',
       html: htmlTemplate
