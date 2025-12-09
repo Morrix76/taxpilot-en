@@ -1,43 +1,38 @@
-import { db } from '../db.js';
-import dotenv from 'dotenv';
-
-// Carica variabili d'ambiente
-dotenv.config();
-
 /**
  * Script di manutenzione per aggiornare i limiti del trial
  * Aggiorna tutti gli utenti con plan_type='trial' o trial_end_date valido
  * a documents_limit=15 (se attualmente diverso da 15)
+ * 
+ * Usa un client DB minimale per evitare di inizializzare servizi non necessari
  */
+import { query } from './dbClient.js';
+
 async function fixTrialLimits() {
   console.log('🔧 Avvio correzione limiti trial...\n');
 
   try {
     // Step 1: Verifica connessione al database
     console.log('📡 Connessione al database...');
-    await db.execute({ sql: 'SELECT 1', args: [] });
+    await query('SELECT 1');
     console.log('✅ Connessione stabilita\n');
 
     // Step 2: Trova tutti gli utenti trial con documents_limit != 15
     console.log('🔍 Ricerca utenti trial con limiti errati...');
-    const searchResult = await db.execute({
-      sql: `
-        SELECT 
-          id, 
-          email, 
-          documents_limit, 
-          documents_used,
-          plan_type,
-          trial_end_date
-        FROM users 
-        WHERE (
-          plan_type = 'trial' 
-          OR trial_end_date IS NOT NULL
-        )
-        AND documents_limit != 15
-      `,
-      args: []
-    });
+    const searchResult = await query(`
+      SELECT 
+        id, 
+        email, 
+        documents_limit, 
+        documents_used,
+        plan_type,
+        trial_end_date
+      FROM users 
+      WHERE (
+        plan_type = 'trial' 
+        OR trial_end_date IS NOT NULL
+      )
+      AND documents_limit != 15
+    `);
 
     const usersToUpdate = searchResult.rows;
     
@@ -71,16 +66,12 @@ async function fixTrialLimits() {
         // Se documents_used > 15, lo limitiamo a 15 per evitare overflow
         const newDocumentsUsed = Math.min(user.documents_used || 0, 15);
         
-        await db.execute({
-          sql: `
-            UPDATE users 
-            SET 
-              documents_limit = 15,
-              documents_used = ?
-            WHERE id = ?
-          `,
-          args: [newDocumentsUsed, user.id]
-        });
+        await query(
+          `UPDATE users 
+           SET documents_limit = 15, documents_used = ?
+           WHERE id = ?`,
+          [newDocumentsUsed, user.id]
+        );
 
         updatedCount++;
         
@@ -108,18 +99,15 @@ async function fixTrialLimits() {
 
     // Step 6: Verifica finale
     console.log('🔍 Verifica finale...');
-    const verifyResult = await db.execute({
-      sql: `
-        SELECT COUNT(*) as count
-        FROM users 
-        WHERE (
-          plan_type = 'trial' 
-          OR trial_end_date IS NOT NULL
-        )
-        AND documents_limit != 15
-      `,
-      args: []
-    });
+    const verifyResult = await query(`
+      SELECT COUNT(*) as count
+      FROM users 
+      WHERE (
+        plan_type = 'trial' 
+        OR trial_end_date IS NOT NULL
+      )
+      AND documents_limit != 15
+    `);
 
     const remainingIncorrect = verifyResult.rows[0].count;
     
@@ -146,4 +134,3 @@ fixTrialLimits()
     console.error('💥 Script terminato con errori:', error);
     process.exit(1);
   });
-
