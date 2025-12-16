@@ -381,9 +381,10 @@ async function runAnalysis(rawContent, options = {}) {
     console.log('🔧 Esecuzione analisi parser-only...');
     if (documentType === 'FATTURA_XML') {
       const parserResult = await validateFatturaElettronica(rawContent);
+      const errorCount = parserResult?.errors?.length || 0;
       return {
         technical: parserResult, expert: { note_commercialista: "AI unavailable - technical parser only used." },
-        combined: { overall_status: parserResult.isValid ? 'ok' : 'error', confidence: parserResult.isValid ? 0.8 : 0.6, flag_manual_review: parserResult.errors.length > 0, final_message: parserResult.isValid ? "Technical validation passed. Document formally correct." : `Detected ${parserResult.errors.length} technical issues in the document.` },
+        combined: { overall_status: parserResult.isValid ? 'ok' : 'error', confidence: parserResult.isValid ? 0.8 : 0.6, flag_manual_review: errorCount > 0, final_message: parserResult.isValid ? "Technical validation passed. Document formally correct." : `Detected ${errorCount} technical issues in the document.` },
         metadata: { analysis_mode: 'parser_only', ai_used: false, documentType: documentType, timestamp: new Date().toISOString() }
       };
     } else {
