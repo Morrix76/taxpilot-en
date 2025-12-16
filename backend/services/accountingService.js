@@ -140,11 +140,18 @@ class AccountingService {
         throw new Error('Struttura FatturaElettronica non trovata');
       }
 
-      const header = fattura.FatturaElettronicaHeader;
-      const body = fattura.FatturaElettronicaBody;
+      const header = fattura?.FatturaElettronicaHeader;
+      if (!header) {
+        throw new Error('FatturaElettronicaHeader not found in XML structure');
+      }
+
+      const body = fattura?.FatturaElettronicaBody;
+      if (!body) {
+        throw new Error('FatturaElettronicaBody not found in XML structure');
+      }
 
       // Gestione Codice Fiscale (invariata)
-      let codiceFiscaleTrovato = header.CessionarioCommittente?.DatiAnagrafici?.CodiceFiscale || '';
+      let codiceFiscaleTrovato = header?.CessionarioCommittente?.DatiAnagrafici?.CodiceFiscale || '';
       if (!codiceFiscaleTrovato) {
         codiceFiscaleTrovato = 'CF_NON_DISPONIBILE';
         console.warn('⚠️ Codice Fiscale del cessionario non trovato. Verrà usato il valore di default.');
@@ -154,11 +161,18 @@ class AccountingService {
       }
 
       // --- LOGICA CORRETTA E ROBUSTA PER PARTITA IVA (MODIFICATA) ---
-      const cedente = header.CedentePrestatore.DatiAnagrafici;
-      const cessionario = header.CessionarioCommittente.DatiAnagrafici;
+      const cedente = header?.CedentePrestatore?.DatiAnagrafici;
+      if (!cedente) {
+        throw new Error('CedentePrestatore DatiAnagrafici not found in XML structure');
+      }
+
+      const cessionario = header?.CessionarioCommittente?.DatiAnagrafici;
+      if (!cessionario) {
+        throw new Error('CessionarioCommittente DatiAnagrafici not found in XML structure');
+      }
       
       // 1. ESTRAZIONE ROBUSTA: Converte in stringa e rimuove spazi.
-      let partitaIvaCedente = String(cedente.IdFiscaleIVA?.IdCodice || '').trim();
+      let partitaIvaCedente = String(cedente?.IdFiscaleIVA?.IdCodice || '').trim();
 
       // 2. VALIDAZIONE NON BLOCCANTE
       // Rimuove il prefisso "IT" (se presente) solo per la validazione.
@@ -172,16 +186,28 @@ class AccountingService {
         partitaIvaCedente = 'IT00000000000';
       }
       
-      const datiGenerali = body.DatiGenerali.DatiGeneraliDocumento;
-      const datiBeniServizi = body.DatiBeniServizi;
+      const datiGenerali = body?.DatiGenerali?.DatiGeneraliDocumento;
+      if (!datiGenerali) {
+        throw new Error('DatiGeneraliDocumento not found in XML structure');
+      }
 
-      const riepiloghi = Array.isArray(datiBeniServizi.DatiRiepilogo)
-        ? datiBeniServizi.DatiRiepilogo
-        : [datiBeniServizi.DatiRiepilogo];
+      const datiBeniServizi = body?.DatiBeniServizi;
+      if (!datiBeniServizi) {
+        throw new Error('DatiBeniServizi not found in XML structure');
+      }
 
-      const totaleImponibile = riepiloghi.reduce((sum, r) => sum + parseFloat(r.ImponibileImporto || 0), 0);
-      const totaleIVA = riepiloghi.reduce((sum, r) => sum + parseFloat(r.Imposta || 0), 0);
-      const totaleDocumento = parseFloat(datiGenerali.ImportoTotaleDocumento || 0);
+      const datiRiepilogo = datiBeniServizi?.DatiRiepilogo;
+      if (!datiRiepilogo) {
+        throw new Error('DatiRiepilogo not found in XML structure');
+      }
+
+      const riepiloghi = Array.isArray(datiRiepilogo)
+        ? datiRiepilogo
+        : [datiRiepilogo];
+
+      const totaleImponibile = riepiloghi.reduce((sum, r) => sum + parseFloat(r?.ImponibileImporto || 0), 0);
+      const totaleIVA = riepiloghi.reduce((sum, r) => sum + parseFloat(r?.Imposta || 0), 0);
+      const totaleDocumento = parseFloat(datiGenerali?.ImportoTotaleDocumento || 0);
 
       const calcolato = totaleImponibile + totaleIVA;
       if (Math.abs(calcolato - totaleDocumento) > 0.02) {
@@ -190,29 +216,29 @@ class AccountingService {
 
       return {
         tipo: 'fattura',
-        numero: datiGenerali.Numero,
-        data: datiGenerali.Data,
-        tipoDocumento: datiGenerali.TipoDocumento,
+        numero: datiGenerali?.Numero,
+        data: datiGenerali?.Data,
+        tipoDocumento: datiGenerali?.TipoDocumento,
         cedente: {
-          denominazione: cedente.Anagrafica?.Denominazione || 'N/A',
+          denominazione: cedente?.Anagrafica?.Denominazione || 'N/A',
           partitaIva: partitaIvaCedente // 3. UTILIZZO della variabile corretta.
         },
         cessionario: {
-          denominazione: cessionario.Anagrafica?.Denominazione || 
-                       `${cessionario.Anagrafica?.Nome || ''} ${cessionario.Anagrafica?.Cognome || ''}`.trim(),
+          denominazione: cessionario?.Anagrafica?.Denominazione || 
+                       `${cessionario?.Anagrafica?.Nome || ''} ${cessionario?.Anagrafica?.Cognome || ''}`.trim(),
           codiceFiscale: codiceFiscaleTrovato
         },
-        direzione: this._detectDirection(datiGenerali.TipoDocumento),
+        direzione: this._detectDirection(datiGenerali?.TipoDocumento),
         totali: {
           imponibile: totaleImponibile,
           iva: totaleIVA,
           totale: totaleDocumento
         },
         riepiloghi: riepiloghi.map(r => ({
-          aliquota: parseFloat(r.AliquotaIVA || 0),
-          imponibile: parseFloat(r.ImponibileImporto || 0),
-          imposta: parseFloat(r.Imposta || 0),
-          natura: r.Natura
+          aliquota: parseFloat(r?.AliquotaIVA || 0),
+          imponibile: parseFloat(r?.ImponibileImporto || 0),
+          imposta: parseFloat(r?.Imposta || 0),
+          natura: r?.Natura
         }))
       };
 
